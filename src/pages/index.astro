@@ -121,6 +121,7 @@ const sectorLabel = (key: string) => sectors.find((s) => s.key === key)?.label ?
                   excerpt={post.data.description}
                   date={post.data.pubDate}
                   href={`/blog/${post.id}`}
+                  category={post.data.category}
                   image={post.data.cover}
                   imageAlt={post.data.coverAlt}
                 />

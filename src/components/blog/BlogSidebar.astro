@@ -5,8 +5,7 @@
  * Sayılar ve etiketler yayınlanmış yazılardan hesaplanır — sabit sayı yazılmaz.
  */
 import Icon from '@/components/common/Icon.astro';
-import TodoAsset from '@/components/common/TodoAsset.astro';
-import { Picture } from 'astro:assets';
+import BlogCover from './BlogCover.astro';
 import { blogListing } from '@/data/blog';
 import { formatDate, isoDate } from '@/utils/date';
 import {
@@ -86,11 +85,7 @@ const { sidebar } = blogListing;
             <li class="py-3 first:pt-1">
               <a href={postHref(p)} class="group grid grid-cols-[4.5rem_1fr] items-center gap-3">
                 <span class="block overflow-hidden rounded-sm">
-                  {p.data.cover ? (
-                    <Picture src={p.data.cover} alt="" formats={['avif', 'webp']} widths={[96, 144]} sizes="72px" class="aspect-square w-full object-cover" loading="lazy" />
-                  ) : (
-                    <TodoAsset name="kapak" ratio="1 / 1" />
-                  )}
+                  <BlogCover image={p.data.cover} category={p.data.category} ratio="1 / 1" widths={[96, 144]} sizes="72px" iconSize={22} class="w-full" />
                 </span>
                 <span>
                   <span class="block text-small leading-snug font-bold text-heading group-hover:text-primary-700">{p.data.title}</span>
