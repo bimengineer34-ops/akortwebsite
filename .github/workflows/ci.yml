@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tip denetimi ve derleme
+        run: npm run build
+        env:
+          PUBLIC_SITE_URL: https://www.akortmuhendislik.com
+      - name: SEO denetimi
+        run: npm run audit:seo
+      - name: Bağımlılık güvenlik denetimi
+        run: npm audit --omit=dev --audit-level=high
+      - name: Sunucu dosyaları sözdizimi
+        run: |
+          for f in server/*.mjs server/lib/*.mjs scripts/admin/*.mjs; do node --check "$f"; done
