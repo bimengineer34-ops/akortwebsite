@@ -12,6 +12,8 @@ import { foldTr } from '@/utils/search';
 interface Props {
   title: string;
   sector: string;
+  /** Projenin hizmet grubu (ör. "yazilim"); Projeler sayfasındaki hizmet süzgeci için */
+  serviceGroup?: string | undefined;
   sectorLabel: string;
   location?: string | undefined;
   summary: string;
@@ -20,7 +22,7 @@ interface Props {
   imageAlt?: string | undefined;
 }
 
-const { title, sector, sectorLabel, location, summary, href, image, imageAlt } = Astro.props;
+const { title, sector, serviceGroup, sectorLabel, location, summary, href, image, imageAlt } = Astro.props;
 const searchText = foldTr([title, sectorLabel, location ?? '', summary].join(' '));
 ---
 
@@ -28,6 +30,7 @@ const searchText = foldTr([title, sectorLabel, location ?? '', summary].join(' '
   class="group card-surface relative flex h-full flex-col overflow-hidden hover:shadow-card-hover"
   data-project
   data-sector={sector}
+  data-service-group={serviceGroup}
   data-search={searchText}
 >
   <div class="overflow-hidden">

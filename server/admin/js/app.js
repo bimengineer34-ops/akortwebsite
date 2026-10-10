@@ -7,7 +7,7 @@ import { renderEntryList, renderEntryEditor } from './pages/entries.js';
 import { renderPublish } from './pages/publish.js';
 import { renderForms, renderSubscribers } from './pages/forms.js';
 import { renderMedia } from './pages/media.js';
-import { renderUsers, renderAudit, renderBackups, renderAccount, renderVerification, renderRedirects, renderSettings } from './pages/system.js';
+import { renderUsers, renderAudit, renderBackups, renderAccount, renderVerification, renderRedirects, renderSettings, renderStats } from './pages/system.js';
 
 const app = document.getElementById('app');
 const state = { badges: { forms: 0, pending: 0, verify: 0 }, siteUrl: '' };
@@ -149,6 +149,7 @@ const NAV = [
   { h: 'Etkileşim', items: [
     { to: '/formlar', label: 'Form talepleri', ic: 'mail', badge: 'forms', match: '/formlar' },
     { to: '/aboneler', label: 'Bülten aboneleri', ic: 'users', match: '/aboneler' },
+    { to: '/istatistik', label: 'Ziyaret istatistikleri', ic: 'eye', match: '/istatistik' },
   ] },
   { h: 'Yayın', items: [{ to: '/yayin', label: 'Yayınla ve geçmiş', ic: 'rocket', badge: 'pending' }, { to: '/yonlendirmeler', label: 'Yönlendirmeler', ic: 'chevron' }] },
   { h: 'Sistem', admin: true, items: [
@@ -238,6 +239,7 @@ const routes = [
   [/^\/hesabim$/, () => renderAccount(ctx)],
   [/^\/yonlendirmeler$/, () => renderRedirects(ctx)],
   [/^\/ayarlar$/, () => renderSettings(ctx)],
+  [/^\/istatistik$/, () => renderStats(ctx)],
 ];
 
 let leaveGuard = null;

@@ -115,12 +115,13 @@ const schema =
 
           <p class="sr-only" aria-live="polite" data-project-status></p>
 
-          <ul class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-project-list data-sectors={sectors.map((s) => s.key).join(',')}>
+          <ul class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-project-list data-sectors={[...sectors.map((s) => s.key), 'yazilim'].join(',')}>
             {projects.map((p) => (
               <li>
                 <ProjectListCard
                   title={p.data.title}
                   sector={p.data.sector}
+                  serviceGroup={p.data.serviceGroup}
                   sectorLabel={sectorLabel(p.data.sector)}
                   location={publishable(p.data.location)}
                   summary={p.data.summary}
@@ -227,7 +228,7 @@ const schema =
       const q = foldTr(search.value);
       let shown = 0;
       for (const card of cards) {
-        const okSector = active === 'tumu' || card.dataset.sector === active;
+        const okSector = active === 'tumu' || card.dataset.sector === active || card.dataset.serviceGroup === active;
         const okSearch = !q || (card.dataset.search ?? '').includes(q);
         const visible = okSector && okSearch;
         (card.parentElement as HTMLElement).hidden = !visible;

@@ -245,6 +245,37 @@ export const renderRedirects = async (ctx) => {
       h('button', { class: 'btn', onclick: () => edit(null) }, icon('plus', 16), 'Yeni yönlendirme')), body);
 };
 
+/* ---------------- ziyaret istatistikleri ---------------- */
+export const renderStats = async (ctx) => {
+  ctx.setTitle('İstatistikler');
+  let days = 30;
+  const box = h('div', { class: 'stack' });
+  const draw = async () => {
+    const s = await api.get(`/istatistik?gun=${days}`);
+    const max = Math.max(1, ...s.daily.map((d) => d.views));
+    const chart = h('div', { class: 'chart', role: 'img', 'aria-label': `Son ${days} gün günlük sayfa görüntüleme` },
+      s.daily.map((d) => {
+        const bar = h('div', { class: 'bar', title: `${d.day}: ${d.views}` });
+        bar.style.height = `${Math.max(2, Math.round((d.views / max) * 100))}%`;
+        return bar;
+      }));
+    const table = (rows, a, b) => h('table', { class: 'tbl' }, h('tbody', {}, rows.length ? rows.map((r) => h('tr', {}, h('td', { class: 'mono small' }, r[a]), h('td', { class: 'small', style: undefined }, String(r.views)))) : h('tr', {}, h('td', { class: 'empty' }, 'Henüz veri yok'))));
+    box.replaceChildren(
+      h('div', { class: 'grid cols-3' },
+        h('div', { class: 'card stat' }, h('b', {}, String(s.total)), h('span', {}, `Son ${days} gün sayfa görüntüleme`)),
+        h('div', { class: 'card stat' }, h('b', {}, String(Math.round(s.total / days))), h('span', {}, 'Günlük ortalama')),
+        h('div', { class: 'card stat' }, h('b', {}, String(Math.max(...s.daily.map((d) => d.views)))), h('span', {}, 'En yoğun gün'))),
+      h('div', { class: 'card card-pad stack' }, h('h3', {}, 'Günlük görüntüleme'), chart),
+      h('div', { class: 'grid cols-2' },
+        h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('h3', {}, 'En çok görüntülenen sayfalar')), table(s.topPages, 'path')),
+        h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('h3', {}, 'Nereden geldiler (dış siteler)')), table(s.referrers, 'host'))),
+      h('div', { class: 'hint' }, 'Bu sayaç çerez kullanmaz ve IP, tarayıcı bilgisi veya kimlik tutmaz; yalnızca gün ve sayfa başına toplam sayıyı tutar. Botlar, "Do Not Track" gönderenler ve panele giriş yapmış kullanıcılar sayılmaz. Arama motoru görünürlüğü için Google Search Console önerilir.'));
+  };
+  const sel = h('select', { class: 'select', onchange: (e) => { days = Number(e.target.value); draw(); } }, [[7, 'Son 7 gün'], [30, 'Son 30 gün'], [90, 'Son 90 gün'], [365, 'Son 1 yıl']].map(([v, l]) => h('option', { value: v, selected: v === days }, l)));
+  await draw();
+  return h('div', { class: 'stack' }, h('div', { class: 'page-head' }, h('div', { class: 'grow' }, h('h1', {}, 'Ziyaret istatistikleri'), h('p', {}, 'Çerezsiz ve kişisel veri tutmayan basit ziyaret sayacı.')), h('div', {}, sel)), box);
+};
+
 /* ---------------- ayarlar (e-posta bildirimi) ---------------- */
 export const renderSettings = async (ctx) => {
   ctx.setTitle('Ayarlar');

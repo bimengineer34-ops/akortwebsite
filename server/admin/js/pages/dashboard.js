@@ -63,6 +63,8 @@ export const renderDashboard = async (ctx) => {
     h('div', { class: 'small stack' },
       h('div', {}, 'Son yayın: ', buildChip),
       h('div', {}, `İçerik belgesi: ${d.docs} · Medya: ${d.media} dosya`),
+      h('div', {}, 'Son 7 gün: ', h('a', { href: '#/istatistik' }, `${d.views7} sayfa görüntüleme`)),
+      session.user.role === 'admin' && !d.myTwoFactor ? h('div', { class: 'banner warn' }, icon('shield'), h('div', {}, h('b', {}, '2 adımlı doğrulama kapalı.'), ' Yönetici hesabınızı korumak için ', h('a', { href: '#/hesabim' }, 'Hesabım'), ' sayfasından açın.')) : null,
       h('div', { class: 'muted' }, `Node ${d.node} · çalışma süresi ${Math.floor(d.uptime / 3600)} sa ${Math.floor((d.uptime % 3600) / 60)} dk`)));
 
   return h('div', { class: 'stack' }, head, publishBanner, verifyBanner, stats,

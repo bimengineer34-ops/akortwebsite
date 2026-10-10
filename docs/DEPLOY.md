@@ -122,3 +122,30 @@ Sunucuyu yeniden başlatın; **Panel → Ayarlar (e-posta)** sayfasında alıcı
 ## Sitedeki görselleri panelden değiştirme
 
 **Sayfa metinleri › Genel ve Menü › Site görselleri** belgesinde hero, intro, hizmet ve sektör görselleri medya kütüphanesinden seçilir (önce **Medya** sayfasından yükleyin). Taslağı kaydedip **Yayınla**; sunucu seçilen dosyayı `src/assets/images/uploads/` altına kopyalar ve derlemede optimize eder. Boş bırakılan yer yerleşik görseli kullanır.
+
+## Parola sıfırlama ve yönetici kurtarma
+
+- **E-posta ile:** Giriş ekranında **Parolamı unuttum** → e-postaya 30 dakika geçerli, tek kullanımlık bağlantı gider (SMTP ayarlı olmalı; bağlantı `PUBLIC_SITE_URL` adresini kullanır, bu yüzden doğru alan adıyla ayarlayın).
+- **Sunucuda (e-posta yoksa / tüm yöneticiler kilitlendiyse):**
+  ```bash
+  npm run admin:reset -- kisi@firma.com                 # yeni rastgele parola üretir ve yazdırır
+  npm run admin:reset -- kisi@firma.com --no-2fa        # telefon kayıpsa 2 adımlı doğrulamayı da kapatır
+  npm run admin:reset -- yeni@firma.com --create        # hesap yoksa yönetici oluşturur
+  ```
+- Güvenlik için **en az iki yönetici hesabı** bulundurun ve 2 adımlı doğrulamanın kurtarma kodlarını güvenli yerde saklayın.
+
+## Yedekten geri yükleme
+
+Sunucuyu durdurun, sonra:
+
+```bash
+npm run admin:restore -- data/backups/akort-yedek-2026-10-10-12-00-00.zip --yes
+```
+
+Mevcut veritabanı `data/akort.db.once-<zaman>` olarak saklanır. Sunucuyu başlatın, panelde **Yayın › Yeniden derle** çalıştırın.
+
+## İzleme
+
+- Sağlık kontrolü: `GET /api/saglik` (`{"ok":true}`). UptimeRobot / Better Stack gibi bir dış servise 5 dakikalık aralıkla ekleyin; kesintide e-posta alırsınız.
+- Günlükler: `journalctl -u akort -f` (systemd). Etkinlik ve hata kayıtları ayrıca panelde **Etkinlik günlüğü**nde.
+- **Ziyaret istatistikleri** panelde çerezsiz ve kişisel veri tutmayan bir sayaçla gelir (Panel › Ziyaret istatistikleri). Arama görünürlüğü için Google Search Console'a siteyi ekleyip `sitemap-index.xml` adresini gönderin.

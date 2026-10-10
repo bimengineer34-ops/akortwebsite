@@ -13,6 +13,7 @@ import { bootstrapAdmin } from './lib/auth.mjs';
 import { ensureInitialBuild } from './lib/build.mjs';
 import { audit } from './lib/db.mjs';
 import { matchRedirect } from './lib/redirects.mjs';
+import { recordView, pruneStats } from './lib/stats.mjs';
 
 const ADMIN_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 
@@ -54,6 +55,7 @@ const serveSite = (req, res, pathname) => {
   if (hit) {
     const immutable = pathname.startsWith('/_astro/');
     const isHtml = hit.file.endsWith('.html');
+    if (isHtml && !hit.file.endsWith('404.html')) recordView(req, pathname, req.headers.host);
     return serveFile(req, res, hit, { cache: immutable ? 'public, max-age=31536000, immutable' : 'public, max-age=3600', extra: isHtml ? siteCsp() : {} });
   }
   const nf = resolveFile(config.siteDir, '404.html', { clean: false });
@@ -129,6 +131,8 @@ server.headersTimeout = 20_000;
 server.keepAliveTimeout = 10_000;
 
 bootstrapAdmin();
+pruneStats();
+setInterval(pruneStats, 24 * 3_600_000).unref();
 server.listen(config.port, config.host, () => {
   console.log(`AKORT sunucusu http://${config.host === '0.0.0.0' ? 'localhost' : config.host}:${config.port}  (panel: /yonetim)`);
   ensureInitialBuild().catch((e) => console.error('[yayın] başlangıç derlemesi hatası', e));

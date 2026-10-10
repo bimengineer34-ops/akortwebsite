@@ -9,6 +9,7 @@ import {
   checkCredentials, createSession,
 } from './auth.mjs';
 import { requestReset, completeReset } from './reset.mjs';
+import { getStats } from './stats.mjs';
 import { totpStatus,beginSetup, enable as enable2fa, disable as disable2fa, adminReset as reset2fa, issueTicket, redeemTicket } from './totp.mjs';
 import { listDocs, getDoc, saveDraft, discardDraft, listVersions, getVersion, defaultsOf, pendingDrafts, scanUnverified } from './content.mjs';
 import { publish, rollback, buildState, listBuilds, getBuildLog } from './build.mjs';
@@ -172,7 +173,7 @@ export const routes = [
     'GET',
     /^\/api\/admin\/pano$/,
     ({ req, res }) => {
-      requireUser(req);
+      const u0 = requireUser(req);
       const forms = q.get(`SELECT COUNT(*) AS n, SUM(status = 'yeni') AS fresh FROM forms`);
       const lastBuild = q.get('SELECT id, status, started_at, finished_at, user_email, summary FROM builds ORDER BY id DESC LIMIT 1');
       const lastOk = q.get(`SELECT finished_at FROM builds WHERE status = 'basarili' ORDER BY id DESC LIMIT 1`);
@@ -191,11 +192,14 @@ export const routes = [
         blog: { total: listEntries('blog').length, drafts: listEntries('blog').filter((e) => e.draft).length },
         projects: { total: listEntries('projects').length, drafts: listEntries('projects').filter((e) => e.draft).length },
         docs: listDocs().length,
+        views7: getStats(7).total,
+        myTwoFactor: totpStatus(u0.id).enabled,
         node: process.version,
         uptime: Math.round(process.uptime()),
       });
     },
   ],
+  ['GET', /^\/api\/admin\/istatistik$/, ({ req, res, url }) => (requireUser(req), sendJson(res, 200, getStats(url.searchParams.get('gun') ?? 30)))],
   ['GET', /^\/api\/admin\/dogrulama$/, ({ req, res }) => (requireUser(req), sendJson(res, 200, { rows: scanUnverified() }))],
   [
     'GET',

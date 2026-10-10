@@ -250,6 +250,11 @@ table.tbl { width: 100%; border-collapse: collapse; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
+/* ---------- Basit sütun grafik ---------- */
+.chart { display: flex; align-items: flex-end; gap: 3px; height: 180px; padding-top: 8px; }
+.chart .bar { flex: 1; min-width: 2px; background: var(--primary); border-radius: 3px 3px 0 0; opacity: 0.85; }
+.chart .bar:hover { opacity: 1; background: var(--accent); }
+
 /* ---------- Taşma önleme (mobil) ---------- */
 .stack > *, .grid > *, .editor-layout > *, .row > *, .card, .fset, .fset-body, label.field, .field { min-width: 0; }
 .main, .content { min-width: 0; max-width: 100%; }
