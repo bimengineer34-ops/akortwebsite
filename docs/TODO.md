@@ -169,3 +169,6 @@ Hâlâ eksik (yer tutucu panel/etiket duruyor):
 - [x] Bağlantı taraması: 100 sayfa, 25.016 bağlantı, 0 kırık, 0 yetim sayfa.
 
 - [ ] **SSS (10 Ekim 2026):** Her hizmet ve sektör sayfasına yeni sorular eklendi (şimdi en az 5; toplam +289). Yanıtlar genel mühendislik bilgisiyle yazıldı, firma taahhüdü/rakam içermez; yayın öncesi firma gözden geçirmeli. Panel › Sayfa metinleri › Hizmet Kayıtları / Sektör sayfaları belgelerinde her kaydın "Sık sorulan sorular" listesinden düzenlenir. Derleme, 5'ten az soru kalırsa uyarı verir (`serviceCatalog.ts` → `MIN_FAQ`).
+
+- [x] **Blog (10 Ekim 2026):** 9 yazı (BIM, proje yönetimi, enerji ×2, dijital ikiz, işveren danışmanlığı, MEP, teknik danışmanlık, yeşil bina) gerçek makaleler olarak yazıldı ve yayına alındı (`draft: false`, tarihler gerçek yayın tarihi). Genel mühendislik bilgisi; rakam, müşteri veya firma referansı içermez. Yayın öncesi firma gözden geçirmeli. Kapak görselleri henüz yok (ChatGPT paketi Parti 4).
+- [ ] **Projeler:** Gerçek proje yok. Mevcut 6 proje dosyası tasarım referansından gelen örneklerdir (taslak, yayında gizli) ve **uydurma proje yayınlanmamalıdır**. Her gerçek proje için: ad, yapı tipi, konum, yıl, AKORT'un rolü/kapsamı, doğrulanmış sonuçlar ve görsel gerekir → Panel › Projeler.
