@@ -8,7 +8,8 @@ import {
   authenticate, requireUser, requireAdmin, login, logout, createUser, hashPassword, verifyPassword, validatePassword, validateEmail, userCount, revokeUserSessions,
   checkCredentials, createSession,
 } from './auth.mjs';
-import { totpStatus, beginSetup, enable as enable2fa, disable as disable2fa, adminReset as reset2fa, issueTicket, redeemTicket } from './totp.mjs';
+import { requestReset, completeReset } from './reset.mjs';
+import { totpStatus,beginSetup, enable as enable2fa, disable as disable2fa, adminReset as reset2fa, issueTicket, redeemTicket } from './totp.mjs';
 import { listDocs, getDoc, saveDraft, discardDraft, listVersions, getVersion, defaultsOf, pendingDrafts, scanUnverified } from './content.mjs';
 import { publish, rollback, buildState, listBuilds, getBuildLog } from './build.mjs';
 import { submitContact, subscribe, listForms, getForm, updateForm, deleteForm, formsCsv, listSubscribers, setSubscriberStatus, deleteSubscriber, subscribersCsv } from './forms.mjs';
@@ -106,7 +107,21 @@ export const routes = [
       sendJson(res, 200, { ok: true, user: publicUser(s.user) }, { 'Set-Cookie': s.cookie });
     },
   ],
-  ['GET', /^\/api\/admin\/2fa$/, ({ req, res }) => sendJson(res, 200, totpStatus(requireUser(req).id))],
+  [
+    'POST',
+    /^\/api\/admin\/parola-unuttum$/,
+    async ({ req, res }) => sendJson(res, 200, await requestReset((await readJson(req, 2048)).email, clientIp(req))),
+  ],
+  [
+    'POST',
+    /^\/api\/admin\/parola-sifirla$/,
+    async ({ req, res }) => {
+      const b = await readJson(req, 4096);
+      completeReset(b.token, b.password, clientIp(req));
+      sendJson(res, 200, { ok: true });
+    },
+  ],
+  ['GET', /^\/api\/admin\/2fa$/,({ req, res }) => sendJson(res, 200, totpStatus(requireUser(req).id))],
   ['POST', /^\/api\/admin\/2fa\/baslat$/, ({ req, res }) => sendJson(res, 200, beginSetup(requireUser(req)))],
   [
     'POST',

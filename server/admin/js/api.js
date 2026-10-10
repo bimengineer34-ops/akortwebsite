@@ -50,6 +50,8 @@ export const api = {
     const d = await request('POST', A + '/giris', { email, password });
     return d;
   },
+  forgot: (email) => request('POST', A + '/parola-unuttum', { email }),
+  resetPassword: (token, password) => request('POST', A + '/parola-sifirla', { token, password }),
   login2fa: (ticket, code) => request('POST', A + '/giris/2fa', { ticket, code }),
   setup: (b) => request('POST', A + '/kurulum', b),
   logout: () => request('POST', A + '/cikis', {}),
