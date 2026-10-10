@@ -1,0 +1,42 @@
+---
+/**
+ * Breadcrumb — referans: hero içinde "ANA SAYFA > HAKKIMIZDA" (küçük, büyük harf, aralıklı).
+ * BreadcrumbList şemasını da üretir.
+ */
+import JsonLd from './JsonLd.astro';
+import { breadcrumbSchema, type Crumb } from '@/utils/schema';
+
+interface Props {
+  items: Crumb[];
+  tone?: 'light' | 'dark';
+  class?: string;
+}
+
+const { items, tone = 'dark', class: className } = Astro.props;
+const crumbs: Crumb[] = [{ label: 'Ana Sayfa', href: '/' }, ...items];
+---
+
+<nav
+  aria-label="Konum"
+  class:list={['text-eyebrow font-semibold tracking-(--text-eyebrow--letter-spacing) uppercase', tone === 'dark' ? 'text-white/85' : 'text-muted', className]}>
+  <ol class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+    {
+      crumbs.map((c, i) => {
+        const last = i === crumbs.length - 1;
+        return (
+          <li class="flex items-center gap-2.5">
+            {i > 0 && <span aria-hidden="true">›</span>}
+            {last ? (
+              <span aria-current="page">{c.label}</span>
+            ) : (
+              <a href={c.href} class:list={['-my-3 inline-block py-3', tone === 'dark' ? 'hover:text-white' : 'hover:text-primary-700']}>
+                {c.label}
+              </a>
+            )}
+          </li>
+        );
+      })
+    }
+  </ol>
+</nav>
+{Astro.site && <JsonLd schema={breadcrumbSchema(crumbs, Astro.site)} />}

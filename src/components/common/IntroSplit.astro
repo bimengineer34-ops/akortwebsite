@@ -1,0 +1,189 @@
+---
+/**
+ * Giriş / yaklaşım bölümü (Home, Hakkımızda ×2, Hizmetler, Uzmanlık, İletişim).
+ * Referans: açık zemin; solda eyebrow + H2 + metin (+ buton, + 3 kısa sütun); sağda kenara taşan bina görseli.
+ *
+ * wedge="from-left"  (Home): açık üçgen soldan görselin içine girer, slogan en sağdaki açık şeritte.
+ * wedge="from-right" (Hakkımızda): üçgen sağ kenardan sola doğru girer, slogan üçgenin içinde.
+ * wedgeTone="dark"   (Hakkımızda › Yaklaşımımız): sağdaki üçgen koyu lacivert, slogan beyaz.
+ *
+ * TODO-ASSET: Bina görseli. Gelene kadar blueprint yer tutucu.
+ */
+import type { ImageMetadata } from 'astro';
+import { Image } from 'astro:assets';
+import Container from './Container.astro';
+import Button from './Button.astro';
+import Icon from './Icon.astro';
+import type { IconName } from './icons';
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  body: string | string[];
+  cta?: { label: string; href: string } | undefined;
+  pillars?: { title: string; text: string }[];
+  /** İkonlu sütunlar (Uzmanlık Alanları referansı): ikon üstte, 2 satır etiket */
+  iconPillars?: { icon: IconName; label: string[] }[];
+  slogan?: string[];
+  sloganAccent?: string;
+  /** Sloganın altında kısa çizgi (Hakkımızda referansı) */
+  sloganRule?: boolean;
+  wedge?: 'from-left' | 'from-right';
+  wedgeTone?: 'light' | 'dark';
+  /** Görsel alanı genişliği (lg+) */
+  imageWidth?: 'md' | 'lg';
+  image?: ImageMetadata;
+  imageAlt?: string;
+  imageTodo?: string;
+  headingId?: string;
+  id?: string;
+  /** Metin kolonunun hizalandığı container (Uzmanlık Alanları referansında geniş) */
+  containerSize?: 'content' | 'wide';
+}
+
+const {
+  eyebrow,
+  title,
+  body,
+  cta,
+  pillars = [],
+  iconPillars = [],
+  slogan = [],
+  sloganAccent,
+  sloganRule = false,
+  wedge = 'from-left',
+  wedgeTone = 'light',
+  imageWidth = 'md',
+  image,
+  imageAlt = '',
+  imageTodo = 'intro bina görseli',
+  headingId = 'intro-title',
+  id,
+  containerSize = 'content',
+} = Astro.props;
+
+const hasSide = pillars.length > 0 || iconPillars.length > 0;
+
+const paragraphs = Array.isArray(body) ? body : [body];
+const isDev = import.meta.env.DEV;
+const dark = wedgeTone === 'dark';
+const placeholderBg = 'bg-[linear-gradient(160deg,#dbe7f0_0%,#b9cddd_55%,#8fa9bf_100%)]';
+---
+
+<section id={id} class="relative isolate overflow-hidden bg-surface-soft" aria-labelledby={headingId}>
+  <!-- Görsel alanı (lg+) -->
+  <div
+    aria-hidden="true"
+    class:list={['absolute inset-y-0 right-0 -z-10 hidden lg:block', imageWidth === 'lg' ? 'w-[60%]' : 'w-[46%]']}
+  >
+    {
+      image ? (
+        <Image src={image} alt="" class="h-full w-full object-cover" widths={[640, 960, 1280, 1600]} sizes="60vw" />
+      ) : (
+        <div class:list={['h-full w-full', placeholderBg]}>
+          {isDev && (
+            <span class="absolute bottom-3 left-[30%] rounded-sm border border-dashed border-primary-700/40 bg-white/80 px-2 py-1 text-[11px] font-semibold text-primary-700">
+              TODO-ASSET · {imageTodo}
+            </span>
+          )}
+        </div>
+      )
+    }
+    <!-- Görselin sol kenarı metin zeminine yumuşak geçer -->
+    <div class:list={['absolute inset-y-0 left-0 bg-linear-to-r from-surface-soft to-surface-soft/0', imageWidth === 'lg' ? 'w-[42%]' : 'w-[22%]']}></div>
+    {
+      wedge === 'from-left' ? (
+        <>
+          <div class="absolute inset-y-0 left-0 w-[46%] bg-surface-soft [clip-path:polygon(0_0,100%_50%,0_100%)]" />
+          <div class="absolute inset-y-0 right-0 w-[24%] bg-linear-to-r from-surface-soft/0 via-surface-soft/90 to-surface-soft" />
+        </>
+      ) : (
+        <div
+          class:list={[
+            'absolute inset-y-0 right-0 [clip-path:polygon(38%_0,100%_0,100%_100%,38%_100%,0_50%)]',
+            imageWidth === 'lg' ? 'w-[44%]' : 'w-[52%]',
+            dark ? 'bg-navy-900' : 'bg-white/95',
+          ]}
+        />
+      )
+    }
+  </div>
+
+  <Container size={containerSize} class="relative grid gap-10 py-12 lg:grid-cols-[minmax(0,1fr)_auto] lg:py-10">
+    <div class:list={['grid gap-8 xl:items-center xl:gap-6', hasSide && 'xl:grid-cols-[minmax(0,26rem)_auto]']}>
+      <div class:list={[!hasSide && 'max-w-[44rem]']}>
+        <p class="eyebrow">{eyebrow}</p>
+        <h2 id={headingId} class="mt-2 text-h2-lg">{title}</h2>
+        {paragraphs.map((p, i) => <p class:list={['text-small text-body', i === 0 ? 'mt-3' : 'mt-2.5']}>{p}</p>)}
+        {
+          cta && (
+            <div class="mt-5">
+              <Button href={cta.href} variant="outline" size="sm">
+                {cta.label}
+              </Button>
+            </div>
+          )
+        }
+      </div>
+
+      {
+        pillars.length > 0 && (
+          <ul class="grid grid-cols-1 gap-4 xs:grid-cols-3 xs:gap-0 xl:self-center">
+            {pillars.map((p) => (
+              <li class="border-border-strong py-1 xs:border-l xs:px-5">
+                <p class="text-small font-bold text-primary-700">{p.title}</p>
+                <p class="mt-0.5 text-xs text-muted">{p.text}</p>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+      {
+        iconPillars.length > 0 && (
+          <ul class="grid grid-cols-2 gap-y-6 xs:grid-cols-4 xs:gap-0 xl:self-center">
+            {iconPillars.map((p) => (
+              <li class="flex flex-col items-center border-border-strong px-3 text-center xs:border-l xs:px-4 xl:px-5">
+                <Icon name={p.icon} size={40} strokeWidth={1.5} class="text-primary-700" />
+                <p class="mt-3 text-xs leading-snug font-bold text-heading">
+                  {p.label.map((l) => (
+                    <span class="block">{l}</span>
+                  ))}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </div>
+
+    {
+      (slogan.length > 0 || sloganAccent) && (
+        <div class="hidden self-center lg:block">
+          <p
+            class:list={[
+              'text-[0.75rem] leading-[1.75] font-semibold tracking-[0.2em] uppercase',
+              dark ? 'text-white' : wedge === 'from-right' ? 'text-primary-700' : 'text-heading/80',
+            ]}
+          >
+            {slogan.map((s) => (
+              <span class="block">{s}</span>
+            ))}
+            {sloganAccent && <span class="block text-accent-600">{sloganAccent}</span>}
+          </p>
+          {sloganRule && <span aria-hidden="true" class:list={['mt-4 block h-px w-8', dark ? 'bg-white/80' : 'bg-primary-700']} />}
+        </div>
+      )
+    }
+  </Container>
+
+  <!-- Mobil / tablet: görsel metnin altında -->
+  <div class="relative h-48 sm:h-64 lg:hidden">
+    {
+      image ? (
+        <Image src={image} alt={imageAlt} class="h-full w-full object-cover" widths={[480, 768, 1024]} sizes="100vw" />
+      ) : (
+        <div aria-hidden="true" class:list={['h-full w-full', placeholderBg]} />
+      )
+    }
+  </div>
+</section>

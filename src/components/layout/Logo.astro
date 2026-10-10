@@ -1,0 +1,47 @@
+---
+/**
+ * AKORT logosu — kaynak: C:\Users\zahitbulut\Downloads\akorwebpage\AKORT_Logo.png (kullanıcıdan).
+ * Beyaz zemin alfa kanalına çevrilip içerik sınırına kırpıldı. Sürümler (src/assets/brand/):
+ *  - akort-logo.png / akort-logo-dark.png                       → dikey (açık / koyu zemin) — footer
+ *  - akort-logo-horizontal.png / akort-logo-horizontal-dark.png → yatay: aynı ikon ve harfler, yalnızca yerleşim
+ *    (ikon solda, AKORT + MÜHENDİSLİK sağda) — header, küçük boyutta okunabilirlik için
+ * Koyu sürümde lacivert/gri → beyaz, teal → açık teal.
+ * Astro <Image> 1x/2x WebP üretir; genişlik/yükseklik sabit → CLS 0.
+ * TODO-ASSET: Vektörel (SVG) logo gelirse bu dosyalar onunla değiştirilmeli (en keskin sonuç).
+ */
+import { Image } from 'astro:assets';
+import { site } from '@/data/site';
+import logoLight from '@/assets/brand/akort-logo.png';
+import logoDark from '@/assets/brand/akort-logo-dark.png';
+import logoHLight from '@/assets/brand/akort-logo-horizontal.png';
+import logoHDark from '@/assets/brand/akort-logo-horizontal-dark.png';
+
+interface Props {
+  tone?: 'light' | 'dark';
+  layout?: 'vertical' | 'horizontal';
+  /** Görüntülenen yükseklik (px) */
+  height?: number;
+  class?: string;
+}
+
+const { tone = 'light', layout = 'vertical', height = 56, class: className } = Astro.props;
+const sources = { vertical: { light: logoLight, dark: logoDark }, horizontal: { light: logoHLight, dark: logoHDark } };
+const src = sources[layout][tone];
+const width = Math.round((src.width / src.height) * height);
+---
+
+<a href="/" class:list={['inline-flex shrink-0 items-center', className]} aria-label={`${site.name} — Ana Sayfa`}>
+  <Image
+    src={src}
+    alt={site.name}
+    width={width}
+    height={height}
+    densities={[1, 2]}
+    format="webp"
+    quality={90}
+    loading="eager"
+    decoding="async"
+    class="block h-auto"
+    style={{ height: `${height}px`, width: `${width}px` }}
+  />
+</a>

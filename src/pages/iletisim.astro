@@ -1,0 +1,173 @@
+---
+/**
+ * İletişim — tek tasarım kaynağı: docs/reference/pages/contact-approved-reference.jpeg
+ * Section sırası: Hero (2 buton) → Fikirlerinizi Dinlemeye Hazırız → Hizmet Talep Formu + İletişim Bilgilerimiz + Harita →
+ * Merak Ettikleriniz (SSS) → CTA.
+ *
+ * NO_FAKE_DATA: E-posta / telefon / adres / harita ve SSS cevapları doğrulanmadıkça production'da render edilmez.
+ */
+import { heroImages, introImages } from '@/data/images';
+import PageLayout from '@/layouts/PageLayout.astro';
+import Container from '@/components/common/Container.astro';
+import Icon from '@/components/common/Icon.astro';
+import IntroSplit from '@/components/common/IntroSplit.astro';
+import CTASection from '@/components/common/CTASection.astro';
+import FAQ from '@/components/common/FAQ.astro';
+import ContactForm from '@/components/contact/ContactForm.astro';
+import MapEmbed from '@/components/contact/MapEmbed.astro';
+import { contactHero, contactIntro, contactInfo, contactMap, contactFaqSection, contactCta } from '@/data/contactPage';
+import { contactFaq } from '@/data/faq';
+import { site } from '@/data/site';
+import { publishable } from '@/utils/verified';
+
+const email = publishable(site.contact.email);
+const phone = publishable(site.contact.phone);
+const address = publishable(site.contact.address);
+const unverifiedContact = [site.contact.email, site.contact.phone, site.contact.address].some((v) => !v.verified);
+
+const cardValue = { email, phone, address } as const;
+const cardHref = {
+  email: email && `mailto:${email}`,
+  phone: phone && `tel:${phone.replace(/\s/g, '')}`,
+  address: address && `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`,
+} as const;
+const cards = contactInfo.cards.filter((c) => !!cardValue[c.key]);
+// Production'da doğrulanmış iletişim bilgisi yoksa sağ kolon boş kalmasın: form tek kolon ve ortalı.
+const hasSideColumn = cards.length > 0 || !!address;
+
+const faqItems = contactFaq
+  .map((f) => ({ question: f.question, answer: publishable(f.answer) }))
+  .filter((f): f is { question: string; answer: string } => !!f.answer);
+const faqUnverified = contactFaq.some((f) => !f.answer.verified);
+
+const schema = Astro.site
+  ? [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'ContactPage',
+        name: `İletişim | ${site.name}`,
+        url: new URL('/iletisim', Astro.site).href,
+        about: { '@id': new URL('/#organization', Astro.site).href },
+        inLanguage: 'tr-TR',
+      },
+    ]
+  : [];
+---
+
+<PageLayout
+  title="İletişim"
+  description="AKORT Mühendislik ile iletişime geçin: mühendislik danışmanlığı, BIM, enerji ve teknik proje yönetimi talepleriniz için hizmet talep formu."
+  heading={contactHero.title}
+  lead={contactHero.lead}
+  breadcrumbs={[{ label: 'İletişim', href: '/iletisim' }]}
+  annotations={contactHero.annotations}
+  heroCta={contactHero.cta}
+  heroImage={heroImages.iletisim}
+  schema={schema}
+>
+  <IntroSplit {...contactIntro} image={introImages.iletisim} headingId="contact-intro-title" />
+
+  <section class="bg-white py-12 lg:py-14" aria-label="Hizmet talebi ve iletişim bilgileri">
+    <Container
+      size="wide"
+      class:list={['grid gap-10', hasSideColumn ? 'lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-8' : 'mx-auto max-w-[52rem]']}
+    >
+      <ContactForm />
+
+      {hasSideColumn && (
+      <div class="min-w-0 space-y-10">
+        {
+          cards.length > 0 && (
+            <div>
+              <p class="eyebrow">{contactInfo.eyebrow}</p>
+              <h2 class="mt-2 text-h2">{contactInfo.title}</h2>
+              {unverifiedContact && (
+                <p class="mt-2 inline-block rounded-sm border border-dashed border-accent-500/60 px-2 py-0.5 text-[11px] font-semibold text-primary-700">
+                  TODO-CONTENT · iletişim bilgileri doğrulanmadı — production'da gizli
+                </p>
+              )}
+              <ul class="mt-5 grid gap-3 sm:grid-cols-3">
+                {cards.map((c) => (
+                  <li class="card-surface flex flex-col p-5">
+                    <Icon name={c.icon} size={40} strokeWidth={1.5} class="text-primary-700" />
+                    <h3 class="mt-4 text-h3 font-bold">{c.title}</h3>
+                    <p class="mt-1.5 text-xs text-muted">{c.text}</p>
+                    <p class="mt-4 mb-5 text-[0.8125rem] font-bold text-primary-700">
+                      {c.key === 'email' && email ? (
+                        // Satır kırılması yalnızca '@' öncesinde
+                        <>
+                          {email.split('@')[0]}
+                          <wbr />@{email.split('@')[1]}
+                        </>
+                      ) : (
+                        cardValue[c.key]
+                      )}
+                    </p>
+                    <a
+                      href={cardHref[c.key]}
+                      class="mt-auto inline-flex items-center gap-1.5 text-small font-semibold text-primary-700 hover:underline"
+                      {...(c.key === 'address' && { target: '_blank', rel: 'noopener' })}
+                    >
+                      {c.action}
+                      <Icon name="ui/arrow-right" size={14} />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
+
+        {
+          address && (
+            <div>
+              <div class="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p class="eyebrow">{contactMap.eyebrow}</p>
+                  <h2 class="mt-2 text-h2">{contactMap.title}</h2>
+                </div>
+                <a
+                  href={cardHref.address}
+                  target="_blank"
+                  rel="noopener"
+                  class="inline-flex items-center gap-1.5 border-b border-primary-700/60 pb-1 text-small font-semibold text-primary-700"
+                >
+                  {contactMap.openLabel}
+                  <Icon name="ui/arrow-right" size={14} />
+                </a>
+              </div>
+              <div class="mt-5">
+                <MapEmbed query={address} label={`${site.name} · ${publishable(site.contact.city) ?? ''}`} />
+              </div>
+            </div>
+          )
+        }
+      </div>
+      )}
+    </Container>
+  </section>
+
+  {
+    faqItems.length > 0 && (
+      <section class="bg-surface-soft py-12 lg:py-11" aria-labelledby="faq-title">
+        <Container size="wide" class="grid gap-8 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-12">
+          <div>
+            <p class="eyebrow">{contactFaqSection.eyebrow}</p>
+            <h2 id="faq-title" class="mt-2 text-h2-lg">
+              {contactFaqSection.title}
+            </h2>
+            <p class="mt-3 text-small text-muted">{contactFaqSection.text}</p>
+            {faqUnverified && (
+              <p class="mt-3 inline-block rounded-sm border border-dashed border-accent-500/60 px-2 py-0.5 text-[11px] font-semibold text-primary-700">
+                TODO-CONTENT · SSS cevapları bekleniyor — production'da gizli
+              </p>
+            )}
+          </div>
+          <FAQ items={faqItems} />
+        </Container>
+      </section>
+    )
+  }
+
+  <CTASection {...contactCta} headingId="contact-cta-title" />
+</PageLayout>

@@ -1,0 +1,112 @@
+---
+/**
+ * "Neden AKORT?" bandı — solda eyebrow + 2 satır H2, sağda ince dikey çizgilerle ayrılmış 4–5 kolon.
+ * tone="dark"  (Ana Sayfa, Hakkımızda): navy zemin, beyaz ikon/metin, ikon başlığın üstünde.
+ * tone="light" (Hizmetler): beyaz zemin, accent ikon, ikon başlığın solunda (iconPlacement="inline").
+ */
+import Container from './Container.astro';
+import Icon from './Icon.astro';
+import type { IconName } from './icons';
+
+export interface FeatureBandItem {
+  icon: IconName;
+  highlight?: string | undefined;
+  title: string;
+  text: string;
+}
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  items: FeatureBandItem[];
+  headingId?: string;
+  tone?: 'dark' | 'light';
+  iconPlacement?: 'top' | 'inline';
+  /** Açıklama metninin önünde ✓ (Uzmanlık › Entegre Uzmanlık referansı) */
+  withCheck?: boolean;
+}
+
+const { eyebrow, title, items, headingId = 'why-title', tone = 'dark', iconPlacement = 'top', withCheck = false } = Astro.props;
+const dark = tone === 'dark';
+const many = items.length > 4;
+// Kolonlar dar kalacaksa (5 öğe veya ikon-yanında-başlık) başlık 1280px altında üste alınır
+const stackUntilXl = many || iconPlacement === 'inline';
+---
+
+<section
+  class:list={['relative isolate overflow-hidden', dark ? 'bg-navy-900 text-white' : 'border-y border-border bg-white']}
+  aria-labelledby={headingId}
+>
+  {
+    dark && (
+      <div aria-hidden="true" class="absolute inset-0 -z-10">
+        <div class="absolute inset-0 bg-linear-to-r from-navy-950 via-navy-900 to-[#123552]" />
+        <div class="absolute inset-0 bg-[repeating-linear-gradient(115deg,transparent_0_46px,#ffffff_46px_47px)] opacity-[0.07]" />
+      </div>
+    )
+  }
+
+  <Container
+    size="wide"
+    class:list={[
+      'grid gap-10 py-12 lg:items-center lg:py-10',
+      stackUntilXl ? 'xl:grid-cols-[minmax(0,21rem)_1fr] xl:gap-8' : 'lg:grid-cols-[minmax(0,21rem)_1fr] lg:gap-14',
+    ]}
+  >
+    <div>
+      <p class:list={['text-eyebrow font-semibold tracking-(--text-eyebrow--letter-spacing) uppercase', dark ? 'text-cyan-300' : 'text-accent-600']}>
+        {eyebrow}
+      </p>
+      <h2 id={headingId} class:list={['mt-3 text-h2', dark ? 'text-white' : 'text-heading']}>{title}</h2>
+    </div>
+
+    <ul class="grid gap-8 sm:grid-cols-2 sm:gap-y-10 lg:gap-0" style={`--cols:${items.length}`} data-cols>
+      {
+        items.map((item) => (
+          <li
+            class:list={[
+              'sm:pr-6 lg:border-l',
+              dark ? 'border-on-dark-line' : 'border-border',
+              many ? 'lg:px-5' : 'lg:px-7',
+              iconPlacement === 'inline' && 'grid grid-cols-[auto_1fr] items-center gap-x-4',
+            ]}
+          >
+            <Icon
+              name={item.icon}
+              size={iconPlacement === 'inline' ? 44 : 32}
+              strokeWidth={1.5}
+              class={dark ? 'text-white' : 'text-accent-600'}
+            />
+            <p class:list={['text-h3 leading-tight font-bold', dark ? 'text-white' : 'text-heading', iconPlacement === 'top' && 'mt-4']}>
+              {item.highlight && <span class="block">{item.highlight}</span>}
+              <span class="block">{item.title}</span>
+            </p>
+            <p
+              class:list={[
+                'text-xs',
+                dark ? 'text-white/70' : 'text-muted',
+                iconPlacement === 'inline' ? 'col-span-2 mt-4' : 'mt-2.5',
+                withCheck && 'grid grid-cols-[auto_1fr] gap-x-4',
+              ]}
+            >
+              {withCheck && (
+                <span class:list={['flex justify-center', iconPlacement === 'inline' ? 'w-11' : 'w-5']}>
+                  <Icon name="process/check" size={20} strokeWidth={2} class="text-cyan-300" />
+                </span>
+              )}
+              <span>{item.text}</span>
+            </p>
+          </li>
+        ))
+      }
+    </ul>
+  </Container>
+</section>
+
+<style>
+  @media (min-width: 64rem) {
+    [data-cols] {
+      grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    }
+  }
+</style>

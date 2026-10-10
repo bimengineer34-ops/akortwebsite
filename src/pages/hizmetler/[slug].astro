@@ -1,0 +1,370 @@
+---
+/**
+ * Hizmet sayfası — her hizmet başlığı (pillar / hub / konu) kendi sayfasına sahiptir: /hizmetler/<slug>.
+ * Düzen: onaylı "hizmet detay şablonu" referansı (docs/reference/service-detail-template.webp):
+ *  1 hero (net değer önerisi, 3 özet, CTA, görsel alanı) → 3 sayfa içi navigasyon (sticky, aktif bölüm vurgusu)
+ *  → 4 "X Nedir?" → 5 hizmet kapsamı (ikonlu kartlar) → 6 koyu bant (çıktılar) → "Ne zaman gerekir?"
+ *  → 7 standartlar → 8 SSS (+ sağda 9 ilgili hizmetler) → CTA.
+ * İçerik kaynağı: src/data/serviceContent/*.ts. Şema: Service + FAQPage (+ BreadcrumbList).
+ * TODO-ASSET: hero görseli ve tanıtım videosu; TODO-CONTENT: hizmet dokümanı (PDF). Doğrulanmamış veri gösterilmez.
+ */
+import type { GetStaticPaths } from 'astro';
+import PageLayout from '@/layouts/PageLayout.astro';
+import Container from '@/components/common/Container.astro';
+import { Image } from 'astro:assets';
+import Icon from '@/components/common/Icon.astro';
+import Button from '@/components/common/Button.astro';
+import Breadcrumbs from '@/components/common/Breadcrumbs.astro';
+import CTASection from '@/components/common/CTASection.astro';
+import FAQ from '@/components/common/FAQ.astro';
+import ServiceCard from '@/components/services/ServiceCard.astro';
+import TechStack from '@/components/services/TechStack.astro';
+import ProjectCard from '@/components/projects/ProjectCard.astro';
+import { getPublished } from '@/utils/content';
+import { sectors } from '@/data/sectors';
+import bimOverlay from '@/assets/graphics/bim/bim-wireframe-overlay.svg?url';
+import type { IconName } from '@/components/common/icons';
+import { pillarImages } from '@/data/images';
+import { chainOf, groupsForPage, getService, childrenOf, navLabel, pillarTitles, serviceCatalog, serviceHref, type ServiceEntry } from '@/data/serviceCatalog';
+import { servicesCta } from '@/data/servicesPage';
+import { serviceSchema } from '@/utils/schema';
+
+export const getStaticPaths = (() => serviceCatalog.map((service) => ({ params: { slug: service.slug }, props: { service } }))) satisfies GetStaticPaths;
+
+interface Props {
+  service: ServiceEntry;
+}
+
+const { service: s } = Astro.props;
+const isDev = import.meta.env.DEV;
+const heroPic = pillarImages[s.pillar];
+const chain = chainOf(s.slug);
+const groups = groupsForPage(s);
+const parent = s.parent ? getService(s.parent) : undefined;
+const siblings = parent ? childrenOf(parent.slug).filter((x) => x.slug !== s.slug) : [];
+const related = [...new Map([...s.related.map((slug) => getService(slug)), ...siblings].map((x) => [x.slug, x])).values()].slice(0, 6);
+const hasStandards = !!s.standards && s.standards.length > 0;
+const label = navLabel(s);
+const isSoftwarePillar = s.kind === 'pillar' && s.pillar === 'yazilim';
+// Yazılım projeleri (Projeler bölümünden tanıtılır): yayında olan ve hizmet grubu "yazilim" işaretli projeler
+const softwareProjects = isSoftwarePillar ? (await getPublished('projects')).filter((p) => p.data.serviceGroup === 'yazilim').sort((a, b) => a.data.order - b.data.order) : [];
+const sectorLabel = (key: string) => sectors.find((x) => x.key === key)?.label ?? key;
+
+// <title>: şablon ("| AKORT Mühendislik") dahil ≤ 65 karakter için uzun başlıklarda kısa ad kullanılır
+const seoTitle = s.title.length <= 45 ? s.title : label;
+const seoDescription = s.summary.length >= 70 ? s.summary : `${s.summary} AKORT Mühendislik danışmanlık hizmeti.`;
+
+const url = new URL(serviceHref(s.slug), Astro.site);
+const schema = Astro.site ? [serviceSchema({ name: s.title, description: s.summary, url, siteUrl: Astro.site })] : [];
+const faqItems = s.faq.map((f) => ({ question: f.q, answer: f.a }));
+const kindLabel = s.kind === 'pillar' ? 'Ana Hizmet' : s.kind === 'hub' ? 'Hizmet Grubu' : (s.group ?? pillarTitles[s.pillar]);
+const crumbs = [
+  { label: 'Hizmetler', href: '/hizmetler' },
+  ...chain.map((c) => ({ label: navLabel(c), href: serviceHref(c.slug) })),
+];
+
+// Hero özet satırı — yalnızca içerik kaydından türetilen, doğrulanabilir bilgiler (iddia/rakam uydurulmaz)
+const highlights: { icon: IconName; title: string; text: string }[] = [
+  { icon: 'process/check', title: `${s.scope.length} kapsam başlığı`, text: 'Ayrıntılı hizmet kapsamı' },
+  { icon: 'process/report', title: `${s.deliverables.length} tipik çıktı`, text: 'Raporlar ve teslimatlar' },
+  hasStandards
+    ? { icon: 'process/strategy', title: 'Standartlara atıf', text: s.standards!.slice(0, 2).join(' · ') }
+    : { icon: 'process/strategy', title: `${s.when.length} uygulama durumu`, text: 'Ne zaman gerekir?' },
+];
+
+const tabs = [
+  { id: 'genel-bakis', label: 'Genel Bakış' },
+  { id: 'hizmet-kapsami', label: 'Hizmet Kapsamı' },
+  { id: 'ciktilar', label: 'Çıktılar' },
+  ...(hasStandards ? [{ id: 'standartlar', label: 'Standartlar' }] : []),
+  { id: 'ne-zaman', label: 'Ne Zaman Gerekir?' },
+  ...(isSoftwarePillar ? [{ id: 'teknolojiler', label: 'Teknolojiler' }] : []),
+  { id: 'sss', label: 'SSS' },
+];
+---
+
+<PageLayout title={seoTitle} description={seoDescription} heading={s.title} lead={s.summary} breadcrumbs={crumbs} schema={schema}>
+  {/* 1 — Net değer önerisi + görsel alanı */}
+  <section slot="hero" class="relative isolate overflow-hidden bg-white" aria-labelledby="page-title">
+    <Container size="content" class="grid items-center gap-10 py-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-12 lg:py-14">
+      <div class="min-w-0">
+        <Breadcrumbs items={crumbs} tone="light" />
+        <p class="eyebrow mt-6">{kindLabel}</p>
+        <h1 id="page-title" class="mt-2 text-display text-heading">{s.title}</h1>
+        <p class="mt-4 max-w-xl text-lead text-body">{s.summary}</p>
+
+        <ul class="mt-6 grid gap-4 sm:grid-cols-3" aria-label="Hizmet özeti">
+          {
+            highlights.map((h) => (
+              <li class="flex items-start gap-2.5">
+                <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-soft text-accent-600">
+                  <Icon name={h.icon} size={18} strokeWidth={1.8} />
+                </span>
+                <span class="min-w-0 text-xs text-muted">
+                  <span class="block text-small font-bold text-heading">{h.title}</span>
+                  {h.text}
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+
+        <div class="mt-7 flex flex-wrap gap-3">
+          <Button href="/iletisim#hizmet-talep-formu" size="lg">{label} İçin Görüşelim</Button>
+          <Button href="#hizmet-kapsami" variant="outline" size="lg">Hizmet Kapsamını İncele</Button>
+        </div>
+      </div>
+
+      {
+        heroPic ? (
+          <div class="relative isolate aspect-[4/3] overflow-hidden rounded-card bg-navy-900">
+            <Image src={heroPic.image} alt={heroPic.alt} widths={[640, 960, 1280]} sizes="(min-width: 1024px) 45vw, 100vw" class="absolute inset-0 h-full w-full object-cover" loading="eager" fetchpriority="high" />
+          </div>
+        ) : (
+          <div class="relative isolate aspect-[4/3] overflow-hidden rounded-card bg-navy-900" aria-hidden="true">
+          <div class="absolute inset-0 bg-[radial-gradient(120%_90%_at_70%_30%,#24405e_0%,#152638_55%,#0b1a2b_100%)]"></div>
+          <div class="bg-tech-grid absolute inset-0 opacity-40"></div>
+          <img src={bimOverlay} alt="" width="1200" height="500" class="absolute top-1/2 left-1/2 w-[115%] max-w-none -translate-x-1/2 -translate-y-1/2 opacity-80" decoding="async" />
+          <Icon name={s.icon} size={72} strokeWidth={1.2} class="absolute right-6 bottom-6 text-white/85" />
+          {isDev && <span class="absolute top-3 left-3 rounded-sm border border-dashed border-white/40 bg-navy-950/70 px-2 py-1 text-[11px] font-semibold text-white">TODO-ASSET · hizmet hero görseli / tanıtım videosu · {label}</span>}
+        </div>
+        )
+      }
+    </Container>
+  </section>
+
+  {/* 3 — Sayfa içi navigasyon */}
+  <nav class="sticky top-(--header-height-scrolled) z-20 border-y border-border bg-white/95 backdrop-blur" aria-label="Sayfa içi bölümler" data-section-nav>
+    <Container size="content">
+      <ul class="flex gap-1 overflow-x-auto py-2 text-small font-medium whitespace-nowrap">
+        {
+          tabs.map((t) => (
+            <li>
+              <a href={`#${t.id}`} data-tab={t.id} class="relative inline-flex min-h-11 items-center px-4 text-body transition-colors hover:text-primary-700 aria-[current=true]:font-bold aria-[current=true]:text-heading aria-[current=true]:after:absolute aria-[current=true]:after:inset-x-3 aria-[current=true]:after:bottom-0 aria-[current=true]:after:h-0.5 aria-[current=true]:after:bg-primary-700">
+                {t.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </Container>
+  </nav>
+
+  {/* 4 — Açıklayıcı içerik */}
+  <section id="genel-bakis" class="scroll-mt-32 bg-white py-12 lg:py-14" aria-labelledby="service-intro-title">
+    <Container size="content" class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:gap-14">
+      <div class="min-w-0">
+        <h2 id="service-intro-title" class="text-h2">{label} Nedir?</h2>
+        <div class="mt-4 space-y-4 text-[0.9375rem] leading-relaxed text-body">
+          {s.intro.map((p) => <p>{p}</p>)}
+        </div>
+        <div class="mt-6">
+          <Button href="#hizmet-kapsami" variant="outline" size="md">Daha Fazla Bilgi</Button>
+        </div>
+      </div>
+      <aside class="card-surface p-(--space-card)" aria-label="Özet ve iletişim">
+        <Icon name={s.icon} size={44} strokeWidth={1.5} class="text-accent-600" />
+        <p class="mt-4 text-h3 font-bold text-heading">Projeniz için görüşelim</p>
+        <p class="mt-2 text-small text-muted">{label} ihtiyacınızı paylaşın, uzman ekibimiz sizinle iletişime geçsin.</p>
+        <div class="mt-5">
+          <Button href="/iletisim#hizmet-talep-formu" size="md">Teklif / Bilgi Al</Button>
+        </div>
+        {
+          parent && (
+            <p class="mt-5 border-t border-border pt-4 text-xs text-muted">
+              Üst hizmet:{' '}
+              <a href={serviceHref(parent.slug)} class="font-semibold text-primary-700 hover:underline">
+                {navLabel(parent)}
+              </a>
+            </p>
+          )
+        }
+      </aside>
+    </Container>
+  </section>
+
+  {/* 5 — Hizmet kapsamı */}
+  <section id="hizmet-kapsami" class="scroll-mt-32 bg-surface-soft py-12 lg:py-14" aria-labelledby="service-scope-title">
+    <Container size="content">
+      <h2 id="service-scope-title" class="text-h2">Hizmet Kapsamımız</h2>
+      <ul class="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {
+          s.scope.map((item, i) => (
+            <li class="card-surface flex flex-col gap-3 p-(--space-card)">
+              <span class="inline-flex size-11 items-center justify-center rounded-control bg-step-bg text-small font-bold tracking-wide text-primary-800" aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <p class="text-small leading-relaxed text-body">{item}</p>
+            </li>
+          ))
+        }
+      </ul>
+
+      {
+        groups.length > 0 && (
+          <div class="mt-12 space-y-10">
+            <h3 class="text-h3 font-bold">{label} Kapsamındaki Hizmetler</h3>
+            {groups.map((g) => (
+              <div>
+                {(groups.length > 1 || g.href) && (
+                  <h4 class="mb-4 text-small font-bold tracking-[0.08em] text-primary-800 uppercase">
+                    {g.href ? (
+                      <a href={g.href} class="inline-flex items-center gap-2 hover:underline">
+                        {g.title}
+                        <Icon name="ui/arrow-right" size={14} />
+                      </a>
+                    ) : (
+                      g.title
+                    )}
+                  </h4>
+                )}
+                <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {g.items.map((c) => (
+                    <li>
+                      <ServiceCard title={navLabel(c)} description={c.summary} icon={c.icon} href={serviceHref(c.slug)} layout="inline" />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )
+      }
+    </Container>
+  </section>
+
+  {/* 6 — Fayda odaklı koyu bant: tipik çıktılar */}
+  <section id="ciktilar" class="scroll-mt-32 bg-navy-900 py-12 text-white lg:py-14" aria-labelledby="service-outputs-title">
+    <Container size="content">
+      <h2 id="service-outputs-title" class="text-h2 text-white">{label} ile Elde Edilen Çıktılar</h2>
+      <ul class="mt-7 grid gap-x-8 gap-y-6 sm:grid-cols-2 xl:grid-cols-4">
+        {
+          s.deliverables.map((d, i) => (
+            <li class="flex items-start gap-3">
+              <span class="inline-flex size-11 shrink-0 items-center justify-center rounded-control bg-white text-small font-bold tracking-wide text-primary-800" aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <p class="text-small leading-relaxed text-white/90">{d}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </Container>
+  </section>
+
+  {/* Ne zaman gerekir */}
+  <section id="ne-zaman" class="scroll-mt-32 bg-white py-12 lg:py-14" aria-labelledby="service-when-title">
+    <Container size="content">
+      <h2 id="service-when-title" class="text-h2">Ne Zaman Gerekir?</h2>
+      <ul class="mt-6 grid gap-3 md:grid-cols-2">
+        {
+          s.when.map((w) => (
+            <li class="card-surface border-l-[3px] border-l-accent-500 p-4 text-small leading-relaxed text-body">{w}</li>
+          ))
+        }
+      </ul>
+    </Container>
+  </section>
+
+  {isSoftwarePillar && <TechStack />}
+
+  {/* 7 + 8 + 9 — Standartlar, SSS ve ilgili hizmetler */}
+  <section class="bg-surface-soft py-12 lg:py-14" aria-label="Standartlar, sıkça sorulan sorular ve ilgili hizmetler">
+    <Container size="content" class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,19rem)] lg:gap-12">
+      <div class="min-w-0 space-y-12">
+        {
+          hasStandards && (
+            <div id="standartlar" class="scroll-mt-32">
+              <h2 class="text-h2">Standartlar ve Referanslar</h2>
+              <ul class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {s.standards!.map((st) => (
+                  <li class="card-surface flex items-center gap-3 p-4">
+                    <Icon name="process/report" size={22} strokeWidth={1.6} class="shrink-0 text-accent-600" />
+                    <span class="text-small font-semibold text-heading">{st}</span>
+                  </li>
+                ))}
+              </ul>
+              <p class="mt-3 text-xs text-muted">Standartlara atıf bilgilendirme amaçlıdır; bir belgelendirme veya yetki anlamına gelmez.</p>
+            </div>
+          )
+        }
+        <div id="sss" class="scroll-mt-32">
+          <h2 class="text-h2">Sıkça Sorulan Sorular</h2>
+          <div class="mt-5">
+            <FAQ items={faqItems} />
+          </div>
+        </div>
+      </div>
+
+      {
+        related.length > 0 && (
+          <aside class="card-surface p-(--space-card) lg:sticky lg:top-36" aria-labelledby="related-services-title">
+            <h2 id="related-services-title" class="text-h3 font-bold">İlgili Hizmetler</h2>
+            <ul class="mt-3 divide-y divide-border">
+              {related.map((r) => (
+                <li>
+                  <a href={serviceHref(r.slug)} class="group flex min-h-11 items-center gap-3 py-2.5 text-small font-medium text-heading hover:text-primary-700">
+                    <Icon name={r.icon} size={22} strokeWidth={1.5} class="shrink-0 text-accent-600" />
+                    <span class="min-w-0 flex-1">{navLabel(r)}</span>
+                    <Icon name="ui/arrow-right" size={14} class="shrink-0" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <div class="mt-4">
+              <Button href="/hizmetler#tum-hizmetler" variant="link">Tüm Hizmetler</Button>
+            </div>
+          </aside>
+        )
+      }
+    </Container>
+  </section>
+
+  {
+    s.kind === 'pillar' && s.pillar === 'yazilim' && (
+      <section class="bg-white py-12 lg:py-14" aria-labelledby="software-projects-title">
+        <Container size="content">
+          <div class="card-surface flex flex-wrap items-center gap-6 p-(--space-card)">
+            <Icon name="_pending/code" size={44} strokeWidth={1.5} class="shrink-0 text-accent-600" />
+            <div class="min-w-0 flex-1">
+              <h2 id="software-projects-title" class="text-h2">
+                Yazılım Projelerimiz
+              </h2>
+              <p class="mt-2 max-w-2xl text-small text-body">Geliştirdiğimiz yazılım ve dijital çözüm projeleri, kapsamı ve sağladığı faydalarla birlikte Projeler bölümünde tanıtılır.</p>
+            </div>
+            <Button href="/projeler" size="lg">Projelerimizi İnceleyin</Button>
+          </div>
+          {softwareProjects.length > 0 && (
+            <ul class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {softwareProjects.map((p) => (
+                <li>
+                  <ProjectCard title={p.data.title} sectorLabel={sectorLabel(p.data.sector)} href={`/projeler/${p.id}`} image={p.data.cover} imageAlt={p.data.coverAlt} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </Container>
+      </section>
+    )
+  }
+
+  <CTASection {...servicesCta} headingId="service-cta-title" />
+</PageLayout>
+
+<script>
+  // Sayfa içi navigasyonda aktif bölümü vurgular (aria-current); JS yoksa bağlantılar yine çalışır.
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-section-nav] [data-tab]'));
+  const sections = links.map((l) => document.getElementById(l.dataset.tab ?? '')).filter((el): el is HTMLElement => !!el);
+  const setActive = (id: string) => links.forEach((l) => l.setAttribute('aria-current', String(l.dataset.tab === id)));
+  if (sections.length && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible) setActive(visible.target.id);
+      },
+      { rootMargin: '-140px 0px -60% 0px' },
+    );
+    sections.forEach((el) => io.observe(el));
+    setActive(sections[0]!.id);
+  }
+</script>

@@ -1,0 +1,49 @@
+---
+/** Blog sayfalama: /blog/sayfa/2, /3 … (1. sayfa /blog). */
+import { heroImages } from '@/data/images';
+import type { GetStaticPaths } from 'astro';
+import PageLayout from '@/layouts/PageLayout.astro';
+import BlogListing from '@/components/blog/BlogListing.astro';
+import NewsletterBand from '@/components/blog/NewsletterBand.astro';
+import { blogHero } from '@/data/blog';
+import { BLOG_PAGE_SIZE, featuredPost, getBlogPosts, pageHref, type BlogPost } from '@/utils/blog';
+
+export const getStaticPaths = (async () => {
+  const allPosts = await getBlogPosts();
+  const featured = featuredPost(allPosts);
+  const rest = allPosts.filter((p) => p !== featured);
+  const totalPages = Math.ceil(rest.length / BLOG_PAGE_SIZE);
+  return Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) => {
+    const page = i + 2;
+    return {
+      params: { page: String(page) },
+      props: { allPosts, posts: rest.slice((page - 1) * BLOG_PAGE_SIZE, page * BLOG_PAGE_SIZE), page, totalPages },
+    };
+  });
+}) satisfies GetStaticPaths;
+
+interface Props {
+  allPosts: BlogPost[];
+  posts: BlogPost[];
+  page: number;
+  totalPages: number;
+}
+
+const { allPosts, posts, page, totalPages } = Astro.props;
+---
+
+<PageLayout
+  title={`Blog — Sayfa ${page}`}
+  description="AKORT Mühendislik teknik yazıları ve uzman görüşleri."
+  heading={blogHero.title}
+  subtitle={blogHero.subtitle}
+  breadcrumbs={[
+    { label: 'Blog', href: '/blog' },
+    { label: `Sayfa ${page}`, href: pageHref(page) },
+  ]}
+  annotations={blogHero.annotations}
+  heroImage={heroImages.blog}
+>
+  <BlogListing allPosts={allPosts} posts={posts} currentPage={page} totalPages={totalPages} pageHref={pageHref} />
+  <NewsletterBand />
+</PageLayout>

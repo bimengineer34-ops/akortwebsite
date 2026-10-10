@@ -1,0 +1,71 @@
+---
+/**
+ * Yatay adım / zaman çizelgesi.
+ * - tone="teal":  Ana Sayfa süreç adımları (01–05, açık teal daire)
+ * - tone="sky":   Hakkımızda kilometre taşları (yıl, açık mavi daire)
+ * Adımlar arasında ince çizgi + ok; 1024px altında dikey timeline.
+ */
+export interface TimelineStep {
+  number: string;
+  title: string;
+  description: string;
+}
+
+interface Props {
+  steps: TimelineStep[];
+  tone?: 'teal' | 'sky' | 'dark';
+  /** Ekran okuyucu ön eki: "Adım 01:" / "2014:" */
+  srPrefix?: (step: TimelineStep) => string;
+}
+
+const { steps, tone = 'teal', srPrefix = (s: TimelineStep) => `Adım ${s.number}: ` } = Astro.props;
+---
+
+<ol class="grid gap-8 lg:gap-0" style={`--steps:${steps.length}`} data-steps>
+  {
+    steps.map((step, i) => (
+      <li class="relative pl-16 lg:pl-0 lg:pr-8">
+        <span
+          class:list={[
+            'absolute top-0 left-0 inline-flex items-center justify-center rounded-full font-bold lg:static',
+            tone !== 'dark' && 'text-primary-800',
+            tone === 'sky'
+              ? 'h-11 w-14 bg-[#dcecf8] text-small shadow-[0_0_0_4px_rgb(220_236_248/0.45)]'
+              : tone === 'dark'
+                ? 'size-11 bg-[#0b5f94] text-small text-white shadow-[0_0_0_4px_rgb(11_95_148/0.25)]'
+                : 'size-11 bg-step-bg text-small',
+          ]}
+          aria-hidden="true"
+        >
+          {step.number}
+        </span>
+        {i < steps.length - 1 && (
+          <>
+            <span
+              aria-hidden="true"
+              class:list={[
+                'absolute top-[1.375rem] right-6 hidden h-px lg:block after:absolute after:-top-[3px] after:right-0 after:size-[7px] after:rotate-45 after:border-t after:border-r',
+                tone === 'dark' ? 'bg-white/45 after:border-white/70' : 'bg-border-strong after:border-muted/70',
+                tone === 'sky' ? 'left-[4.5rem]' : 'left-16',
+              ]}
+            />
+            <span aria-hidden="true" class:list={['absolute top-12 bottom-[-1.5rem] left-[1.375rem] w-px lg:hidden', tone === 'dark' ? 'bg-white/30' : 'bg-border-strong']} />
+          </>
+        )}
+        <h3 class:list={['text-small font-bold lg:mt-3.5', tone === 'dark' ? 'text-white' : 'text-heading']}>
+          <span class="sr-only">{srPrefix(step)}</span>
+          {step.title}
+        </h3>
+        <p class:list={['mt-1.5 text-xs', tone === 'dark' ? 'text-white/70' : 'text-muted']}>{step.description}</p>
+      </li>
+    ))
+  }
+</ol>
+
+<style>
+  @media (min-width: 64rem) {
+    [data-steps] {
+      grid-template-columns: repeat(var(--steps), minmax(0, 1fr));
+    }
+  }
+</style>

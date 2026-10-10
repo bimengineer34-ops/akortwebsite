@@ -1,0 +1,50 @@
+---
+import '@/styles/global.css';
+import { Font } from 'astro:assets';
+import Seo from '@/components/common/Seo.astro';
+import JsonLd from '@/components/common/JsonLd.astro';
+import SkipLink from '@/components/layout/SkipLink.astro';
+import Header from '@/components/layout/Header.astro';
+import Footer from '@/components/layout/Footer.astro';
+import TechnicalAssistant from '@/components/assistant/TechnicalAssistant.astro';
+import { site } from '@/data/site';
+import { organizationSchema, websiteSchema } from '@/utils/schema';
+import type { SeoProps } from '@/utils/seo';
+
+interface Props extends SeoProps {
+  /** Ek JSON-LD şemaları (Service, BlogPosting, FAQPage …) */
+  schema?: Record<string, unknown>[];
+}
+
+const { schema = [], ...seo } = Astro.props;
+const globalSchema = Astro.site ? [organizationSchema(Astro.site), websiteSchema(Astro.site)] : [];
+---
+
+<!doctype html>
+<html lang={site.lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1a2b" />
+    <meta name="format-detection" content="telephone=no" />
+    {/* Favicon seti: AKORT_Logo.png'deki "AK" işaretinden üretildi (public/favicon/) */}
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon/favicon-48.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <Font cssVariable="--font-jakarta" preload />
+    <Seo {...seo} />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <JsonLd schema={[...globalSchema, ...schema]} />
+    <slot name="head" />
+  </head>
+  <body class="flex min-h-dvh flex-col bg-white">
+    <SkipLink />
+    <Header />
+    <main id="main" tabindex="-1" class="flex-1 focus:outline-none">
+      <slot />
+    </main>
+    <Footer />
+    <TechnicalAssistant />
+  </body>
+</html>

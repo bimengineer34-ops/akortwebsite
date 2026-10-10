@@ -1,0 +1,63 @@
+---
+/**
+ * Sayfalama — referans: kare kutular; aktif sayfa lacivert dolu, aralar "…", sonda → oku.
+ */
+import Icon from '@/components/common/Icon.astro';
+
+interface Props {
+  current: number;
+  total: number;
+  href: (page: number) => string;
+}
+
+const { current, total, href } = Astro.props;
+
+// 1 … (current-1) current (current+1) … total
+const pages: (number | 'gap')[] = [];
+for (let p = 1; p <= total; p++) {
+  if (p === 1 || p === total || Math.abs(p - current) <= 1 || (current <= 3 && p <= 3)) pages.push(p);
+  else if (pages[pages.length - 1] !== 'gap') pages.push('gap');
+}
+const box = 'inline-flex size-10 items-center justify-center rounded-control border text-small font-semibold transition-colors';
+---
+
+{
+  total > 1 && (
+    <nav aria-label="Sayfalama" class="mt-8 flex justify-center">
+      <ul class="flex items-center gap-2">
+        {current > 1 && (
+          <li>
+            <a href={href(current - 1)} rel="prev" aria-label="Önceki sayfa" class:list={[box, 'border-border bg-white text-heading hover:border-primary-700']}>
+              <Icon name="ui/arrow-right" size={16} class="rotate-180" />
+            </a>
+          </li>
+        )}
+        {pages.map((p) =>
+          p === 'gap' ? (
+            <li aria-hidden="true" class="px-1 text-muted">
+              …
+            </li>
+          ) : (
+            <li>
+              <a
+                href={href(p)}
+                aria-current={p === current ? 'page' : undefined}
+                aria-label={`Sayfa ${p}`}
+                class:list={[box, p === current ? 'border-primary-800 bg-primary-800 text-white' : 'border-border bg-white text-heading hover:border-primary-700']}
+              >
+                {p}
+              </a>
+            </li>
+          ),
+        )}
+        {current < total && (
+          <li>
+            <a href={href(current + 1)} rel="next" aria-label="Sonraki sayfa" class:list={[box, 'border-border bg-white text-heading hover:border-primary-700']}>
+              <Icon name="ui/arrow-right" size={16} />
+            </a>
+          </li>
+        )}
+      </ul>
+    </nav>
+  )
+}

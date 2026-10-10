@@ -1,0 +1,151 @@
+/*
+ * AKORT Design Tokens
+ * Kaynak: docs/reference/pages/*-approved-reference.jpeg (piksel örneklemesi, JPEG kaynaklı ±3–5 sapma).
+ * Değerler Faz 5'te referansla yan yana karşılaştırılarak ince ayarlanacak. Rastgele renk eklenmez.
+ * `@theme` içindeki her token hem CSS değişkeni hem Tailwind utility'si üretir.
+ */
+
+@theme {
+  /* ---------- Renkler ---------- */
+  --color-*: initial;
+
+  --color-white: #ffffff;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* Lacivert zeminler */
+  --color-navy-950: #0b1a2b; /* footer */
+  --color-navy-900: #0e2236; /* "Neden AKORT" / öne çıkan proje bandı */
+  --color-navy-850: #08243a; /* final CTA bandı */
+  --color-navy-800: #152638; /* hero overlay */
+
+  /* Birincil (butonlar) */
+  --color-primary-700: #0b4f80;
+  --color-primary-800: #03426b; /* hover / aktif filtre */
+
+  /* Accent */
+  --color-accent-600: #0b6f9f; /* Asset Pack ikon stroke değeri */
+  --color-accent-500: #2f86b7; /* CTA dalgası, link vurgusu */
+  --color-accent-400: #55a9d9; /* BIM wireframe */
+  --color-cyan-300: #8fd3f5; /* hero H1 vurgusu (yaklaşık) */
+  --color-cyan-200: #71c4dd;
+  --color-blueprint: #3e7fa8;
+  --color-step-bg: #b4dce1; /* süreç adımı daireleri (örnek: #A7D8DC–#BCDBDE) */
+
+  /* Yüzeyler ve çizgiler */
+  --color-surface: #ffffff;
+  --color-surface-soft: #f3f7fa; /* intro / süreç zemini (#F2F6F9–#F7F8FA) */
+  --color-border: #e2e8ef;
+  --color-border-strong: #cfd8e3;
+
+  /* Metin */
+  --color-heading: #0e1b2c;
+  --color-body: #4a5563;
+  --color-muted: #5f6a79; /* referans ≈ #6B7685; AA için koyulaştırıldı (beyaz 5.5:1, soft 5.1:1, gradient 4.8:1) */
+  --color-on-dark: #ffffff;
+  --color-on-dark-muted: rgb(255 255 255 / 0.72);
+  --color-on-dark-line: rgb(255 255 255 / 0.12);
+
+  /* Durum — referansta yok; yalnızca form hataları için (AA kontrast: beyaz üzerinde 5.4:1) */
+  --color-danger: #b42318;
+
+  /* ---------- Tipografi ---------- */
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  /*
+   * Referans kompozit birebir ölçeklenirse 1440'ta gövde ≈11px olur (okunamaz). Yerleşim oranları birebir korunur;
+   * tipografi gövde 15–16px tabanına oturtulur ve başlık/gövde oranları referanstan alınır
+   * (hero H1 ≈ 3.0×, intro H2 ≈ 2.3×, bölüm H2 ≈ 2.0×, kart başlığı ≈ 1.15× gövde).
+   */
+  --text-display: clamp(2.5rem, 1.9rem + 2.4vw, 3.5rem); /* 40 → 56 (iç sayfa hero) */
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: -0.02em;
+  --text-h1: clamp(1.875rem, 1.45rem + 1.7vw, 2.875rem); /* 30 → 46 (Ana Sayfa hero) */
+  --text-h1--line-height: 1.16;
+  --text-h1--letter-spacing: -0.02em;
+  --text-h2-lg: clamp(1.625rem, 1.35rem + 1.1vw, 2.125rem); /* 26 → 34 ("Uyumun Mühendisliği") */
+  --text-h2-lg--line-height: 1.18;
+  --text-h2-lg--letter-spacing: -0.015em;
+  --text-h2: clamp(1.4375rem, 1.25rem + 0.75vw, 1.75rem); /* 23 → 28 (bölüm başlıkları; referansta tek satır) */
+  --text-h2--line-height: 1.22;
+  --text-h2--letter-spacing: -0.015em;
+  --text-h3: clamp(1rem, 0.96rem + 0.15vw, 1.0625rem); /* 16 → 17 (kart başlığı) */
+  --text-h3--line-height: 1.3;
+  --text-lead: clamp(0.9375rem, 0.9rem + 0.18vw, 1.0625rem); /* 15 → 17 */
+  --text-lead--line-height: 1.6;
+  --text-body: 0.9375rem; /* 15 */
+  --text-body--line-height: 1.65;
+  --text-small: 0.8125rem; /* 13 — kart açıklaması, tarih */
+  --text-small--line-height: 1.55;
+  --text-xs: 0.75rem; /* 12 — mini özellikler, footer alt satır */
+  --text-xs--line-height: 1.45;
+  --text-eyebrow: 0.6875rem; /* 11 */
+  --text-eyebrow--line-height: 1.4;
+  --text-eyebrow--letter-spacing: 0.18em;
+  --text-nav: 0.8125rem; /* 13px — referans ölçeği ~11px, okunabilirlik için alt sınır */
+  --text-button: 0.875rem;
+
+  /* ---------- Breakpoint'ler (test: 375/480/768/1024/1280/1440) ---------- */
+  --breakpoint-xs: 30rem; /* 480 */
+  --breakpoint-sm: 40rem; /* 640 */
+  --breakpoint-md: 48rem; /* 768 */
+  --breakpoint-lg: 64rem; /* 1024 */
+  --breakpoint-xl: 80rem; /* 1280 */
+  --breakpoint-2xl: 90rem; /* 1440 */
+
+  /* ---------- Genişlikler ---------- */
+  /* Ölçüm: referansta içerik kolonu x≈118–937/1055 → 1440'ta ≈1120px; kart satırları x≈58–995 → ≈1280px */
+  --container-content: 70rem; /* 1120 — header, hero, intro, hizmet başlığı (x≈118) */
+  --container-wide: 78.5rem; /* 1256 — Neden AKORT, projeler, süreç, blog, footer (x≈75–995) */
+  --container-cards: 80rem; /* 1280 — hizmet kart satırı (x≈58–995) */
+  --container-prose: 46rem;
+
+  /* ---------- Radius ---------- */
+  --radius-sm: 4px;
+  --radius-control: 6px; /* buton, input, chip */
+  --radius-card: 8px;
+  --radius-full: 9999px;
+
+  /* ---------- Gölge ---------- */
+  --shadow-card: 0 1px 2px rgb(14 34 54 / 0.04), 0 8px 24px -12px rgb(14 34 54 / 0.12);
+  --shadow-card-hover: 0 2px 4px rgb(14 34 54 / 0.06), 0 16px 32px -14px rgb(14 34 54 / 0.2);
+  --shadow-header: 0 1px 0 rgb(14 34 54 / 0.06);
+  --shadow-float: 0 12px 32px -8px rgb(8 36 58 / 0.35);
+
+  /* ---------- Hareket ---------- */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+}
+
+:root {
+  /* Spacing — bölüm ritmi (referans ×1.365) */
+  --space-section: clamp(3.5rem, 2.5rem + 4vw, 6rem);
+  --space-section-sm: clamp(2.5rem, 2rem + 2vw, 4rem);
+  --space-gutter: clamp(1rem, 0.6rem + 1.8vw, 2rem);
+  --space-card: clamp(1.25rem, 1rem + 0.8vw, 1.75rem);
+
+  /* Header (sticky) */
+  --header-height: 4rem;
+  --header-height-scrolled: 3.5rem;
+
+  /* Z-index */
+  --z-base: 1;
+  --z-overlay: 10;
+  --z-header: 50;
+  --z-mobile-nav: 60;
+  --z-assistant: 70;
+  --z-skip-link: 100;
+
+  /* Focus */
+  --focus-ring-color: var(--color-accent-500);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --header-height: 4.75rem; /* referans 56px × 1.365 ≈ 76px */
+    --header-height-scrolled: 4rem;
+  }
+}

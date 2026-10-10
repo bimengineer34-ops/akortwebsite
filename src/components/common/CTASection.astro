@@ -1,0 +1,95 @@
+---
+/**
+ * Final CTA bandı — referans: koyu lacivert gradient, ince dalga çizgileri (cta-wave.svg),
+ * sağda cam cepheli bina görseli; solda eyebrow + H2 + metin, ortada beyaz geniş buton
+ * ve altında 3 ikonlu mini özellik.
+ *
+ * TODO-ASSET: Sağdaki cam cepheli bina görseli.
+ */
+import Container from './Container.astro';
+import Button from './Button.astro';
+import Icon from './Icon.astro';
+import type { IconName } from './icons';
+import { Image } from 'astro:assets';
+import ctaWave from '@/assets/graphics/patterns/cta-wave.svg?url';
+import { ctaImage } from '@/data/images';
+
+interface Props {
+  eyebrow?: string;
+  title: string;
+  text: string;
+  button: { label: string; href: string };
+  features?: { icon: IconName; label: string }[];
+  headingId?: string;
+  /**
+   * stack: başlık+metin solda, buton ve özellikler sağda (Ana Sayfa, Hakkımızda, Hizmetler)
+   * split: başlık solda, metin+özellikler ortada, buton sağda (Uzmanlık Alanları)
+   */
+  layout?: 'stack' | 'split';
+}
+
+const { eyebrow, title, text, button, features = [], headingId = 'cta-title', layout = 'stack' } = Astro.props;
+---
+
+<section class="relative isolate overflow-hidden bg-navy-850 text-white" aria-labelledby={headingId}>
+  <div aria-hidden="true" class="absolute inset-0 -z-10">
+    <div class="absolute inset-0 bg-linear-to-r from-[#062036] via-[#0c3a5a] to-[#0d4466]"></div>
+    <img src={ctaWave} alt="" width="800" height="300" class="absolute inset-0 h-full w-full object-cover opacity-90" decoding="async" />
+    <!-- Bina görseli (lg+): sağ yarıda, sola doğru yumuşak geçiş -->
+    <div class="absolute inset-y-0 right-0 hidden w-[62%] [mask-image:linear-gradient(90deg,transparent,#000_45%)] lg:block">
+      <Image src={ctaImage} alt="" widths={[960, 1440, 1920]} sizes="62vw" class="h-full w-full object-cover object-right opacity-90" loading="lazy" />
+    </div>
+  </div>
+
+  {
+    layout === 'split' ? (
+      <Container size="content" class="grid gap-8 py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)_auto] lg:items-center lg:gap-10 lg:py-8">
+        <div>
+          {eyebrow && <p class="mb-2 text-eyebrow font-semibold tracking-(--text-eyebrow--letter-spacing) text-white/80 uppercase">{eyebrow}</p>}
+          <h2 id={headingId} class="text-h2 text-white">{title}</h2>
+        </div>
+        <div>
+          <p class="text-small text-white/80">{text}</p>
+          {features.length > 0 && (
+            <ul class="mt-4 flex flex-wrap gap-x-5 gap-y-3">
+              {features.map((f) => (
+                <li class="inline-flex items-center gap-2 text-xs whitespace-nowrap text-white/80">
+                  <Icon name={f.icon} size={18} strokeWidth={1.6} class="text-white/90" />
+                  {f.label}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div class="lg:mr-[6%]">
+          <Button href={button.href} variant="white" size="lg" class="w-full sm:w-auto sm:min-w-[15rem]">
+            {button.label}
+          </Button>
+        </div>
+      </Container>
+    ) : (
+      <Container size="content" class="grid gap-8 py-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-14 lg:py-8">
+        <div>
+          {eyebrow && <p class="mb-2 text-eyebrow font-semibold tracking-(--text-eyebrow--letter-spacing) text-white/80 uppercase">{eyebrow}</p>}
+          <h2 id={headingId} class="text-h2 text-white">{title}</h2>
+          <p class="mt-2.5 max-w-[34rem] text-small text-white/80">{text}</p>
+        </div>
+        <div class="flex flex-col gap-5 lg:mr-[8%]">
+          <Button href={button.href} variant="white" size="lg" class="w-full sm:w-auto sm:min-w-[21rem]">
+            {button.label}
+          </Button>
+          {features.length > 0 && (
+            <ul class="flex flex-wrap gap-x-6 gap-y-3 2xl:flex-nowrap">
+              {features.map((f) => (
+                <li class="inline-flex items-center gap-2 text-xs whitespace-nowrap text-white/80">
+                  <Icon name={f.icon} size={18} strokeWidth={1.6} class="text-white/90" />
+                  {f.label}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Container>
+    )
+  }
+</section>

@@ -1,0 +1,53 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  href?: string;
+  type?: 'button' | 'submit' | 'reset';
+  /**
+   * primary: lacivert dolu (header CTA, hero) · outline: beyaz zemin üstü çerçeveli ("Hakkımızda →")
+   * white: koyu CTA bandında beyaz · ghost: koyu zeminde çerçeveli · link: "Detaylı Bilgi →" metin linki
+   */
+  variant?: 'primary' | 'outline' | 'white' | 'ghost' | 'link';
+  size?: 'sm' | 'md' | 'lg';
+  arrow?: boolean;
+  class?: string;
+  [key: `data-${string}`]: string | undefined;
+  [key: `aria-${string}`]: string | boolean | undefined;
+}
+
+const { href, type = 'button', variant = 'primary', size = 'md', arrow = true, class: className, ...rest } = Astro.props;
+
+const base =
+  'group inline-flex items-center justify-center gap-2 font-semibold whitespace-nowrap transition-[background-color,border-color,color,box-shadow] duration-(--duration-fast) ease-(--ease-standard)';
+
+const variants = {
+  primary: 'rounded-control bg-primary-700 text-white hover:bg-primary-800 shadow-[0_1px_2px_rgb(3_66_107/0.2)]',
+  outline: 'rounded-control border border-primary-700 text-primary-700 bg-transparent hover:bg-primary-700 hover:text-white',
+  white: 'rounded-control bg-white text-primary-700 hover:bg-surface-soft',
+  ghost: 'rounded-control border border-white/40 text-white hover:bg-white/10',
+  link: 'text-primary-700 hover:text-accent-600',
+} as const;
+
+const sizes = {
+  sm: 'text-small px-4 py-2',
+  md: 'text-button px-5 py-2.5',
+  lg: 'text-button px-6 py-3.5',
+} as const;
+
+const classes = [base, variants[variant], variant === 'link' ? 'text-small' : sizes[size], className];
+---
+
+{
+  href ? (
+    <a href={href} class:list={classes} {...rest}>
+      <slot />
+      {arrow && <Icon name="ui/arrow-right" size={16} class="transition-transform duration-(--duration-fast) group-hover:translate-x-0.5" />}
+    </a>
+  ) : (
+    <button type={type} class:list={classes} {...rest}>
+      <slot />
+      {arrow && <Icon name="ui/arrow-right" size={16} class="transition-transform duration-(--duration-fast) group-hover:translate-x-0.5" />}
+    </button>
+  )
+}

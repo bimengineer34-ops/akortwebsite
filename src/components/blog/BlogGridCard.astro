@@ -1,0 +1,76 @@
+---
+/**
+ * Blog grid kartı — referans: üstte görsel ve sol üstte lacivert kategori rozeti; altında tarih (takvim) +
+ * okuma süresi (saat), 2 satır başlık, 3 satır özet, "Devamını Oku →". Arama için data-search taşır.
+ */
+import type { ImageMetadata } from 'astro';
+import { Picture } from 'astro:assets';
+import Icon from '@/components/common/Icon.astro';
+import TodoAsset from '@/components/common/TodoAsset.astro';
+import { formatDate, isoDate } from '@/utils/date';
+import { foldTr } from '@/utils/search';
+
+interface Props {
+  title: string;
+  excerpt: string;
+  category: string;
+  date: Date;
+  minutes: number;
+  href: string;
+  image?: ImageMetadata | undefined;
+  imageAlt?: string | undefined;
+}
+
+const { title, excerpt, category, date, minutes, href, image, imageAlt } = Astro.props;
+const searchText = foldTr([title, excerpt, category].join(' '));
+---
+
+<article class="group card-surface relative flex h-full flex-col overflow-hidden hover:shadow-card-hover" data-post data-search={searchText}>
+  <div class="relative overflow-hidden">
+    {
+      image ? (
+        <Picture
+          src={image}
+          alt={imageAlt ?? ''}
+          formats={['avif', 'webp']}
+          widths={[360, 540, 720]}
+          sizes="(min-width: 1024px) 24vw, (min-width: 640px) 50vw, 100vw"
+          class="aspect-[2/1] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          loading="lazy"
+        />
+      ) : (
+        <TodoAsset name="blog kapak" ratio="2 / 1" />
+      )
+    }
+    <span class="absolute top-3 left-3 rounded-sm bg-navy-900 px-2.5 py-1 text-[0.625rem] font-semibold tracking-[0.1em] text-white uppercase">
+      {category}
+    </span>
+  </div>
+  <div class="flex flex-1 flex-col p-(--space-card) pt-4">
+    <p class="flex items-center justify-between text-xs text-muted">
+      <span class="inline-flex items-center gap-1.5">
+        <Icon name="services/project-management" size={14} strokeWidth={2} />
+        <time datetime={isoDate(date)}>{formatDate(date)}</time>
+      </span>
+      <span class="inline-flex items-center gap-1.5">
+        <Icon name="_pending/clock" size={14} strokeWidth={2} />
+        {minutes} dk
+      </span>
+    </p>
+    <h3 class="mt-3 text-h3 leading-snug font-bold">
+      <a href={href} class="after:absolute after:inset-0 after:rounded-card focus-visible:outline-none">{title}</a>
+    </h3>
+    <p class="mt-2 mb-4 line-clamp-3 text-small text-muted">{excerpt}</p>
+    <span class="mt-auto inline-flex items-center gap-1.5 text-small font-semibold text-primary-700" aria-hidden="true">
+      Devamını Oku
+      <Icon name="ui/arrow-right" size={14} class="transition-transform group-hover:translate-x-0.5" />
+    </span>
+  </div>
+</article>
+
+<style>
+  article:has(a:focus-visible) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+</style>

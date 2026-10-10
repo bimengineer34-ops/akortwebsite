@@ -1,0 +1,158 @@
+---
+/**
+ * Mobil menü (< 1024px). Native <dialog> kullanır: focus trap, Esc ile kapanma ve
+ * arka plan inert davranışı tarayıcıdan gelir; JS yalnızca aç/kapa için (~300 byte).
+ */
+import Button from '@/components/common/Button.astro';
+import Icon from '@/components/common/Icon.astro';
+import { mainNav, isActivePath, aboutMenu } from '@/data/navigation';
+import { site } from '@/data/site';
+import { groupsOf, navLabel, pillarEntry, pillarOrder, sectorCatalog, sectorHref, serviceHref } from '@/data/serviceCatalog';
+
+const pathname = Astro.url.pathname;
+const pillars = pillarOrder.map((p) => ({ entry: pillarEntry(p), groups: groupsOf(p) }));
+---
+
+<button
+  type="button"
+  class="inline-flex size-11 items-center justify-center rounded-control text-heading hover:text-primary-700 lg:hidden"
+  aria-label="Menüyü aç"
+  aria-haspopup="dialog"
+  aria-controls="mobile-nav"
+  data-mobile-nav-open
+>
+  <Icon name="_pending/menu" size={26} />
+</button>
+
+<dialog
+  id="mobile-nav"
+  aria-label="Mobil menü"
+  class="m-0 ml-auto h-dvh max-h-none w-full max-w-sm bg-white p-0 text-heading backdrop:bg-navy-950/60 lg:hidden"
+>
+  <div class="h-full overflow-y-auto">
+  <div class="flex h-(--header-height) items-center justify-between border-b border-border px-(--space-gutter)">
+    <span class="eyebrow">Menü</span>
+    <button
+      type="button"
+      class="inline-flex size-11 items-center justify-center rounded-control hover:text-primary-700"
+      aria-label="Menüyü kapat"
+      data-mobile-nav-close
+    >
+      <Icon name="_pending/close" size={26} />
+    </button>
+  </div>
+  <nav aria-label="Mobil ana menü" class="px-(--space-gutter) py-4">
+    <ul class="divide-y divide-border">
+      {
+        mainNav.map((item) => {
+          const active = isActivePath(item.href, pathname);
+          const rowCls = ['flex min-h-12 items-center justify-between py-3 text-lead font-semibold', active ? 'text-primary-700' : 'text-heading'];
+          if (item.href === '/hizmetler' || item.href === '/uzmanlik-alanlari' || item.href === '/hakkimizda') {
+            // Alt başlıkları olan öğe: native <details> akordeon (JS yok). Üst sayfa linki ilk satırda.
+            return (
+              <li>
+                <details class="group/acc" open={active}>
+                  <summary class:list={[...rowCls, 'cursor-pointer list-none [&::-webkit-details-marker]:hidden']}>
+                    {item.label}
+                    <Icon name="_pending/chevron-down" size={20} class="text-accent-600 transition-transform group-open/acc:rotate-180" />
+                  </summary>
+                  <div class="pb-3 pl-1">
+                    <a href={item.href} class="flex min-h-11 items-center gap-2 text-small font-bold text-primary-700">
+                      Tüm {item.label}
+                      <Icon name="ui/arrow-right" size={14} />
+                    </a>
+                    {item.href === '/hakkimizda' ? (
+                      <ul class="mt-1">
+                        {[...aboutMenu.corporate.slice(1), aboutMenu.workModel, ...aboutMenu.workModel.steps].map((l) => (
+                          <li>
+                            <a href={l.href} class="block py-2.5 text-small text-body">
+                              {l.label}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : item.href === '/hizmetler' ? (
+                      <div class="mt-1 space-y-1">
+                        {pillars.map(({ entry, groups }) => (
+                          <details class="group/sub rounded-control border border-border">
+                            <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-small font-semibold [&::-webkit-details-marker]:hidden">
+                              {navLabel(entry)}
+                              <Icon name="_pending/chevron-down" size={16} class="text-muted transition-transform group-open/sub:rotate-180" />
+                            </summary>
+                            <div class="space-y-3 border-t border-border px-3 py-3">
+                              <a href={serviceHref(entry.slug)} class="block text-xs font-bold text-primary-700">
+                                {navLabel(entry)} — genel bakış
+                              </a>
+                              {groups.map((g) => (
+                                <div>
+                                  <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-primary-800 uppercase">
+                                    {g.href ? <a href={g.href}>{g.title}</a> : g.title}
+                                  </p>
+                                  <ul class="mt-1">
+                                    {g.items.map((it) => (
+                                      <li>
+                                        <a href={serviceHref(it.slug)} class="block py-2 text-small text-body">
+                                          {navLabel(it)}
+                                        </a>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        ))}
+                      </div>
+                    ) : (
+                      <ul class="mt-1">
+                        {sectorCatalog.map((sec) => (
+                          <li>
+                            <a href={sectorHref(sec.slug)} class="block py-2.5 text-small text-body">
+                              {sec.title}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </details>
+              </li>
+            );
+          }
+          return (
+            <li>
+              <a href={item.href} aria-current={active ? 'page' : undefined} class:list={rowCls}>
+                {item.label}
+                <Icon name="ui/arrow-right" size={18} class="text-accent-600" />
+              </a>
+            </li>
+          );
+        })
+      }
+    </ul>
+    <Button href={site.primaryCta.href} size="lg" class="mt-6 w-full">
+      {site.primaryCta.label}
+    </Button>
+  </nav>
+  </div>
+</dialog>
+
+<script>
+  const dialog = document.getElementById('mobile-nav') as HTMLDialogElement | null;
+  const openBtn = document.querySelector<HTMLButtonElement>('[data-mobile-nav-open]');
+  const closeBtn = document.querySelector<HTMLButtonElement>('[data-mobile-nav-close]');
+
+  if (dialog && openBtn && closeBtn) {
+    openBtn.addEventListener('click', () => dialog.showModal());
+    closeBtn.addEventListener('click', () => dialog.close());
+    // Backdrop'a tıklayınca kapat
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('close', () => openBtn.focus());
+    // Masaüstü genişliğe geçilirse açık kalmasın
+    matchMedia('(min-width: 64rem)').addEventListener('change', (e) => {
+      if (e.matches && dialog.open) dialog.close();
+    });
+  }
+</script>

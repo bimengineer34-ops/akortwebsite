@@ -1,0 +1,143 @@
+---
+/**
+ * Uzmanlık Alanları — tek tasarım kaynağı: docs/reference/pages/expertise-approved-reference.jpeg
+ * Section sırası: Hero (CTA'lı) → Daha İyi Yapılar İçin Uzman Mühendislik (ikonlu sütunlar) →
+ * Uzmanlık Alanlarımız (4 + 3 sektör kartı) → Entegre Uzmanlık (koyu, ✓) → Çalışma Disiplinlerimiz (6 kart) → CTA (3 kolon).
+ */
+import { heroImages, introImages, sectorImages } from '@/data/images';
+import PageLayout from '@/layouts/PageLayout.astro';
+import Container from '@/components/common/Container.astro';
+import SectionHeading from '@/components/common/SectionHeading.astro';
+import IntroSplit from '@/components/common/IntroSplit.astro';
+import FeatureBand from '@/components/common/FeatureBand.astro';
+import CTASection from '@/components/common/CTASection.astro';
+import ServiceCard from '@/components/services/ServiceCard.astro';
+import SectorCard from '@/components/expertise/SectorCard.astro';
+import Icon from '@/components/common/Icon.astro';
+import { sectorCatalog, sectorHref } from '@/data/serviceCatalog';
+import {
+  expertiseHero,
+  expertiseIntro,
+  expertiseSectors,
+  expertiseIntegrated,
+  expertiseDisciplines,
+  expertiseCta,
+} from '@/data/expertisePage';
+
+const schema = Astro.site
+  ? [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: 'Uzmanlık Alanları | AKORT Mühendislik',
+        url: new URL('/uzmanlik-alanlari', Astro.site).href,
+        about: [...expertiseSectors.primary, ...expertiseSectors.secondary].map((s) => ({ '@type': 'Thing', name: s.title })),
+        inLanguage: 'tr-TR',
+      },
+    ]
+  : [];
+
+/** Elimizde görseli olan sektörlerde kart görselini kullanır; diğerleri yer tutucu kalır. */
+const cardImg = (href: string) => {
+  const x = sectorImages[href.split('/').pop() ?? ''];
+  return x ? { image: x.image, imageAlt: x.alt } : {};
+};
+---
+
+<PageLayout
+  title="Uzmanlık Alanları"
+  description="Sağlık, eğitim, karma kullanım, ticari, kampüs ve kamu yapıları ile mevcut yapıların analizi ve enerji optimizasyonunda uzman mühendislik danışmanlığı."
+  heading={expertiseHero.title}
+  lead={expertiseHero.lead}
+  breadcrumbs={[{ label: 'Uzmanlık Alanları', href: '/uzmanlik-alanlari' }]}
+  annotations={expertiseHero.annotations}
+  heroCta={expertiseHero.cta}
+  heroImage={heroImages.uzmanlik}
+  schema={schema}
+>
+  <IntroSplit
+    eyebrow={expertiseIntro.eyebrow}
+    title={expertiseIntro.title}
+    body={expertiseIntro.body}
+    cta={expertiseIntro.cta}
+    iconPillars={expertiseIntro.iconPillars}
+    slogan={expertiseIntro.slogan}
+    containerSize="wide"
+    image={introImages.uzmanlik}
+    headingId="expertise-intro-title"
+  />
+
+  <section id="uzmanlik-alanlarimiz" class="scroll-mt-4 bg-white py-12 lg:py-11" aria-labelledby="sectors-title">
+    <Container size="wide">
+      <SectionHeading eyebrow={expertiseSectors.eyebrow} title={expertiseSectors.title} lead={expertiseSectors.lead} id="sectors-title" />
+    </Container>
+    <Container size="cards" class="mt-7 space-y-4">
+      <ul class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {
+          expertiseSectors.primary.map((s) => (
+            <li>
+              <SectorCard title={s.title} text={s.text} icon={s.icon} href={s.href} imageTodo={s.imageTodo} {...cardImg(s.href)} />
+            </li>
+          ))
+        }
+      </ul>
+      <ul class="grid gap-4 md:grid-cols-3">
+        {
+          expertiseSectors.secondary.map((s) => (
+            <li>
+              <SectorCard title={s.title} text={s.text} icon={s.icon} href={s.href} imageTodo={s.imageTodo} ratio="29 / 10" {...cardImg(s.href)} />
+            </li>
+          ))
+        }
+      </ul>
+    </Container>
+  </section>
+
+  <section class="bg-white pb-12 lg:pb-14" aria-labelledby="all-sectors-title">
+    <Container size="wide">
+      <p class="eyebrow">Tüm Yapı Tipleri</p>
+      <h2 id="all-sectors-title" class="mt-2 text-h2">Uzmanlık Alanlarının Detayları</h2>
+      <ul class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {sectorCatalog.map((sec) => (
+          <li>
+            <a href={sectorHref(sec.slug)} class="card-surface group flex h-full items-start gap-3 p-4 hover:border-border-strong hover:shadow-card-hover">
+              <Icon name={sec.icon} size={32} strokeWidth={1.5} class="text-accent-600" />
+              <span>
+                <span class="block text-small font-bold text-heading group-hover:text-primary-700">{sec.title}</span>
+                <span class="mt-0.5 block text-xs text-muted">{sec.summary}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </Container>
+  </section>
+
+  <FeatureBand
+    eyebrow={expertiseIntegrated.eyebrow}
+    title={expertiseIntegrated.title}
+    items={expertiseIntegrated.items}
+    iconPlacement="inline"
+    withCheck
+    headingId="integrated-title"
+  />
+
+  <section class="bg-white py-12 lg:py-11" aria-labelledby="disciplines-title">
+    <Container size="wide">
+      <SectionHeading {...expertiseDisciplines} id="disciplines-title" />
+    </Container>
+    <Container size="cards" class="mt-7">
+      <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {
+          expertiseDisciplines.items.map((d) => (
+            <li>
+              <ServiceCard title={d.title} description={d.text} icon={d.icon} href={d.href} layout="header" />
+            </li>
+          ))
+        }
+      </ul>
+    </Container>
+  </section>
+
+  <CTASection {...expertiseCta} layout="split" headingId="expertise-cta-title" />
+</PageLayout>

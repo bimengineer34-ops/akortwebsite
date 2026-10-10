@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /yonetim
+Disallow: /api/
+
+# TODO-CONTENT: Domain doğrulandığında güncellenecek (astro.config.mjs → site).
+Sitemap: https://www.akortmuhendislik.com/sitemap-index.xml

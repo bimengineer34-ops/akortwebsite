@@ -1,0 +1,53 @@
+---
+/** Blog kategori sayfası — yalnızca en az bir yayınlanmış yazısı olan kategoriler üretilir. */
+import { heroImages } from '@/data/images';
+import type { GetStaticPaths } from 'astro';
+import PageLayout from '@/layouts/PageLayout.astro';
+import BlogListing from '@/components/blog/BlogListing.astro';
+import NewsletterBand from '@/components/blog/NewsletterBand.astro';
+import { blogHero } from '@/data/blog';
+import { categoryCounts, categoryHref, categorySlug, getBlogPosts, type BlogCategory, type BlogPost } from '@/utils/blog';
+
+export const getStaticPaths = (async () => {
+  const allPosts = await getBlogPosts();
+  return categoryCounts(allPosts).map(({ category }) => ({
+    params: { slug: categorySlug(category) },
+    props: { allPosts, category, posts: allPosts.filter((p) => p.data.category === category) },
+  }));
+}) satisfies GetStaticPaths;
+
+interface Props {
+  allPosts: BlogPost[];
+  category: BlogCategory;
+  posts: BlogPost[];
+}
+
+const { allPosts, category, posts } = Astro.props;
+const href = categoryHref(category);
+---
+
+<PageLayout
+  title={`${category} Yazıları`}
+  description={`${category} alanında AKORT Mühendislik teknik yazıları, rehberleri ve uzman görüşleri.`}
+  heading={category}
+  subtitle="Kategori"
+  breadcrumbs={[
+    { label: 'Blog', href: '/blog' },
+    { label: category, href },
+  ]}
+  annotations={blogHero.annotations}
+  heroImage={heroImages.blog}
+>
+  <BlogListing
+    allPosts={allPosts}
+    posts={posts}
+    currentPage={1}
+    totalPages={1}
+    pageHref={() => href}
+    eyebrow="Kategori"
+    title={category}
+    lead={`${posts.length} yazı`}
+    activeCategory={category}
+  />
+  <NewsletterBand />
+</PageLayout>

@@ -1,0 +1,101 @@
+---
+/**
+ * Bülten bandı — referans: koyu lacivert, solda eyebrow + 2 satır H2 + metin, ortada yuvarlak zarf ikonu,
+ * sağda form başlığı, e-posta + "Abone Ol" ve KVKK onay kutusu.
+ * Endpoint tanımlı değilken (newsletter.endpoint = null) gönderim yapılmaz, bilgilendirme mesajı gösterilir.
+ * TODO-ASSET: sağdaki cam cepheli bina görseli (CTA ile ortak).
+ */
+import Container from '@/components/common/Container.astro';
+import Icon from '@/components/common/Icon.astro';
+import ctaWave from '@/assets/graphics/patterns/cta-wave.svg?url';
+import { newsletter } from '@/data/blog';
+
+const [consentBefore, consentAfter] = newsletter.consent.split('{kvkk}');
+---
+
+<section class="relative isolate overflow-hidden bg-navy-850 text-white" aria-labelledby="newsletter-title">
+  <div aria-hidden="true" class="absolute inset-0 -z-10">
+    <div class="absolute inset-0 bg-linear-to-r from-[#062036] via-[#0c3a5a] to-[#0d4466]"></div>
+    <img src={ctaWave} alt="" width="800" height="300" class="absolute inset-0 h-full w-full object-cover opacity-90" decoding="async" />
+  </div>
+
+  <Container size="content" class="grid gap-8 py-10 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,24rem)] lg:items-center lg:gap-10 lg:py-9">
+    <div>
+      <p class="text-eyebrow font-semibold tracking-(--text-eyebrow--letter-spacing) text-white/80 uppercase">{newsletter.eyebrow}</p>
+      <h2 id="newsletter-title" class="mt-2 text-h2 text-white">{newsletter.title}</h2>
+      <p class="mt-3 max-w-[32rem] text-small text-white/80">{newsletter.text}</p>
+    </div>
+
+    <span aria-hidden="true" class="hidden size-20 items-center justify-center rounded-full bg-primary-700/70 shadow-[0_0_0_10px_rgb(11_79_128/0.25)] lg:inline-flex">
+      <Icon name={newsletter.icon} size={36} strokeWidth={1.5} class="text-white" />
+    </span>
+
+    <form class="w-full" data-newsletter data-endpoint={newsletter.endpoint ?? ''} novalidate>
+      <p class="text-small font-bold text-white">{newsletter.formTitle}</p>
+      <div class="mt-3 flex rounded-control bg-white p-1.5 shadow-float">
+        <label for="newsletter-email" class="sr-only">{newsletter.placeholder}</label>
+        <input
+          id="newsletter-email"
+          name="email"
+          type="email"
+          required
+          autocomplete="email"
+          placeholder={newsletter.placeholder}
+          class="min-w-0 flex-1 rounded-control px-3 text-small text-heading placeholder:text-muted focus:outline-none"
+        />
+        <button type="submit" class="inline-flex items-center gap-2 rounded-control bg-primary-700 px-4 py-2.5 text-small font-semibold text-white hover:bg-primary-800">
+          {newsletter.button}
+          <Icon name="ui/arrow-right" size={16} />
+        </button>
+      </div>
+      <label class="mt-3 flex items-start gap-2.5 text-xs text-white/80">
+        <input name="kvkk" type="checkbox" required class="mt-0.5 size-4 shrink-0 accent-primary-700" />
+        <span>
+          {consentBefore}<a href="/kvkk" class="underline underline-offset-2 hover:text-white">KVKK</a>{consentAfter}
+        </span>
+      </label>
+      <p class="mt-3 min-h-5 text-xs font-semibold text-cyan-200" role="status" aria-live="polite" data-newsletter-status></p>
+    </form>
+  </Container>
+</section>
+
+<script>
+  import { newsletter } from '@/data/blog';
+
+  document.querySelectorAll<HTMLFormElement>('[data-newsletter]').forEach((form) => {
+    const status = form.querySelector<HTMLElement>('[data-newsletter-status]');
+    const email = form.querySelector<HTMLInputElement>('input[name=email]');
+    const consent = form.querySelector<HTMLInputElement>('input[name=kvkk]');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!status || !email || !consent) return;
+      if (!email.checkValidity()) {
+        status.textContent = 'Lütfen geçerli bir e-posta adresi girin.';
+        email.focus();
+        return;
+      }
+      if (!consent.checked) {
+        status.textContent = 'Devam etmek için KVKK onayını işaretleyin.';
+        consent.focus();
+        return;
+      }
+      const endpoint = form.dataset.endpoint;
+      if (!endpoint) {
+        status.textContent = newsletter.pendingMessage;
+        return;
+      }
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.value }),
+        });
+        status.textContent = res.ok ? 'Teşekkürler! Bültenimize abone oldunuz.' : 'Bir hata oluştu, lütfen tekrar deneyin.';
+        if (res.ok) form.reset();
+      } catch {
+        status.textContent = 'Bir hata oluştu, lütfen tekrar deneyin.';
+      }
+    });
+  });
+</script>

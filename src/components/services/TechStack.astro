@@ -1,0 +1,50 @@
+---
+/**
+ * "Kullandığımız Teknolojiler" — yazılım hizmeti sayfasında. Yalnızca doğrulanmış teknolojiler yayında görünür (NO_FAKE_DATA);
+ * geliştirme modunda doğrulanmamış olanlar kesikli çerçeve ve "doğrulanmadı" etiketiyle gösterilir.
+ */
+import Container from '@/components/common/Container.astro';
+import { techStack } from '@/data/techStack';
+import { isPublishable } from '@/utils/verified';
+
+const isDev = import.meta.env.DEV;
+const groups = techStack.groups
+  .map((g) => ({ ...g, items: g.items.filter((i) => isPublishable(i)) }))
+  .filter((g) => g.items.length > 0);
+---
+
+{
+  groups.length > 0 && (
+    <section id="teknolojiler" class="scroll-mt-32 bg-surface-soft py-12 lg:py-14" aria-labelledby="tech-title">
+      <Container size="content">
+        <p class="eyebrow">{techStack.eyebrow}</p>
+        <h2 id="tech-title" class="mt-2 text-h2">
+          {techStack.title}
+        </h2>
+        <p class="mt-3 max-w-3xl text-[0.9375rem] leading-relaxed text-body">{techStack.lead}</p>
+        <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {groups.map((g) => (
+            <div class="card-surface p-(--space-card)">
+              <h3 class="text-h3 font-bold">{g.title}</h3>
+              {g.text && <p class="mt-1 text-xs text-muted">{g.text}</p>}
+              <ul class="mt-4 flex flex-wrap gap-2" aria-label={`${g.title} teknolojileri`}>
+                {g.items.map((i) => (
+                  <li
+                    class:list={[
+                      'rounded-control border px-3 py-1.5 text-small font-medium',
+                      i.verified ? 'border-border bg-white text-heading' : 'border-dashed border-muted/50 bg-white/60 text-muted',
+                    ]}
+                  >
+                    {i.value}
+                    {isDev && !i.verified && <span class="ml-1 text-[10px] font-semibold text-muted">· doğrulanmadı</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <p class="mt-6 max-w-3xl text-xs text-muted">{techStack.note}</p>
+      </Container>
+    </section>
+  )
+}

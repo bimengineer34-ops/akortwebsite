@@ -1,0 +1,55 @@
+---
+/**
+ * Hizmet dizini — 5 ana başlık, her biri kendi gruplarıyla; listedeki HER başlık kendi sayfasına gider.
+ * Hizmetler sayfasında "Tüm hizmet başlıkları" olarak kullanılır (iç linkleme + kullanıcı için tek bakışta kapsam).
+ */
+import Icon from '@/components/common/Icon.astro';
+import { groupsOf, navLabel, pillarEntry, pillarOrder, serviceHref } from '@/data/serviceCatalog';
+
+const pillars = pillarOrder.map((p) => ({ entry: pillarEntry(p), groups: groupsOf(p) }));
+---
+
+<div class="grid gap-5 lg:grid-cols-2">
+  {
+    pillars.map(({ entry, groups }) => (
+      <section class="card-surface p-(--space-card)" aria-labelledby={`dir-${entry.slug}`}>
+        <div class="flex items-start gap-4">
+          <Icon name={entry.icon} size={40} strokeWidth={1.5} class="text-accent-600" />
+          <div>
+            <h3 id={`dir-${entry.slug}`} class="text-h3 font-bold">
+              <a href={serviceHref(entry.slug)} class="text-heading hover:text-primary-700">
+                {navLabel(entry)}
+              </a>
+            </h3>
+            <p class="mt-1 text-xs text-muted">{entry.summary}</p>
+          </div>
+        </div>
+        <div class="mt-5 space-y-5">
+          {groups.map((g) => (
+            <div>
+              <p class="text-xs font-bold tracking-[0.08em] text-primary-800 uppercase">
+                {g.href ? (
+                  <a href={g.href} class="hover:underline">
+                    {g.title}
+                  </a>
+                ) : (
+                  g.title
+                )}
+              </p>
+              <ul class="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                {g.items.map((item) => (
+                  <li>
+                    <a href={serviceHref(item.slug)} class="inline-flex items-start gap-1.5 py-1 text-small text-body hover:text-primary-700">
+                      <Icon name="ui/arrow-right" size={12} strokeWidth={2.2} class="mt-[0.4em] text-accent-600" />
+                      {navLabel(item)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+    ))
+  }
+</div>

@@ -1,0 +1,50 @@
+---
+/**
+ * Harita — tıkla-yükle (click-to-load). Kullanıcı istemeden Google Haritalar'a istek atılmaz
+ * (KVKK / çerez + LCP/INP performansı). Referanstaki harita crop'u lisanslı tile içerdiği için kullanılmaz.
+ */
+import Icon from '@/components/common/Icon.astro';
+import { contactMap } from '@/data/contactPage';
+
+interface Props {
+  /** Haritada aranacak adres (doğrulanmış olmalı) */
+  query: string;
+  label: string;
+}
+
+const { query, label } = Astro.props;
+const embedSrc = `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+---
+
+<div class="relative h-[clamp(16rem,24vw,21rem)] w-full overflow-hidden rounded-card border border-border bg-surface-soft" data-map data-src={embedSrc}>
+  <div class="bg-tech-grid absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center" data-map-placeholder>
+    <span class="inline-flex items-center gap-2.5 rounded-control bg-navy-900 px-4 py-2.5 text-small font-semibold text-white shadow-float">
+      <Icon name="ui/location" size={18} class="text-white" />
+      {label}
+    </span>
+    <button
+      type="button"
+      class="inline-flex items-center gap-2 rounded-control border border-primary-700 bg-white px-4 py-2 text-small font-semibold text-primary-700 hover:bg-primary-700 hover:text-white"
+      data-map-load
+    >
+      {contactMap.loadLabel}
+    </button>
+    <p class="max-w-sm text-xs text-muted">{contactMap.consentNote}</p>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-map]').forEach((map) => {
+    map.querySelector('[data-map-load]')?.addEventListener('click', () => {
+      const iframe = document.createElement('iframe');
+      iframe.src = map.dataset.src ?? '';
+      iframe.title = 'Ofis konumu haritası';
+      iframe.loading = 'lazy';
+      iframe.referrerPolicy = 'no-referrer-when-downgrade';
+      iframe.className = 'absolute inset-0 h-full w-full border-0';
+      map.querySelector('[data-map-placeholder]')?.remove();
+      map.append(iframe);
+      iframe.focus();
+    });
+  });
+</script>

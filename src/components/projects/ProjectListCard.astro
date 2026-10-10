@@ -1,0 +1,80 @@
+---
+/**
+ * Projeler listesi kartı — referans: üstte görsel; altında büyük harfli sektör etiketi, kalın başlık,
+ * konum (pin), 3 satır açıklama ve sağda yuvarlak ok butonu. Filtre/arama için data-* öznitelikleri taşır.
+ */
+import type { ImageMetadata } from 'astro';
+import { Picture } from 'astro:assets';
+import Icon from '@/components/common/Icon.astro';
+import TodoAsset from '@/components/common/TodoAsset.astro';
+import { foldTr } from '@/utils/search';
+
+interface Props {
+  title: string;
+  sector: string;
+  sectorLabel: string;
+  location?: string | undefined;
+  summary: string;
+  href: string;
+  image?: ImageMetadata | undefined;
+  imageAlt?: string | undefined;
+}
+
+const { title, sector, sectorLabel, location, summary, href, image, imageAlt } = Astro.props;
+const searchText = foldTr([title, sectorLabel, location ?? '', summary].join(' '));
+---
+
+<article
+  class="group card-surface relative flex h-full flex-col overflow-hidden hover:shadow-card-hover"
+  data-project
+  data-sector={sector}
+  data-search={searchText}
+>
+  <div class="overflow-hidden">
+    {
+      image ? (
+        <Picture
+          src={image}
+          alt={imageAlt ?? ''}
+          formats={['avif', 'webp']}
+          widths={[400, 640, 960]}
+          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+          class="aspect-[5/2] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          loading="lazy"
+        />
+      ) : (
+        <TodoAsset name={`proje görseli · ${title}`} ratio="5 / 2" labelPosition="top" />
+      )
+    }
+  </div>
+  <div class="grid flex-1 grid-cols-[1fr_auto] items-center gap-x-4 p-(--space-card)">
+    <div class="min-w-0">
+      <p class="text-[0.625rem] font-semibold tracking-[0.14em] text-muted uppercase">{sectorLabel}</p>
+      <h3 class="mt-1 text-h3 font-bold">
+        <a href={href} class="after:absolute after:inset-0 after:rounded-card focus-visible:outline-none">{title}</a>
+      </h3>
+      {
+        location && (
+          <p class="mt-1.5 inline-flex items-center gap-1.5 text-xs text-body">
+            <Icon name="ui/location" size={14} strokeWidth={2} class="text-primary-700" />
+            {location}
+          </p>
+        )
+      }
+      <p class="mt-2 text-xs text-muted">{summary}</p>
+    </div>
+    <span
+      aria-hidden="true"
+      class="inline-flex size-9 items-center justify-center rounded-full border border-primary-700/50 text-primary-700 transition-colors group-hover:bg-primary-700 group-hover:text-white"
+    >
+      <Icon name="ui/arrow-right" size={16} />
+    </span>
+  </div>
+</article>
+
+<style>
+  article:has(a:focus-visible) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+</style>

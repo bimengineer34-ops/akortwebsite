@@ -1,0 +1,136 @@
+---
+/**
+ * Hizmetler — tek tasarım kaynağı: docs/reference/pages/services-approved-reference.jpeg
+ * Section sırası: Hero → Mühendislik Odaklı Danışmanlık Hizmetleri → Danışmanlık Hizmetlerimiz (8 kart) →
+ * Öne Çıkan Hizmet → Sürecimiz (koyu) → Fark Yaratan Danışmanlık Anlayışı (açık) → CTA.
+ */
+import { heroImages, introImages, wireframeImages } from '@/data/images';
+import PageLayout from '@/layouts/PageLayout.astro';
+import Container from '@/components/common/Container.astro';
+import SectionHeading from '@/components/common/SectionHeading.astro';
+import IntroSplit from '@/components/common/IntroSplit.astro';
+import FeatureBand, { type FeatureBandItem } from '@/components/common/FeatureBand.astro';
+import ProcessTimeline from '@/components/common/ProcessTimeline.astro';
+import CTASection from '@/components/common/CTASection.astro';
+import ServiceCard from '@/components/services/ServiceCard.astro';
+import ServiceDirectory from '@/components/services/ServiceDirectory.astro';
+import FeaturedService from '@/components/services/FeaturedService.astro';
+import { services, serviceHref } from '@/data/services';
+import {
+  servicesHero,
+  servicesIntro,
+  servicesGrid,
+  featuredService,
+  servicesProcess,
+  servicesWhy,
+  servicesCta,
+} from '@/data/servicesPage';
+import { isPublishable } from '@/utils/verified';
+
+// NO_FAKE_DATA: doğrulanmamış "15+ yıllık" ifadesi production'da sayısız karşılığına döner.
+const whyItems: FeatureBandItem[] = servicesWhy.items.map((item) => ({
+  icon: item.icon,
+  title: item.title,
+  text:
+    typeof item.text === 'string'
+      ? item.text
+      : isPublishable(item.text)
+        ? item.text.value
+        : (item.fallbackText ?? ''),
+}));
+
+const listSchema = Astro.site
+  ? [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: 'AKORT Mühendislik Danışmanlık Hizmetleri',
+        itemListElement: services.map((s, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          item: {
+            '@type': 'Service',
+            name: s.title,
+            description: s.description,
+            url: new URL(serviceHref(s.slug), Astro.site).href,
+            provider: { '@id': new URL('/#organization', Astro.site).href },
+          },
+        })),
+      },
+    ]
+  : [];
+---
+
+<PageLayout
+  title="Hizmetler"
+  description="Mühendislik danışmanlığı, BIM ve dijital mühendislik, MEP, enerji verimliliği, keşif-metraj-hakediş kontrolü ve teknik proje yönetimi hizmetlerimiz."
+  heading={servicesHero.title}
+  lead={servicesHero.lead}
+  breadcrumbs={[{ label: 'Hizmetler', href: '/hizmetler' }]}
+  annotations={servicesHero.annotations}
+  heroImage={heroImages.hizmetler}
+  schema={listSchema}
+>
+  <IntroSplit {...servicesIntro} image={introImages.hizmetler} headingId="services-intro-title" />
+
+  <section id="danismanlik-hizmetleri" class="bg-white py-12 lg:py-11" aria-labelledby="services-list-title">
+    <Container size="content">
+      <SectionHeading {...servicesGrid} id="services-list-title" />
+    </Container>
+    <Container size="cards" class="mt-7">
+      <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {
+          services.map((s) => (
+            <li>
+              <ServiceCard title={s.title} description={s.description} icon={s.icon} href={serviceHref(s.slug)} layout="inline" />
+            </li>
+          ))
+        }
+      </ul>
+    </Container>
+  </section>
+
+  <FeaturedService {...featuredService} image={wireframeImages.oneCikanHizmet} imageAlt="Gerçek cephe ile BIM tel kafes modelinin birleştiği bina" />
+
+  <!-- Tüm hizmet başlıkları: her başlık kendi sayfasına gider -->
+  <section id="tum-hizmetler" class="bg-surface-soft py-12 lg:py-14" aria-labelledby="directory-title">
+    <Container size="wide">
+      <p class="eyebrow">Tüm Hizmet Başlıkları</p>
+      <h2 id="directory-title" class="mt-2 text-h2">Hizmet Kapsamımız</h2>
+      <p class="mt-2 max-w-2xl text-small text-muted">
+        Aşağıdaki her başlık, konuyu ayrıntılı anlatan kendi sayfasına gider: kapsam, tipik çıktılar, ne zaman gerektiği ve sık sorulan sorular.
+      </p>
+      <div class="mt-7">
+        <ServiceDirectory />
+      </div>
+    </Container>
+  </section>
+
+  <!-- Sürecimiz (koyu bant) -->
+  <section class="relative isolate overflow-hidden bg-navy-900 text-white" aria-labelledby="services-process-title">
+    <div aria-hidden="true" class="absolute inset-0 -z-10">
+      <div class="absolute inset-0 bg-linear-to-r from-navy-950 via-navy-900 to-[#123552]"></div>
+      <div class="bg-tech-grid absolute inset-0 opacity-40"></div>
+    </div>
+    <Container size="wide" class="grid gap-10 py-12 lg:py-10 xl:grid-cols-[minmax(0,19rem)_1fr] xl:items-center xl:gap-8">
+      <div>
+        <p class="text-eyebrow font-semibold tracking-(--text-eyebrow--letter-spacing) text-white/75 uppercase">
+          {servicesProcess.eyebrow}
+        </p>
+        <h2 id="services-process-title" class="mt-3 text-h2 text-white">{servicesProcess.title}</h2>
+      </div>
+      <ProcessTimeline steps={servicesProcess.steps} tone="dark" />
+    </Container>
+  </section>
+
+  <FeatureBand
+    eyebrow={servicesWhy.eyebrow}
+    title={servicesWhy.title}
+    items={whyItems}
+    tone="light"
+    iconPlacement="inline"
+    headingId="services-why-title"
+  />
+
+  <CTASection {...servicesCta} headingId="services-cta-title" />
+</PageLayout>

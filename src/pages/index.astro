@@ -1,0 +1,136 @@
+---
+/**
+ * Ana Sayfa — tek tasarım kaynağı: docs/reference/pages/home-approved-reference.jpeg
+ * Section sırası (Master Prompt §12): Hero → Uyumun Mühendisliği → Hizmetler → Neden AKORT? →
+ * Öne Çıkan Projeler → Çalışma Modelimiz → Blog → Final CTA (+ Header, Footer, Teknik Asistan layout'ta).
+ */
+import { introImages } from '@/data/images';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Container from '@/components/common/Container.astro';
+import SectionHeading from '@/components/common/SectionHeading.astro';
+import IntroSplit from '@/components/common/IntroSplit.astro';
+import FeatureBand, { type FeatureBandItem } from '@/components/common/FeatureBand.astro';
+import ProcessTimeline from '@/components/common/ProcessTimeline.astro';
+import CTASection from '@/components/common/CTASection.astro';
+import HomeHero from '@/components/home/HomeHero.astro';
+import ServiceCard from '@/components/services/ServiceCard.astro';
+import ProjectCard from '@/components/projects/ProjectCard.astro';
+import BlogCard from '@/components/blog/BlogCard.astro';
+import { homeIntro, homeWhy, homeSections, homeCta } from '@/data/home';
+import { homeServices, serviceHref } from '@/data/services';
+import { process } from '@/data/process';
+import { sectors } from '@/data/sectors';
+import { getPublished } from '@/utils/content';
+import { isPublishable } from '@/utils/verified';
+
+// Neden AKORT — doğrulanmamış sayısal ifadeler production'da onaylı referanstaki sayısız karşılığına döner.
+const whyItems: FeatureBandItem[] = homeWhy.items.map((item) => {
+  if (typeof item.highlight === 'string') return item as FeatureBandItem;
+  const ok = isPublishable(item.highlight);
+  return {
+    icon: item.icon,
+    highlight: ok ? item.highlight.value : item.fallbackHighlight,
+    title: ok ? item.title : (item.fallbackTitle ?? item.title),
+    text: item.text,
+  };
+});
+
+// Projeler: yalnızca yayınlanmış (draft: false) öne çıkan projeler; development'ta taslaklar da görünür.
+const featuredProjects = (await getPublished('projects'))
+  .filter((p) => p.data.featured)
+  .sort((a, b) => a.data.order - b.data.order)
+  .slice(0, 4);
+
+const latestPosts = (await getPublished('blog'))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 3);
+
+const sectorLabel = (key: string) => sectors.find((s) => s.key === key)?.label ?? key;
+---
+
+<BaseLayout>
+  <HomeHero />
+
+  <IntroSplit {...homeIntro} image={introImages.anasayfa} headingId="intro-title" />
+
+  <!-- Hizmetler -->
+  <section class="bg-white py-12 lg:py-11" aria-labelledby="services-title">
+    <Container size="content">
+      <SectionHeading {...homeSections.services} id="services-title" />
+    </Container>
+    <Container size="cards" class="mt-7">
+      <ul class="grid gap-3 xs:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+        {
+          homeServices.map((s) => (
+            <li>
+              <ServiceCard title={s.title} description={s.description} icon={s.icon} href={serviceHref(s.slug)} />
+            </li>
+          ))
+        }
+      </ul>
+    </Container>
+  </section>
+
+  <FeatureBand eyebrow={homeWhy.eyebrow} title={homeWhy.title} items={whyItems} />
+
+  <!-- Öne Çıkan Projeler: doğrulanmış proje yoksa production'da bölüm render edilmez -->
+  {
+    featuredProjects.length > 0 && (
+      <section class="bg-white py-12 lg:py-10" aria-labelledby="projects-title">
+        <Container size="wide">
+          <SectionHeading {...homeSections.projects} id="projects-title" />
+          <ul class="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {featuredProjects.map((p) => (
+              <li>
+                <ProjectCard
+                  title={p.data.title}
+                  sectorLabel={sectorLabel(p.data.sector)}
+                  href={`/projeler/${p.id}`}
+                  image={p.data.cover}
+                  imageAlt={p.data.coverAlt}
+                />
+              </li>
+            ))}
+          </ul>
+        </Container>
+      </section>
+    )
+  }
+
+  <!-- Çalışma Modelimiz -->
+  <section class="bg-surface-soft py-12 lg:py-10" aria-labelledby="process-title">
+    <Container size="wide">
+      <SectionHeading {...homeSections.process} id="process-title" />
+      <div class="mt-7">
+        <ProcessTimeline steps={process} />
+      </div>
+    </Container>
+  </section>
+
+  <!-- Blog -->
+  {
+    latestPosts.length > 0 && (
+      <section class="bg-white py-12 lg:py-10" aria-labelledby="blog-title">
+        <Container size="wide">
+          <SectionHeading {...homeSections.blog} id="blog-title" />
+          <ul class="mt-6 grid gap-3 lg:grid-cols-3">
+            {latestPosts.map((post) => (
+              <li>
+                <BlogCard
+                  title={post.data.title}
+                  excerpt={post.data.description}
+                  date={post.data.pubDate}
+                  href={`/blog/${post.id}`}
+                  image={post.data.cover}
+                  imageAlt={post.data.coverAlt}
+                />
+              </li>
+            ))}
+          </ul>
+        </Container>
+      </section>
+    )
+  }
+
+  <CTASection {...homeCta} />
+</BaseLayout>

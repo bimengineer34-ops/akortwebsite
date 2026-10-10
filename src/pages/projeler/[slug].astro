@@ -1,0 +1,248 @@
+---
+/**
+ * Proje detayı (Case Study) — Master Prompt §18 yapısı.
+ * Onaylı referans görseli YOK: yeni tasarım üretilmez, yalnızca onaylı component'ler kullanılır.
+ * Yalnızca dolu alanlar render edilir; sayısal künye ve sonuçlar doğrulanmadıkça production'da gösterilmez.
+ * "BIM Modelini İncele" yalnızca bimModel.enabled ise görünür (Faz 18: ThatOpen / web-ifc viewer).
+ */
+import type { GetStaticPaths } from 'astro';
+import { Picture } from 'astro:assets';
+import { render, type CollectionEntry } from 'astro:content';
+import PageLayout from '@/layouts/PageLayout.astro';
+import Container from '@/components/common/Container.astro';
+import Icon from '@/components/common/Icon.astro';
+import Button from '@/components/common/Button.astro';
+import CTASection from '@/components/common/CTASection.astro';
+import { projectsCta } from '@/data/projectsPage';
+import { sectors } from '@/data/sectors';
+import { services, serviceHref } from '@/data/services';
+import { getPublished } from '@/utils/content';
+import { publishable } from '@/utils/verified';
+import { creativeWorkSchema } from '@/utils/schema';
+
+export const getStaticPaths = (async () => {
+  const projects = await getPublished('projects');
+  return projects.map((project) => ({ params: { slug: project.id }, props: { project } }));
+}) satisfies GetStaticPaths;
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+}
+
+const { project } = Astro.props;
+const d = project.data;
+const { Content } = await render(project);
+const isDev = import.meta.env.DEV;
+
+const serviceTitles = d.services
+  .map((ref) => services.find((s) => s.slug === ref.id))
+  .filter((s): s is (typeof services)[number] => !!s);
+
+const facts = [
+  { label: 'Konum', value: publishable(d.location) },
+  { label: 'Proje Türü', value: sectors.find((s) => s.key === d.sector)?.title },
+  { label: 'Yıl', value: publishable(d.year) },
+  { label: 'Alan', value: publishable(d.area) },
+  { label: 'Kapasite', value: publishable(d.capacity) },
+  { label: 'AKORT Rolü', value: d.role },
+].filter((f): f is { label: string; value: string } => !!f.value);
+
+const narrative = [
+  { title: 'Problem', text: d.problem },
+  { title: 'Teknik Zorluk', text: d.challenge },
+  { title: 'Yaklaşım', text: d.approach },
+  { title: 'Çözüm', text: d.solution },
+].filter((n): n is { title: string; text: string } => !!n.text);
+
+const scopes = [
+  { title: 'BIM Kapsamı', text: d.bimScope, icon: 'services/bim-digital' as const },
+  { title: 'Enerji Kapsamı', text: d.energyScope, icon: 'services/energy' as const },
+  { title: 'Maliyet Kapsamı', text: d.costScope, icon: 'services/cost' as const },
+].filter((s): s is { title: string; text: string; icon: typeof s.icon } => !!s.text);
+
+const results = d.results.map((r) => publishable(r)).filter((r): r is string => !!r);
+const href = `/projeler/${project.id}`;
+const schema = Astro.site
+  ? [creativeWorkSchema({ name: d.title, description: d.summary, url: new URL(href, Astro.site), siteUrl: Astro.site })]
+  : [];
+---
+
+<PageLayout
+  title={d.seo?.title ?? d.title}
+  description={d.seo?.description ?? d.summary}
+  heading={d.title}
+  lead={d.summary}
+  breadcrumbs={[
+    { label: 'Projeler', href: '/projeler' },
+    { label: d.title, href },
+  ]}
+  heroImageTodo={`proje hero · ${d.title}`}
+  noindex={d.seo?.noindex ?? false}
+  schema={schema}
+  type="article"
+>
+  {
+    d.draft && isDev && (
+      <div class="border-b border-dashed border-accent-500/60 bg-step-bg/40 py-2 text-center text-[11px] font-semibold text-primary-700">
+        TODO-CONTENT · Taslak proje (referans görselden örnek) — production'da yayınlanmaz
+      </div>
+    )
+  }
+
+  <!-- Künye -->
+  {
+    facts.length > 0 && (
+      <section class="bg-white py-8" aria-label="Proje künyesi">
+        <Container size="content">
+          <dl class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:flex lg:flex-wrap lg:gap-0">
+            {facts.map((f) => (
+              <div class="flex flex-col lg:border-l lg:border-border lg:px-6 lg:first:border-l-0 lg:first:pl-0">
+                <dt class="eyebrow">{f.label}</dt>
+                <dd class="mt-1 text-small font-semibold text-heading">{f.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Container>
+      </section>
+    )
+  }
+
+  <!-- Proje özeti + anlatı -->
+  <section class="bg-surface-soft py-12 lg:py-14" aria-labelledby="case-summary-title">
+    <Container size="content" class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:gap-16">
+      <div>
+        <p class="eyebrow">Case Study</p>
+        <h2 id="case-summary-title" class="mt-2 text-h2">Proje Özeti</h2>
+        <div class="prose-akort mt-4 text-small text-body">
+          <Content />
+        </div>
+        {
+          narrative.map((n) => (
+            <div class="mt-8">
+              <h3 class="text-h3 font-bold">{n.title}</h3>
+              <p class="mt-2 text-small text-body">{n.text}</p>
+            </div>
+          ))
+        }
+      </div>
+      <aside class="space-y-4 self-start">
+        {
+          serviceTitles.length > 0 && (
+            <div class="card-surface p-(--space-card)">
+              <p class="eyebrow">Hizmetler</p>
+              <ul class="mt-3 space-y-2">
+                {serviceTitles.map((s) => (
+                  <li>
+                    <a href={serviceHref(s.slug)} class="inline-flex items-center gap-2 text-small font-semibold text-primary-700 hover:underline">
+                      <Icon name={s.icon} size={18} class="text-accent-600" />
+                      {s.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
+        {
+          d.bimModel.enabled && (
+            <div class="card-surface p-(--space-card)">
+              <Icon name="services/bim-digital" size={36} class="text-accent-600" />
+              <p class="mt-3 text-h3 font-bold text-heading">BIM Modelini İncele</p>
+              <p class="mt-1.5 text-xs text-muted">IFC modelini tarayıcıda inceleyin.</p>
+              <div class="mt-4">
+                <Button href={d.bimModel.ifcUrl ? `/bim?model=${encodeURIComponent(d.bimModel.ifcUrl)}` : '/bim'} size="sm">
+                  Modeli Aç
+                </Button>
+              </div>
+            </div>
+          )
+        }
+        <div class="card-surface p-(--space-card)">
+          <p class="text-h3 font-bold text-heading">Benzer bir projeniz mi var?</p>
+          <p class="mt-1.5 text-xs text-muted">Uzman ekibimizle projenizin ihtiyaçlarını konuşalım.</p>
+          <div class="mt-4">
+            <Button href="/iletisim" size="sm">
+              Proje Danışmanlığı Al
+            </Button>
+          </div>
+        </div>
+      </aside>
+    </Container>
+  </section>
+
+  {
+    scopes.length > 0 && (
+      <section class="bg-white py-12 lg:py-11" aria-labelledby="case-scope-title">
+        <Container size="wide">
+          <p class="eyebrow">Kapsam</p>
+          <h2 id="case-scope-title" class="mt-2 text-h2">Teknik Kapsam</h2>
+          <ul class="mt-6 grid gap-3 md:grid-cols-3">
+            {scopes.map((s) => (
+              <li class="card-surface grid grid-cols-[auto_1fr] gap-x-4 p-(--space-card)">
+                <Icon name={s.icon} size={40} strokeWidth={1.5} class="text-accent-600" />
+                <div>
+                  <h3 class="text-h3 font-bold">{s.title}</h3>
+                  <p class="mt-1.5 text-small text-muted">{s.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Container>
+      </section>
+    )
+  }
+
+  {
+    (results.length > 0 || d.outputs.length > 0) && (
+      <section class="bg-surface-soft py-12 lg:py-11" aria-labelledby="case-results-title">
+        <Container size="content" class="grid gap-10 md:grid-cols-2">
+          {results.length > 0 && (
+            <div>
+              <h2 id="case-results-title" class="text-h2">Sonuçlar</h2>
+              <ul class="mt-4 space-y-2.5">
+                {results.map((r) => (
+                  <li class="flex gap-3 text-small text-body">
+                    <Icon name="process/check" size={18} strokeWidth={2.4} class="mt-0.5 text-primary-700" />
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {d.outputs.length > 0 && (
+            <div>
+              <h2 class="text-h2">Teknik Çıktılar</h2>
+              <ul class="mt-4 space-y-2.5">
+                {d.outputs.map((o) => (
+                  <li class="flex gap-3 text-small text-body">
+                    <Icon name="process/report" size={18} class="mt-0.5 text-primary-700" />
+                    {o}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Container>
+      </section>
+    )
+  }
+
+  {
+    d.gallery.length > 0 && (
+      <section class="bg-white py-12 lg:py-11" aria-labelledby="case-gallery-title">
+        <Container size="wide">
+          <h2 id="case-gallery-title" class="text-h2">Galeri</h2>
+          <ul class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {d.gallery.map((g) => (
+              <li class="overflow-hidden rounded-card">
+                <Picture src={g.src} alt={g.alt} formats={['avif', 'webp']} widths={[400, 640, 960]} sizes="(min-width: 1024px) 33vw, 50vw" class="aspect-[4/3] w-full object-cover" loading="lazy" />
+              </li>
+            ))}
+          </ul>
+        </Container>
+      </section>
+    )
+  }
+
+  <CTASection {...projectsCta} headingId="case-cta-title" />
+</PageLayout>

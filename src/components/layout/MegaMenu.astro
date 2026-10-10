@@ -1,0 +1,107 @@
+---
+/**
+ * Masaüstü mega menü paneli (≥1024px). Üstteki nav linkinin <li> öğesi içinde render edilir;
+ * header (sticky, relative bağlam) altında tam genişlikte açılır. Açılma: hover veya klavye odağı (focus-within), JS yok.
+ * Her başlık kendi sayfasına gider. Üst başlık linki (Hizmetler / Uzmanlık Alanları) panel dışında da tıklanabilir kalır.
+ */
+import Container from '@/components/common/Container.astro';
+import Icon from '@/components/common/Icon.astro';
+import { groupsOf, navLabel, pillarEntry, pillarOrder, sectorCatalog, sectorHref, serviceHref } from '@/data/serviceCatalog';
+import { aboutMenu } from '@/data/navigation';
+
+interface Props {
+  kind: 'services' | 'sectors' | 'about';
+}
+
+const { kind } = Astro.props;
+const pillars = pillarOrder.map((p) => ({ entry: pillarEntry(p), groups: groupsOf(p) }));
+---
+
+<div
+  class="invisible absolute inset-x-0 top-full z-(--z-header) translate-y-1 border-t border-border bg-white opacity-0 shadow-[0_18px_40px_-18px_rgb(14_34_54/0.35)] transition-[opacity,transform,visibility] duration-(--duration-base) group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
+  data-mega
+>
+  <Container size="wide" class="max-h-[calc(100dvh-var(--header-height)-1rem)] overflow-y-auto py-7">
+    {
+      kind === 'services' ? (
+        <div class="grid gap-x-8 gap-y-6 xl:grid-cols-5 lg:grid-cols-3">
+          {pillars.map(({ entry, groups }) => (
+            <div>
+              <a href={serviceHref(entry.slug)} class="flex items-center gap-2.5 border-b border-border pb-2 text-small font-bold text-heading hover:text-primary-700">
+                <Icon name={entry.icon} size={22} strokeWidth={1.6} class="text-accent-600" />
+                {navLabel(entry)}
+              </a>
+              <div class="mt-3 space-y-3.5">
+                {groups.map((g) => (
+                  <div>
+                    <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-primary-800 uppercase">
+                      {g.href ? (
+                        <a href={g.href} class="hover:underline">
+                          {g.title}
+                        </a>
+                      ) : (
+                        g.title
+                      )}
+                    </p>
+                    <ul class="mt-1">
+                      {g.items.map((item) => (
+                        <li>
+                          <a href={serviceHref(item.slug)} class="block py-[3px] text-xs leading-snug text-body hover:text-primary-700">
+                            {navLabel(item)}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : kind === 'about' ? (
+        <div class="grid gap-x-10 gap-y-6 lg:grid-cols-2">
+          <div>
+            <p class="border-b border-border pb-2 text-small font-bold text-heading">Kurumsal</p>
+            <ul class="mt-2">
+              {aboutMenu.corporate.map((l) => (
+                <li>
+                  <a href={l.href} class="block py-1.5 text-small text-body hover:text-primary-700">
+                    {l.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <a href={aboutMenu.workModel.href} class="block border-b border-border pb-2 text-small font-bold text-heading hover:text-primary-700">
+              {aboutMenu.workModel.label}
+            </a>
+            <ul class="mt-2">
+              {aboutMenu.workModel.steps.map((l) => (
+                <li>
+                  <a href={l.href} class="block py-1.5 text-small text-body hover:text-primary-700">
+                    {l.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : (
+        <ul class="grid gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
+          {sectorCatalog.map((sec) => (
+            <li>
+              <a href={sectorHref(sec.slug)} class="group/s flex items-start gap-3 rounded-control p-2.5 hover:bg-surface-soft">
+                <Icon name={sec.icon} size={26} strokeWidth={1.5} class="text-accent-600" />
+                <span>
+                  <span class="block text-small font-bold text-heading group-hover/s:text-primary-700">{sec.title}</span>
+                  <span class="mt-0.5 line-clamp-2 block text-xs text-muted">{sec.summary}</span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </Container>
+</div>

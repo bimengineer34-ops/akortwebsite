@@ -1,0 +1,54 @@
+---
+/** Blog etiket sayfası — ince içerik olduğu için noindex (sitemap dışı). */
+import { heroImages } from '@/data/images';
+import type { GetStaticPaths } from 'astro';
+import PageLayout from '@/layouts/PageLayout.astro';
+import BlogListing from '@/components/blog/BlogListing.astro';
+import NewsletterBand from '@/components/blog/NewsletterBand.astro';
+import { blogHero } from '@/data/blog';
+import { getBlogPosts, tagCloud, tagHref, tagSlug, type BlogPost } from '@/utils/blog';
+
+export const getStaticPaths = (async () => {
+  const allPosts = await getBlogPosts();
+  return tagCloud(allPosts).map((tag) => ({
+    params: { slug: tagSlug(tag) },
+    props: { allPosts, tag, posts: allPosts.filter((p) => p.data.tags.includes(tag)) },
+  }));
+}) satisfies GetStaticPaths;
+
+interface Props {
+  allPosts: BlogPost[];
+  tag: string;
+  posts: BlogPost[];
+}
+
+const { allPosts, tag, posts } = Astro.props;
+const href = tagHref(tag);
+---
+
+<PageLayout
+  title={`${tag} Etiketli Yazılar`}
+  description={`AKORT Mühendislik blogunda "${tag}" etiketli teknik yazılar.`}
+  heading={tag}
+  subtitle="Etiket"
+  breadcrumbs={[
+    { label: 'Blog', href: '/blog' },
+    { label: tag, href },
+  ]}
+  annotations={blogHero.annotations}
+  heroImage={heroImages.blog}
+  noindex
+>
+  <BlogListing
+    allPosts={allPosts}
+    posts={posts}
+    currentPage={1}
+    totalPages={1}
+    pageHref={() => href}
+    eyebrow="Etiket"
+    title={tag}
+    lead={`${posts.length} yazı`}
+    activeTag={tag}
+  />
+  <NewsletterBand />
+</PageLayout>

@@ -1,0 +1,106 @@
+---
+/**
+ * "Öne Çıkan Proje" koyu bandı — referans: solda eyebrow + büyük başlık + açıklama + "Proje Detayını İncele",
+ * altında ince ayraçlı künye (konum · kapalı alan · kapasite · dönem); sağda hava fotoğrafı + teknik notlar.
+ * Künye alanları yalnızca doğrulanmışsa (veya development'ta) gösterilir.
+ * TODO-ASSET: projenin hava fotoğrafı / render'ı.
+ */
+import type { ImageMetadata } from 'astro';
+import { Picture } from 'astro:assets';
+import Container from '@/components/common/Container.astro';
+import Button from '@/components/common/Button.astro';
+import Icon from '@/components/common/Icon.astro';
+import type { IconName } from '@/components/common/icons';
+
+export interface Fact {
+  icon: IconName;
+  value: string;
+  label?: string;
+}
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  summary: string;
+  href: string;
+  ctaLabel: string;
+  facts: Fact[];
+  annotations: string[][];
+  /** Dekoratif arka plan görseli (alt metin gerekmez; başlık ve özet metin olarak sayfada) */
+  image?: ImageMetadata | undefined;
+  unverifiedNote?: boolean;
+}
+
+const { eyebrow, title, summary, href, ctaLabel, facts, annotations, image, unverifiedNote = false } = Astro.props;
+const isDev = import.meta.env.DEV;
+---
+
+<section class="relative isolate overflow-hidden bg-navy-900 text-white" aria-labelledby="spotlight-title">
+  <div aria-hidden="true" class="absolute inset-y-0 right-0 -z-10 w-full lg:w-[62%]">
+    {
+      image ? (
+        <Picture src={image} alt="" formats={['avif', 'webp']} widths={[768, 1280, 1600]} sizes="62vw" class="h-full w-full object-cover" loading="lazy" />
+      ) : (
+        <div class="bg-tech-grid h-full w-full bg-[#173a5a]/60">
+          {isDev && (
+            <span class="absolute right-4 bottom-3 rounded-sm border border-dashed border-white/40 bg-navy-950/70 px-2 py-1 text-[11px] font-semibold">
+              TODO-ASSET · öne çıkan proje görseli
+            </span>
+          )}
+        </div>
+      )
+    }
+  </div>
+  <div aria-hidden="true" class="absolute inset-0 -z-10 bg-linear-to-r from-navy-950 via-navy-900/95 to-navy-900/10 lg:via-navy-900/90 lg:via-40%"></div>
+
+  <Container size="wide" class="relative py-12 lg:py-11">
+    <div class="max-w-[33rem]">
+      <p class="text-eyebrow font-semibold tracking-(--text-eyebrow--letter-spacing) text-white/80 uppercase">{eyebrow}</p>
+      <h2 id="spotlight-title" class="mt-3 text-h2-lg text-white">{title}</h2>
+      <p class="mt-3 text-small text-white/85">{summary}</p>
+      {
+        unverifiedNote && (
+          <p class="mt-3 inline-block rounded-sm border border-dashed border-white/40 px-2 py-0.5 text-[11px] font-semibold text-white/85">
+            TODO-CONTENT · taslak proje, künye doğrulanmadı — production'da gizli
+          </p>
+        )
+      }
+    </div>
+    <div class="mt-6 flex flex-col gap-6 xl:flex-row xl:items-center xl:gap-8">
+      <Button href={href} size="lg" class="self-start border border-accent-500/60">{ctaLabel}</Button>
+      {
+        facts.length > 0 && (
+          <dl class="grid grid-cols-2 gap-4 sm:flex sm:flex-wrap sm:items-center sm:gap-0">
+            {facts.map((f) => (
+              <div class="flex items-center gap-2.5 sm:border-l sm:border-on-dark-line sm:px-5 sm:first:border-l-0 sm:first:pl-0">
+                <Icon name={f.icon} size={24} strokeWidth={1.6} class="text-white/90" />
+                <div>
+                  <dt class="sr-only">{f.label ?? 'Konum'}</dt>
+                  <dd class="text-small leading-tight font-semibold text-white">{f.value}</dd>
+                  {f.label && (
+                    <dd class="text-[0.6875rem] text-white/70" aria-hidden="true">
+                      {f.label}
+                    </dd>
+                  )}
+                </div>
+              </div>
+            ))}
+          </dl>
+        )
+      }
+    </div>
+  </Container>
+
+  <ul class="absolute top-1/2 right-[3%] hidden -translate-y-1/2 flex-col gap-6 xl:flex" aria-label="Proje kapsamı">
+    {
+      annotations.map((lines) => (
+        <li class="relative text-[0.6875rem] leading-snug font-semibold tracking-[0.12em] text-white/85 uppercase">
+          <span aria-hidden="true" class="absolute top-1/2 right-[calc(100%+0.75rem)] h-px w-10 bg-white/30" />
+          {lines.map((l) => (
+            <span class="block">{l}</span>
+          ))}
+        </li>
+      ))
+    }
+  </ul>
+</section>

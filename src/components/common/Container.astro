@@ -1,0 +1,25 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends HTMLAttributes<'div'> {
+  /**
+   * content: 1120px — header, hero, intro, hizmet başlığı
+   * wide:    1256px — Neden AKORT, projeler, süreç, blog, footer
+   * cards:   1280px — hizmet kart satırı
+   */
+  size?: 'content' | 'wide' | 'cards';
+  as?: 'div' | 'section' | 'header' | 'footer' | 'nav';
+}
+
+const { size = 'content', as: Tag = 'div', class: className, ...rest } = Astro.props;
+
+const widths = {
+  content: 'max-w-[calc(var(--container-content)+2*var(--space-gutter))]',
+  wide: 'max-w-[calc(var(--container-wide)+2*var(--space-gutter))]',
+  cards: 'max-w-[calc(var(--container-cards)+2*var(--space-gutter))]',
+} as const;
+---
+
+<Tag class:list={['mx-auto w-full px-(--space-gutter)', widths[size], className]} {...rest}>
+  <slot />
+</Tag>

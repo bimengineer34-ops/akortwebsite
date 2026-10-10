@@ -1,0 +1,163 @@
+---
+/**
+ * Hakkımızda — tek tasarım kaynağı: docs/reference/pages/about-approved-reference.jpeg
+ * Section sırası (Master Prompt §14): Hero → Uyumun Mühendisliği → Misyon / Vizyon / Değerler →
+ * Neden AKORT (multidisipliner yaklaşım) → Yolculuğumuz → Yaklaşımımız (dijital mühendislik / çalışma yaklaşımı) →
+ * Uzmanlık Alanlarımız (teknik uzmanlık) → CTA.
+ */
+import { heroImages, introImages, wireframeImages } from '@/data/images';
+import PageLayout from '@/layouts/PageLayout.astro';
+import Container from '@/components/common/Container.astro';
+import Icon from '@/components/common/Icon.astro';
+import IntroSplit from '@/components/common/IntroSplit.astro';
+import FeatureBand from '@/components/common/FeatureBand.astro';
+import ProcessTimeline, { type TimelineStep } from '@/components/common/ProcessTimeline.astro';
+import CTASection from '@/components/common/CTASection.astro';
+import ServiceCard from '@/components/services/ServiceCard.astro';
+import {
+  aboutHero,
+  aboutIntro,
+  aboutPrinciples,
+  aboutWhy,
+  aboutMilestones,
+  aboutApproach,
+  aboutExpertise,
+  aboutCta,
+} from '@/data/about';
+import { site } from '@/data/site';
+import { isPublishable } from '@/utils/verified';
+
+// NO_FAKE_DATA: Kilometre taşları yalnızca tüm yıllar doğrulandığında yayınlanır (development'ta her zaman görünür).
+const milestonesVisible = aboutMilestones.items.every((m) => isPublishable(m.year));
+const milestoneSteps: TimelineStep[] = aboutMilestones.items.map((m) => ({
+  number: m.year.value,
+  title: m.title,
+  description: m.text,
+}));
+const milestonesUnverified = aboutMilestones.items.some((m) => !m.year.verified);
+
+const aboutSchema = Astro.site
+  ? [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'AboutPage',
+        name: `Hakkımızda | ${site.name}`,
+        url: new URL('/hakkimizda', Astro.site).href,
+        about: { '@id': new URL('/#organization', Astro.site).href },
+        inLanguage: 'tr-TR',
+      },
+    ]
+  : [];
+---
+
+<PageLayout
+  title="Hakkımızda"
+  description="AKORT Mühendislik: mühendislik bilgisi, BIM ve dijital teknolojileri bir araya getiren bağımsız mühendislik danışmanlığı. Misyonumuz, vizyonumuz ve değerlerimiz."
+  heading={aboutHero.title}
+  lead={aboutHero.lead}
+  breadcrumbs={[{ label: 'Hakkımızda', href: '/hakkimizda' }]}
+  annotations={aboutHero.annotations}
+  heroImage={heroImages.hakkimizda}
+  schema={aboutSchema}
+>
+  <IntroSplit
+    eyebrow={aboutIntro.eyebrow}
+    title={aboutIntro.title}
+    body={aboutIntro.body}
+    cta={{ label: aboutIntro.ctaLabel, href: milestonesVisible ? '#yolculugumuz' : '#yaklasimimiz' }}
+    slogan={aboutIntro.slogan}
+    sloganRule
+    wedge="from-right"
+    image={introImages.hakkimizda}
+    headingId="about-intro-title"
+  />
+
+  <!-- Misyon / Vizyon / Değerler -->
+  <section id="misyon-vizyon-degerler" class="scroll-mt-24 bg-white py-12 lg:py-11" aria-labelledby="principles-title">
+    <Container size="content">
+      <p class="eyebrow">{aboutPrinciples.eyebrow}</p>
+      <h2 id="principles-title" class="mt-2 text-h2">{aboutPrinciples.title}</h2>
+    </Container>
+    <Container size="wide" class="mt-6">
+      <ul class="grid gap-4 lg:grid-cols-3">
+        {
+          aboutPrinciples.cards.map((card) => (
+            <li class="card-surface grid grid-cols-[auto_1fr] gap-x-5 p-(--space-card)">
+              <Icon name={card.icon} size={52} strokeWidth={1.6} class="text-primary-700" />
+              <div class:list={[card.list ? 'pt-0' : 'pt-6']}>
+                <h3 class="text-h3 font-bold">{card.title}</h3>
+                {card.text && <p class="mt-2 text-small text-muted">{card.text}</p>}
+                {card.list && (
+                  <ul class="mt-2.5 space-y-1 text-small text-muted">
+                    {card.list.map((v) => (
+                      <li class="flex gap-2.5"><span aria-hidden="true" class="mt-[0.6em] size-1 shrink-0 rounded-full bg-primary-700" />
+                        {v}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </Container>
+  </section>
+
+  <FeatureBand eyebrow={aboutWhy.eyebrow} title={aboutWhy.title} items={aboutWhy.items} headingId="about-why-title" />
+
+  <!-- Yolculuğumuz — doğrulanmamış tarihler production'da yayınlanmaz -->
+  {
+    milestonesVisible && (
+      <section id="yolculugumuz" class="relative isolate overflow-hidden bg-white py-12 lg:py-10" aria-labelledby="milestones-title">
+        <div aria-hidden="true" class="bg-tech-grid absolute inset-y-0 right-0 -z-10 hidden w-[18%] opacity-70 [mask-image:linear-gradient(90deg,transparent,#000_60%)] lg:block" />
+        <Container size="wide">
+          <p class="eyebrow">{aboutMilestones.eyebrow}</p>
+          <h2 id="milestones-title" class="mt-2 text-h2">{aboutMilestones.title}</h2>
+          {milestonesUnverified && (
+            <p class="mt-2 inline-block rounded-sm border border-dashed border-accent-500/60 px-2 py-0.5 text-[11px] font-semibold text-primary-700">
+              TODO-CONTENT · tarihler doğrulanmadı — production'da gizli
+            </p>
+          )}
+          <div class="mt-6 lg:pr-[12%]">
+            <ProcessTimeline steps={milestoneSteps} tone="sky" srPrefix={(s) => `${s.number}: `} />
+          </div>
+        </Container>
+      </section>
+    )
+  }
+
+  <IntroSplit
+    id="yaklasimimiz"
+    eyebrow={aboutApproach.eyebrow}
+    title={aboutApproach.title}
+    body={aboutApproach.body}
+    cta={aboutApproach.cta}
+    slogan={aboutApproach.slogan}
+    sloganRule
+    wedge="from-right"
+    wedgeTone="dark"
+    imageWidth="lg"
+    image={wireframeImages.yaklasim}
+    headingId="approach-title"
+  />
+
+  <!-- Uzmanlık Alanlarımız -->
+  <section class="bg-white py-12 lg:py-10" aria-labelledby="about-expertise-title">
+    <Container size="wide">
+      <p class="eyebrow">{aboutExpertise.eyebrow}</p>
+      <h2 id="about-expertise-title" class="mt-2 text-h2">{aboutExpertise.title}</h2>
+      <ul class="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {
+          aboutExpertise.items.map((item) => (
+            <li>
+              <ServiceCard title={item.title} description={item.text} icon={item.icon} href={item.href} layout="inline" />
+            </li>
+          ))
+        }
+      </ul>
+    </Container>
+  </section>
+
+  <CTASection {...aboutCta} headingId="about-cta-title" />
+</PageLayout>

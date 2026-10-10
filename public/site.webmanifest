@@ -1,0 +1,13 @@
+{
+  "name": "AKORT Mühendislik",
+  "short_name": "AKORT",
+  "lang": "tr",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#ffffff",
+  "theme_color": "#0b1a2b",
+  "icons": [
+    { "src": "/favicon/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/favicon/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

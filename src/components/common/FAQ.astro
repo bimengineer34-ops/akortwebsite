@@ -1,0 +1,31 @@
+---
+/**
+ * SSS akordeonu — referans: beyaz satırlar, solda soru, sağda "+" (açıkken "−").
+ * Native <details>/<summary>: JS gerektirmez, klavye ve ekran okuyucu desteği yerleşik.
+ * FAQPage şeması yalnızca cevabı yayınlanabilir sorular için üretilir.
+ */
+import Icon from './Icon.astro';
+import JsonLd from './JsonLd.astro';
+import { faqSchema } from '@/utils/schema';
+
+interface Props {
+  items: { question: string; answer: string }[];
+}
+
+const { items } = Astro.props;
+---
+
+<div class="space-y-2.5">
+  {
+    items.map((item) => (
+      <details class="group card-surface overflow-hidden">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-small font-medium text-heading marker:hidden hover:text-primary-700 [&::-webkit-details-marker]:hidden">
+          {item.question}
+          <Icon name="_pending/plus" size={18} strokeWidth={2} class="text-primary-700 transition-transform duration-(--duration-base) group-open:rotate-45" />
+        </summary>
+        <div class="border-t border-border px-5 py-4 text-small text-muted">{item.answer}</div>
+      </details>
+    ))
+  }
+</div>
+{items.length > 0 && <JsonLd schema={faqSchema(items)} />}

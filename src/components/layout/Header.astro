@@ -1,0 +1,100 @@
+---
+/**
+ * Header — referans: beyaz zemin, solda logo, ortada 7 linkli nav (aktif link alt çizgili),
+ * sağda arama ikonu + lacivert "Proje Danışmanlığı Al →" butonu. 1024px altında MobileNav.
+ *
+ * Sabit (sticky) header: sayfa kaydırılınca üstte kalır. Kaydırma başlayınca gölge belirginleşir ve
+ * header hafifçe incelir (data-scrolled). JS yalnızca tek bir pasif scroll dinleyicisi.
+ */
+import Container from '@/components/common/Container.astro';
+import Button from '@/components/common/Button.astro';
+import Icon from '@/components/common/Icon.astro';
+import Logo from './Logo.astro';
+import MobileNav from './MobileNav.astro';
+import MegaMenu from './MegaMenu.astro';
+import { mainNav, isActivePath } from '@/data/navigation';
+import { site } from '@/data/site';
+
+const pathname = Astro.url.pathname;
+// Mega menüsü olan üst başlıklar
+const megaFor: Record<string, 'services' | 'sectors' | 'about'> = { '/hakkimizda': 'about', '/hizmetler': 'services', '/uzmanlik-alanlari': 'sectors' };
+---
+
+<header
+  class="sticky top-0 z-(--z-header) bg-white/95 shadow-(--shadow-header) backdrop-blur-md transition-shadow duration-(--duration-base) data-[scrolled=true]:shadow-[0_6px_24px_-12px_rgb(14_34_54/0.28)] supports-[backdrop-filter]:bg-white/90"
+  data-site-header
+>
+  <Container
+    size="content"
+    class="flex h-(--header-height) items-center justify-between gap-6 transition-[height] duration-(--duration-base) lg:grid lg:grid-cols-[1fr_auto_1fr] [[data-scrolled=true]_&]:h-(--header-height-scrolled)"
+  >
+    <Logo
+      class="origin-left justify-self-start transition-transform duration-(--duration-base) max-lg:scale-[0.85] [[data-scrolled=true]_&]:scale-[0.88]"
+      layout="horizontal"
+      height={44}
+    />
+
+    <nav aria-label="Ana menü" class="hidden lg:block">
+      <ul class="flex items-stretch gap-5 xl:gap-7">
+        {
+          mainNav.map((item) => {
+            const active = isActivePath(item.href, pathname);
+            return (
+              <li class="group flex h-(--header-height) items-center transition-[height] duration-(--duration-base) [[data-scrolled=true]_&]:h-(--header-height-scrolled)">
+                <a
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  class:list={[
+                    'relative inline-block py-2 text-nav font-medium transition-colors duration-(--duration-fast)',
+                    'after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:origin-left after:rounded-full after:bg-primary-700 after:transition-transform after:duration-(--duration-base)',
+                    active ? 'text-primary-700 after:scale-x-100' : 'text-heading hover:text-primary-700 after:scale-x-0 hover:after:scale-x-100',
+                  ]}
+                >
+                  {item.label}
+                </a>
+                {megaFor[item.href] && <MegaMenu kind={megaFor[item.href]!} />}
+              </li>
+            );
+          })
+        }
+      </ul>
+    </nav>
+
+    <div class="flex items-center gap-2 justify-self-end lg:gap-6">
+      {/* Site içi arama: /arama (statik JSON indeks; Pagefind onaylanırsa değiştirilebilir) */}
+      <a
+        href="/arama"
+        class="inline-flex size-11 items-center justify-center rounded-control text-heading transition-colors hover:text-primary-700"
+        aria-label="Sitede ara"
+      >
+        <Icon name="ui/search" size={20} />
+      </a>
+      <div class="hidden lg:block">
+        <Button href={site.primaryCta.href} size="sm">
+          {site.primaryCta.label}
+        </Button>
+      </div>
+      <MobileNav />
+    </div>
+  </Container>
+</header>
+
+<script>
+  const header = document.querySelector<HTMLElement>('[data-site-header]');
+  if (header) {
+    let last: boolean | undefined;
+    // Esc: açık mega menüden odağı çıkar (menü kapanır)
+    header.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && header.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
+    });
+    const update = () => {
+      const scrolled = window.scrollY > 8;
+      if (scrolled !== last) {
+        header.dataset.scrolled = String(scrolled);
+        last = scrolled;
+      }
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  }
+</script>

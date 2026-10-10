@@ -1,0 +1,96 @@
+---
+/**
+ * Ana Sayfa hero — referans: koyu lacivert gradient, sağda bina + BIM wireframe,
+ * sağ kenarda 4 teknik not, solda eyebrow / 3 satırlı H1 (son satır cyan) / açıklama / CTA.
+ *
+ * Görsel: src/assets/images/home/home-hero.png (kullanıcıdan, metinsiz render, 1672×941).
+ * LCP elemanı → <Picture> AVIF/WebP, srcset, loading="eager" + fetchpriority="high".
+ * Sol taraf parlak gün batımı olduğu için metin kontrastı koyu gradient overlay ile sağlanır.
+ * TODO-ASSET: ≥2560px kaynak gelirse 4K/retina ekranlarda daha keskin olur (aynı dosya adıyla değiştirilebilir).
+ */
+import { Picture } from 'astro:assets';
+import Container from '@/components/common/Container.astro';
+import Button from '@/components/common/Button.astro';
+import heroImage from '@/assets/images/home/home-hero.png';
+import { homeHero } from '@/data/home';
+
+const isDev = import.meta.env.DEV;
+---
+
+<section class="relative isolate overflow-hidden bg-navy-950 text-white" aria-labelledby="hero-title">
+  <!-- Arka plan katmanları (dekoratif) -->
+  <div aria-hidden="true" class="absolute inset-0 -z-10">
+    <Picture
+      src={heroImage}
+      alt=""
+      formats={['avif', 'webp']}
+      fallbackFormat="jpg"
+      widths={[640, 960, 1280, 1672]}
+      sizes="100vw"
+      quality={70}
+      loading="eager"
+      fetchpriority="high"
+      decoding="async"
+      class="absolute inset-0 h-full w-full object-cover object-[68%_50%] lg:object-[60%_45%]"
+    />
+    <!-- Metin okunabilirliği: soldan koyu lacivert gradient (referanstaki koyu ton) -->
+    <div class="absolute inset-0 bg-linear-to-r from-navy-950/95 via-navy-950/75 to-navy-950/10 lg:via-navy-950/55 lg:via-45%"></div>
+    <!-- Sağ kenardaki teknik notlar için hafif koyulaştırma -->
+    <div class="absolute inset-y-0 right-0 hidden w-1/4 bg-linear-to-l from-navy-950/60 to-transparent lg:block"></div>
+    <div class="absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-navy-950/70 to-transparent"></div>
+  </div>
+
+  <Container size="content" class="relative grid min-h-[clamp(30rem,34vw,33rem)] items-center py-14 lg:py-12">
+    <div class="max-w-[38rem]">
+      <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-eyebrow font-semibold tracking-(--text-eyebrow--letter-spacing) text-white/85 uppercase">
+        {
+          homeHero.eyebrow.map((item, i) => (
+            <>
+              {i > 0 && <span aria-hidden="true" class="size-1 rounded-full bg-cyan-300/80" />}
+              <span>{item}</span>
+            </>
+          ))
+        }
+      </p>
+
+      <h1 id="hero-title" class="mt-5 text-h1 text-white [text-shadow:0_2px_24px_rgb(11_26_43/0.45)]">
+        {homeHero.titleLines.map((line) => <span class="block">{line}</span>)}
+        <span class="block text-cyan-300">{homeHero.titleAccent}</span>
+      </h1>
+
+      <p class="mt-5 max-w-[34rem] text-lead text-white/90">{homeHero.lead}</p>
+
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+        <Button href={homeHero.primary.href} size="lg" class="border border-accent-500/60">
+          {homeHero.primary.label}
+        </Button>
+        {
+          isDev && (
+            <span class="inline-flex items-center gap-3 text-small font-semibold text-white/70" title="TODO-ASSET: tanıtım videosu">
+              <span class="inline-flex size-10 items-center justify-center rounded-full border border-white/50">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" fill="currentColor" />
+                </svg>
+              </span>
+              {homeHero.video.label} (TODO-ASSET)
+            </span>
+          )
+        }
+      </div>
+    </div>
+  </Container>
+
+  <!-- Sağ kenar teknik notları — 1024px+ (içerik HTML'de kalır) -->
+  <ul class="absolute top-1/2 right-[4%] hidden -translate-y-1/2 flex-col gap-9 lg:flex" aria-label="Uzmanlık başlıkları">
+    {
+      homeHero.annotations.map((lines) => (
+        <li class="relative text-left text-[0.6875rem] leading-snug font-semibold tracking-[0.14em] text-white uppercase [text-shadow:0_1px_8px_rgb(11_26_43/0.7)]">
+          <span aria-hidden="true" class="absolute top-1/2 right-[calc(100%+0.75rem)] h-px w-16 bg-white/50" />
+          {lines.map((l) => (
+            <span class="block">{l}</span>
+          ))}
+        </li>
+      ))
+    }
+  </ul>
+</section>

@@ -1,0 +1,44 @@
+---
+/**
+ * Eksik production görseli için yer tutucu (TODO-ASSET).
+ * Referans crop'ları kullanılmaz (metin gömülü, düşük çözünürlük). Development'ta etiketli görünür,
+ * production'da yalnızca nötr blueprint zemini kalır. Boyut verilerek CLS önlenir.
+ */
+interface Props {
+  /** İhtiyaç duyulan asset'in tarifi (rapor için) */
+  name: string;
+  /** CSS aspect-ratio, ör. "16 / 9" */
+  ratio?: string;
+  tone?: 'light' | 'dark';
+  /** Dev etiketinin konumu (alt kısmı kaplanan kartlarda 'top') */
+  labelPosition?: 'top' | 'bottom';
+  class?: string;
+}
+
+const { name, ratio = '16 / 9', tone = 'light', labelPosition = 'bottom', class: className } = Astro.props;
+const isDev = import.meta.env.DEV;
+---
+
+<div
+  class:list={[
+    'relative overflow-hidden bg-tech-grid',
+    tone === 'dark' ? 'bg-navy-800' : 'bg-surface-soft', // tech-grid yalnızca background-image, renk ayrı
+    className,
+  ]}
+  style={{ aspectRatio: ratio }}
+  data-todo-asset={name}
+  aria-hidden="true"
+>
+  {
+    isDev && (
+      <span
+        class:list={[
+          'absolute inset-x-3 truncate rounded-sm border border-dashed border-accent-500/60 bg-white/85 px-2 py-1 text-[11px] font-semibold tracking-wide text-primary-700',
+          labelPosition === 'top' ? 'top-3' : 'bottom-3',
+        ]}
+      >
+        TODO-ASSET · {name}
+      </span>
+    )
+  }
+</div>

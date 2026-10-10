@@ -1,0 +1,242 @@
+---
+/**
+ * Hizmet Talep Formu — referans: beyaz kart; eyebrow + H2 + açıklama; 2 kolonlu ikonlu input'lar
+ * (Ad Soyad*, Şirket/Kurum, E-posta*, Telefon), etiketli select'ler (Hizmet Alanı*, Proje Türü),
+ * Mesajınız* textarea, KVKK onay kutusu, "Talebimi Gönder" (kağıt uçak ikonlu) butonu.
+ *
+ * Erişilebilirlik: her alanın görünür ya da sr-only <label>'ı var; hatalar aria-invalid + aria-describedby ile bağlı.
+ * Gönderim: contactForm.endpoint null iken veri gönderilmez, kullanıcıya açıkça bildirilir.
+ * Lead qualification (Master Prompt §22): leadQualification.enabled ile açılan koşullu alan grupları.
+ */
+import Icon from '@/components/common/Icon.astro';
+import type { IconName } from '@/components/common/icons';
+import { contactForm, leadQualification } from '@/data/contactPage';
+
+const [consentBefore, consentAfter] = contactForm.consent.split('{kvkk}');
+
+const inputs: { name: string; label: string; type: 'text' | 'email' | 'tel'; icon: IconName; required: boolean; autocomplete: string }[] = [
+  { name: 'ad_soyad', label: 'Ad Soyad', type: 'text', icon: '_pending/user', required: true, autocomplete: 'name' },
+  { name: 'sirket', label: 'Şirket / Kurum', type: 'text', icon: 'expertise/commercial', required: false, autocomplete: 'organization' },
+  { name: 'eposta', label: 'E-posta', type: 'email', icon: 'ui/mail', required: true, autocomplete: 'email' },
+  { name: 'telefon', label: 'Telefon', type: 'tel', icon: 'ui/phone', required: false, autocomplete: 'tel' },
+];
+
+const field =
+  'w-full rounded-control border border-border bg-white text-small text-heading placeholder:text-muted transition-colors focus:border-accent-500 focus:outline-none aria-[invalid=true]:border-danger';
+---
+
+<form
+  id={contactForm.id}
+  class="card-surface min-w-0 scroll-mt-6 p-(--space-card) sm:p-8"
+  novalidate
+  data-contact-form
+  data-endpoint={contactForm.endpoint ?? ''}
+  data-messages={JSON.stringify(contactForm.messages)}
+  aria-labelledby="contact-form-title"
+>
+  <p class="eyebrow">{contactForm.eyebrow}</p>
+  <h2 id="contact-form-title" class="mt-2 text-h2">{contactForm.title}</h2>
+  <p class="mt-2 text-small text-muted">{contactForm.lead}</p>
+
+  <div class="mt-6 grid gap-4 sm:grid-cols-2">
+    {
+      inputs.map((f) => (
+        <div>
+          <label for={`cf-${f.name}`} class="sr-only">
+            {f.label}
+            {f.required && ' (zorunlu)'}
+          </label>
+          <div class="relative">
+            <Icon name={f.icon} size={18} strokeWidth={1.6} class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted" />
+            <input
+              id={`cf-${f.name}`}
+              name={f.name}
+              type={f.type}
+              autocomplete={f.autocomplete}
+              placeholder={f.required ? `${f.label} *` : f.label}
+              required={f.required}
+              aria-describedby={`cf-${f.name}-err`}
+              class:list={[field, 'h-12 pr-3 pl-11']}
+            />
+          </div>
+          <p id={`cf-${f.name}-err`} class="mt-1 hidden text-xs text-danger" data-error />
+        </div>
+      ))
+    }
+
+    <div>
+      <label for="cf-hizmet" class="mb-1.5 block text-small font-medium text-body">Hizmet Alanı *</label>
+      <div class="relative">
+        <select id="cf-hizmet" name="hizmet_alani" required aria-describedby="cf-hizmet-err" class:list={[field, 'h-12 appearance-none pr-10 pl-3.5']} data-service-select>
+          <option value="">Seçiniz</option>
+          {contactForm.serviceOptions.map((o) => <option value={o.value}>{o.label}</option>)}
+        </select>
+        <Icon name="_pending/chevron-down" size={18} class="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-heading" />
+      </div>
+      <p id="cf-hizmet-err" class="mt-1 hidden text-xs text-danger" data-error />
+    </div>
+
+    <div>
+      <label for="cf-proje" class="mb-1.5 block text-small font-medium text-body">Proje Türü</label>
+      <div class="relative">
+        <select id="cf-proje" name="proje_turu" class:list={[field, 'h-12 appearance-none pr-10 pl-3.5']}>
+          <option value="">Seçiniz</option>
+          {contactForm.projectTypeOptions.map((o) => <option value={o.value}>{o.label}</option>)}
+        </select>
+        <Icon name="_pending/chevron-down" size={18} class="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-heading" />
+      </div>
+    </div>
+
+    {
+      leadQualification.enabled &&
+        Object.entries(leadQualification.groups).map(([pillar, fields]) => (
+          <fieldset class="hidden rounded-control border border-border p-4 sm:col-span-2" data-qualification={pillar} disabled>
+            <legend class="px-1 text-xs font-semibold text-primary-700">Proje detayları</legend>
+            <div class="grid gap-3 sm:grid-cols-2">
+              {fields?.map((q) => (
+                <label class="text-xs text-body">
+                  {q.label}
+                  {q.type === 'select' ? (
+                    <select name={q.name} class:list={[field, 'mt-1 h-10 px-3']}>
+                      <option value="">Seçiniz</option>
+                      {q.options?.map((o) => <option>{o}</option>)}
+                    </select>
+                  ) : q.type === 'checkbox-group' ? (
+                    <span class="mt-1 flex flex-wrap gap-3">
+                      {q.options?.map((o) => (
+                        <span class="inline-flex items-center gap-1.5">
+                          <input type="checkbox" name={q.name} value={o} class="accent-primary-700" />
+                          {o}
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    <input name={q.name} type={q.type} class:list={[field, 'mt-1 h-10 px-3']} />
+                  )}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ))
+    }
+
+    <div class="sm:col-span-2">
+      <label for="cf-mesaj" class="mb-1.5 block text-small font-medium text-body">Mesajınız *</label>
+      <textarea
+        id="cf-mesaj"
+        name="mesaj"
+        rows="5"
+        required
+        minlength="10"
+        placeholder="Proje detaylarınızı, ihtiyaçlarınızı veya sorularınızı buraya yazabilirsiniz..."
+        aria-describedby="cf-mesaj-err"
+        class:list={[field, 'resize-y px-3.5 py-3']}></textarea>
+      <p id="cf-mesaj-err" class="mt-1 hidden text-xs text-danger" data-error></p>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <label class="flex items-start gap-2.5 text-xs text-muted">
+      <input name="kvkk" type="checkbox" required aria-describedby="cf-kvkk-err" class="mt-0.5 size-4 shrink-0 accent-primary-700" />
+      <span>
+        {consentBefore}<a href={contactForm.consentLink.href} class="text-primary-700 underline underline-offset-2">{contactForm.consentLink.label}</a>{consentAfter}
+      </span>
+    </label>
+    <p id="cf-kvkk-err" class="mt-1 hidden text-xs text-danger" data-error></p>
+  </div>
+
+  <!-- Bot tuzağı (honeypot) — gerçek kullanıcı görmez -->
+  <div class="absolute -left-[9999px]" aria-hidden="true">
+    <label>Web sitesi <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+  </div>
+
+  <button
+    type="submit"
+    class="mt-6 inline-flex items-center gap-3 rounded-control bg-primary-700 px-6 py-3.5 text-button font-semibold text-white shadow-[0_1px_2px_rgb(3_66_107/0.2)] transition-colors hover:bg-primary-800 disabled:opacity-60"
+  >
+    <Icon name="_pending/send" size={18} />
+    {contactForm.submit}
+    <Icon name="ui/arrow-right" size={16} />
+  </button>
+  <p class="mt-4 min-h-5 text-small font-medium" role="status" aria-live="polite" data-form-status></p>
+</form>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
+  if (form) {
+    const status = form.querySelector<HTMLElement>('[data-form-status]');
+    // Metinler panelden değiştirilebildiği için sunucu tarafında sayfaya gömülür (istemci paketinde varsayılan kalmaz)
+    const messages = JSON.parse(form.dataset.messages ?? '{}') as Record<'pending' | 'success' | 'error' | 'invalid', string>;
+    const serviceSelect = form.querySelector<HTMLSelectElement>('[data-service-select]');
+
+    const messageFor = (el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) => {
+      if (el.validity.valueMissing) return el.type === 'checkbox' ? 'Devam etmek için onay vermeniz gerekiyor.' : 'Bu alan zorunludur.';
+      if (el.validity.typeMismatch) return 'Lütfen geçerli bir e-posta adresi girin.';
+      if (el.validity.tooShort) return `En az ${(el as HTMLTextAreaElement).minLength} karakter girin.`;
+      return '';
+    };
+
+    const validateField = (el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) => {
+      const errId = el.getAttribute('aria-describedby');
+      const err = errId ? document.getElementById(errId) : null;
+      const msg = el.checkValidity() ? '' : messageFor(el);
+      el.setAttribute('aria-invalid', String(!!msg));
+      if (err) {
+        err.textContent = msg;
+        err.classList.toggle('hidden', !msg);
+      }
+      return !msg;
+    };
+
+    const fields = [...form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('[required]')];
+    fields.forEach((el) => el.addEventListener('blur', () => validateField(el)));
+
+    // Lead qualification: seçilen hizmete göre ek alan grubu (leadQualification.enabled ise render edilir)
+    serviceSelect?.addEventListener('change', () => {
+      form.querySelectorAll<HTMLFieldSetElement>('[data-qualification]').forEach((fs) => {
+        const on = fs.dataset.qualification === serviceSelect.value;
+        fs.classList.toggle('hidden', !on);
+        fs.disabled = !on;
+      });
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!status) return;
+      const results = fields.map(validateField);
+      if (results.includes(false)) {
+        status.textContent = messages.invalid;
+        status.className = 'mt-4 min-h-5 text-small font-medium text-danger';
+        fields[results.indexOf(false)]?.focus();
+        return;
+      }
+      const data = new FormData(form);
+      if (data.get('website')) return; // honeypot
+      const payload: Record<string, string | string[]> = {};
+      for (const key of new Set(data.keys())) {
+        const all = data.getAll(key).map(String);
+        payload[key] = all.length > 1 ? all : (all[0] ?? '');
+      }
+
+      const endpoint = form.dataset.endpoint;
+      if (!endpoint) {
+        status.textContent = messages.pending;
+        status.className = 'mt-4 min-h-5 text-small font-medium text-primary-700';
+        return;
+      }
+      const button = form.querySelector<HTMLButtonElement>('button[type=submit]');
+      if (button) button.disabled = true;
+      try {
+        const res = await fetch(endpoint, { method: 'POST', body: JSON.stringify(payload), headers: { Accept: 'application/json', 'Content-Type': 'application/json' } });
+        status.textContent = res.ok ? messages.success : messages.error;
+        status.className = `mt-4 min-h-5 text-small font-medium ${res.ok ? 'text-primary-700' : 'text-danger'}`;
+        if (res.ok) form.reset();
+      } catch {
+        status.textContent = messages.error;
+        status.className = 'mt-4 min-h-5 text-small font-medium text-danger';
+      } finally {
+        if (button) button.disabled = false;
+      }
+    });
+  }
+</script>

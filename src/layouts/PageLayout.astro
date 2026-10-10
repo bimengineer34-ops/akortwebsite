@@ -1,0 +1,54 @@
+---
+/**
+ * İç sayfa iskeleti: BaseLayout + PageHero (breadcrumb, tek H1, açıklama, teknik notlar).
+ * Sayfa kendi hero'sunu vermek isterse `hero` slot'unu doldurur.
+ */
+import type { ImageMetadata } from 'astro';
+import BaseLayout from './BaseLayout.astro';
+import PageHero from '@/components/common/PageHero.astro';
+import type { Crumb } from '@/utils/schema';
+import type { SeoProps } from '@/utils/seo';
+
+interface Props extends SeoProps {
+  heading: string;
+  subtitle?: string;
+  lead?: string;
+  breadcrumbs?: Crumb[];
+  annotations?: string[][];
+  heroCta?: { label: string; href: string };
+  heroImage?: ImageMetadata;
+  heroImageTodo?: string;
+  schema?: Record<string, unknown>[];
+}
+
+const {
+  heading,
+  subtitle,
+  lead,
+  breadcrumbs = [],
+  annotations,
+  heroCta,
+  heroImage,
+  heroImageTodo,
+  schema = [],
+  ...seo
+} = Astro.props;
+
+const heroProps = {
+  title: heading,
+  breadcrumbs: breadcrumbs.length ? breadcrumbs : [{ label: heading, href: Astro.url.pathname }],
+  ...(subtitle && { subtitle }),
+  ...(lead && { lead }),
+  ...(annotations && { annotations }),
+  ...(heroCta && { cta: heroCta }),
+  ...(heroImage && { image: heroImage }),
+  ...(heroImageTodo && { imageTodo: heroImageTodo }),
+};
+---
+
+<BaseLayout {...seo} schema={schema}>
+  <slot name="hero">
+    <PageHero {...heroProps} />
+  </slot>
+  <slot />
+</BaseLayout>

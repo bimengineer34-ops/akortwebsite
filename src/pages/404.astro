@@ -1,0 +1,59 @@
+---
+/**
+ * 404 — onaylı referans yok; iç sayfa hero'su + arama + ana bölümlere hızlı bağlantılar.
+ */
+import PageLayout from '@/layouts/PageLayout.astro';
+import Container from '@/components/common/Container.astro';
+import Icon from '@/components/common/Icon.astro';
+import { mainNav } from '@/data/navigation';
+
+const links = mainNav.filter((n) => n.href !== '/');
+---
+
+<PageLayout
+  title="Sayfa Bulunamadı"
+  description="Aradığınız sayfa bulunamadı. AKORT Mühendislik hizmetleri, projeleri ve teknik yazılarına buradan ulaşabilirsiniz."
+  heading="Sayfa Bulunamadı"
+  lead="Aradığınız sayfa taşınmış, adı değişmiş ya da kaldırılmış olabilir. Aşağıdaki bağlantılardan devam edebilir veya sitede arama yapabilirsiniz."
+  breadcrumbs={[{ label: '404', href: '/404' }]}
+  heroCta={{ label: 'Ana Sayfaya Dön', href: '/' }}
+  heroImageTodo="404 hero"
+  noindex
+>
+  <section class="bg-surface-soft py-12 lg:py-14" aria-label="Yönlendirme">
+    <Container size="content" class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
+      <div>
+        <p class="eyebrow">Arama</p>
+        <h2 class="mt-2 text-h2">Aradığınızı bulalım</h2>
+        <form class="mt-5" role="search" action="/arama" method="get">
+          <label for="nf-search" class="sr-only">Sitede ara</label>
+          <div class="relative">
+            <Icon name="ui/search" size={20} class="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-heading" />
+            <input
+              id="nf-search"
+              name="q"
+              type="search"
+              placeholder="Örn. BIM danışmanlığı"
+              class="h-12 w-full rounded-control border border-border bg-white pr-4 pl-12 text-small text-heading shadow-card placeholder:text-muted focus:border-accent-500 focus:outline-none"
+            />
+          </div>
+        </form>
+      </div>
+      <div>
+        <p class="eyebrow">Hızlı Bağlantılar</p>
+        <ul class="mt-4 grid gap-2.5 sm:grid-cols-2">
+          {
+            links.map((l) => (
+              <li>
+                <a href={l.href} class="card-surface group flex items-center justify-between px-4 py-3 text-small font-semibold text-heading hover:text-primary-700">
+                  {l.label}
+                  <Icon name="ui/arrow-right" size={16} class="text-primary-700 transition-transform group-hover:translate-x-0.5" />
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </Container>
+  </section>
+</PageLayout>

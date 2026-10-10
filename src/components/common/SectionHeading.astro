@@ -1,0 +1,42 @@
+---
+/**
+ * Referanstaki 3 kolonlu bölüm başlığı: solda eyebrow + H2, ortada-sağda kısa açıklama,
+ * en sağda alt çizgili "Tümü →" linki. 1024px altında alt alta dizilir.
+ */
+import Icon from './Icon.astro';
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  lead?: string;
+  link?: { label: string; href: string };
+  id?: string;
+  class?: string;
+}
+
+const { eyebrow, title, lead, link, id, class: className } = Astro.props;
+---
+
+<div
+  class:list={[
+    'grid gap-x-10 gap-y-3 lg:grid-cols-[auto_minmax(14rem,1fr)_auto] lg:items-end',
+    className,
+  ]}
+>
+  <div>
+    <p class="eyebrow">{eyebrow}</p>
+    <h2 id={id} class="mt-2 text-h2 xl:whitespace-nowrap">{title}</h2>
+  </div>
+  {lead && <p class="max-w-md text-small text-muted lg:justify-self-end lg:pb-1.5">{lead}</p>}
+  {
+    link && (
+      <a
+        href={link.href}
+        class="group inline-flex items-center gap-1.5 justify-self-start border-b border-primary-700/60 pb-1 text-small font-semibold text-primary-700 transition-colors hover:border-primary-700 lg:mb-1 lg:justify-self-end"
+      >
+        {link.label}
+        <Icon name="ui/arrow-right" size={14} class="transition-transform group-hover:translate-x-0.5" />
+      </a>
+    )
+  }
+</div>

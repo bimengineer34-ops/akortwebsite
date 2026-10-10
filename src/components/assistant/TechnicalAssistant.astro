@@ -1,0 +1,283 @@
+---
+/**
+ * AKORT Teknik Asistanı (Master Prompt §23) — sağ alt floating launcher + sohbet paneli.
+ *
+ * UI: karşılama, hızlı sorular, input, gönder, küçült (konuşma korunur), kapat (konuşma sıfırlanır).
+ * Konuşma ve panel durumu sessionStorage'da tutulur → sayfa değişince kaybolmaz, sekme kapanınca silinir.
+ * Taşıma: endpoint yokken LocalTransport (site içi yönlendirme, LLM yok); varsa HttpTransport (bkz. transport.ts, docs/ASSISTANT.md).
+ * Erişilebilirlik: non-modal dialog, aria-expanded, aria-live log, Esc ile küçültme, odak yönetimi.
+ */
+import Icon from '@/components/common/Icon.astro';
+import { assistant } from '@/data/assistant';
+---
+
+<div class="fixed right-4 bottom-4 z-(--z-assistant) flex flex-col items-end gap-3 sm:right-6 sm:bottom-6" data-assistant>
+  <section
+    id="assistant-panel"
+    role="dialog"
+    aria-modal="false"
+    aria-labelledby="assistant-title"
+    aria-describedby="assistant-privacy"
+    hidden
+    class="flex h-[min(36rem,calc(100dvh-6.5rem))] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-card border border-border bg-white shadow-float sm:w-[23.5rem]"
+    data-assistant-panel
+  >
+    <header class="flex items-center justify-between gap-2 bg-navy-900 px-4 py-3 text-white">
+      <div class="flex min-w-0 items-center gap-2.5">
+        <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10">
+          <Icon name="chatbot/chat" size={18} class="text-white" />
+        </span>
+        <div class="min-w-0">
+          <h2 id="assistant-title" class="truncate text-small font-bold text-white">{assistant.title}</h2>
+          <p class="flex items-center gap-1.5 text-[0.6875rem] text-white/75">
+            <span class="size-1.5 rounded-full bg-cyan-300" aria-hidden="true"></span>
+            <span data-assistant-mode>{assistant.status.local}</span>
+          </p>
+        </div>
+      </div>
+      <div class="flex shrink-0 items-center">
+        <button type="button" class="inline-flex size-10 items-center justify-center rounded-control hover:bg-white/10" aria-label="Küçült (konuşma korunur)" data-assistant-minimize>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"></path></svg>
+        </button>
+        <button type="button" class="inline-flex size-10 items-center justify-center rounded-control hover:bg-white/10" aria-label="Kapat (konuşmayı sıfırla)" data-assistant-close>
+          <Icon name="_pending/close" size={18} />
+        </button>
+      </div>
+    </header>
+
+    <div class="flex-1 space-y-3 overflow-y-auto bg-surface-soft p-4" role="log" aria-live="polite" aria-label="Konuşma" data-assistant-log>
+      <p class="max-w-[88%] rounded-card rounded-tl-sm bg-white p-3 text-small text-body shadow-card">{assistant.welcome}</p>
+    </div>
+
+    <div class="border-t border-border bg-white p-3">
+      <ul class="mb-3 flex flex-wrap gap-1.5" aria-label="Hızlı sorular" data-assistant-quick>
+        {
+          assistant.quickQuestions.map((q) => (
+            <li>
+              <button type="button" class="rounded-full border border-border px-2.5 py-1.5 text-xs text-primary-700 transition-colors hover:border-primary-700" data-question={q}>
+                {q}
+              </button>
+            </li>
+          ))
+        }
+      </ul>
+      <form class="flex items-center gap-2" data-assistant-form>
+        <label for="assistant-input" class="sr-only">Sorunuz</label>
+        <input
+          id="assistant-input"
+          name="q"
+          type="text"
+          autocomplete="off"
+          maxlength={assistant.maxLength}
+          placeholder={assistant.inputPlaceholder}
+          class="min-w-0 flex-1 rounded-control border border-border px-3 py-2.5 text-small text-heading placeholder:text-muted focus:border-accent-500 focus:outline-none"
+        />
+        <button
+          type="submit"
+          class="inline-flex size-11 shrink-0 items-center justify-center rounded-control bg-primary-700 text-white transition-colors hover:bg-primary-800 disabled:opacity-50"
+          aria-label="Gönder"
+          data-assistant-send
+        >
+          <Icon name="_pending/send" size={18} />
+        </button>
+      </form>
+      <p id="assistant-privacy" class="mt-2 text-[0.6875rem] leading-snug text-muted">{assistant.privacy}</p>
+    </div>
+  </section>
+
+  <button
+    type="button"
+    class="inline-flex items-center gap-2.5 rounded-full bg-primary-700 py-2.5 pr-3 pl-3 text-small font-semibold text-white shadow-float transition-colors hover:bg-primary-800 sm:pr-5"
+    aria-controls="assistant-panel"
+    aria-expanded="false"
+    data-assistant-toggle
+  >
+    <span class="relative inline-flex size-8 items-center justify-center rounded-full bg-white/15">
+      <Icon name="chatbot/chat" size={18} class="text-white" />
+      <span class="absolute -top-0.5 -right-0.5 hidden size-2.5 rounded-full bg-cyan-300 ring-2 ring-primary-700" data-assistant-dot aria-hidden="true"></span>
+    </span>
+    <span class="hidden sm:inline">{assistant.title}</span>
+    <span class="sr-only sm:hidden">{assistant.title}</span>
+  </button>
+</div>
+
+<script>
+  import { assistant } from '@/data/assistant';
+  import { HttpTransport, LocalTransport, type AssistantMessage, type AssistantSource, type AssistantTransport } from './transport';
+
+  type Stored = { open: boolean; messages: (AssistantMessage & { sources?: AssistantSource[] })[] };
+
+  const transport: AssistantTransport = assistant.endpoint
+    ? new HttpTransport(assistant.endpoint)
+    : new LocalTransport(assistant.indexUrl, assistant.local);
+
+  const root = document.querySelector<HTMLElement>('[data-assistant]');
+  const panel = root?.querySelector<HTMLElement>('[data-assistant-panel]');
+  const toggle = root?.querySelector<HTMLButtonElement>('[data-assistant-toggle]');
+  const log = root?.querySelector<HTMLElement>('[data-assistant-log]');
+  const form = root?.querySelector<HTMLFormElement>('[data-assistant-form]');
+  const input = form?.querySelector<HTMLInputElement>('input');
+  const sendBtn = root?.querySelector<HTMLButtonElement>('[data-assistant-send]');
+  const dot = root?.querySelector<HTMLElement>('[data-assistant-dot]');
+  const modeLabel = root?.querySelector<HTMLElement>('[data-assistant-mode]');
+
+  if (root && panel && toggle && log && form && input && sendBtn) {
+    if (modeLabel) modeLabel.textContent = assistant.status[transport.mode];
+    const welcome = log.firstElementChild;
+
+    // ---- Oturum durumu (sessionStorage erişimi her zaman try/catch: gizli mod vb.)
+    const load = (): Stored => {
+      try {
+        const raw = sessionStorage.getItem(assistant.storageKey);
+        if (raw) return JSON.parse(raw) as Stored;
+      } catch {
+        /* depolama yok — bellekte devam */
+      }
+      return { open: false, messages: [] };
+    };
+    const state = load();
+    const save = () => {
+      try {
+        sessionStorage.setItem(assistant.storageKey, JSON.stringify(state));
+      } catch {
+        /* yok say */
+      }
+    };
+
+    // ---- Görünüm
+    const bubble = (m: Stored['messages'][number]) => {
+      const wrap = document.createElement('div');
+      const p = document.createElement('p');
+      p.textContent = m.content;
+      p.className =
+        m.role === 'user'
+          ? 'ml-auto max-w-[88%] rounded-card rounded-tr-sm bg-primary-700 p-3 text-small text-white'
+          : 'max-w-[88%] rounded-card rounded-tl-sm bg-white p-3 text-small text-body shadow-card';
+      wrap.append(p);
+      if (m.role === 'assistant' && m.sources?.length) {
+        const ul = document.createElement('ul');
+        ul.className = 'mt-2 max-w-[88%] space-y-1.5';
+        for (const s of m.sources) {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = s.url;
+          a.className = 'flex items-center justify-between gap-2 rounded-control border border-border bg-white px-3 py-2 text-xs font-semibold text-primary-700 hover:border-primary-700';
+          const label = document.createElement('span');
+          label.textContent = s.title;
+          const type = document.createElement('span');
+          type.className = 'shrink-0 text-[0.625rem] font-medium tracking-wide text-muted uppercase';
+          type.textContent = s.type ?? '';
+          a.append(label, type);
+          li.append(a);
+          ul.append(li);
+        }
+        wrap.append(ul);
+      }
+      if (m.role === 'assistant' && !m.sources?.length) {
+        const a = document.createElement('a');
+        a.href = assistant.contact.href;
+        a.className = 'mt-2 inline-block text-xs font-semibold text-primary-700 underline underline-offset-2';
+        a.textContent = `${assistant.contact.label} →`;
+        wrap.append(a);
+      }
+      log.append(wrap);
+      log.scrollTop = log.scrollHeight;
+    };
+
+    const typing = () => {
+      const p = document.createElement('p');
+      p.className = 'inline-flex gap-1 rounded-card rounded-tl-sm bg-white px-3 py-3 shadow-card';
+      p.setAttribute('aria-label', 'Yanıt hazırlanıyor');
+      for (let i = 0; i < 3; i++) {
+        const d = document.createElement('span');
+        d.className = 'size-1.5 animate-pulse rounded-full bg-muted';
+        d.style.animationDelay = `${i * 150}ms`;
+        p.append(d);
+      }
+      log.append(p);
+      log.scrollTop = log.scrollHeight;
+      return p;
+    };
+
+    const renderAll = () => {
+      log.replaceChildren(...(welcome ? [welcome] : []));
+      state.messages.forEach(bubble);
+    };
+
+    const setOpen = (open: boolean, focus = true) => {
+      panel.hidden = !open;
+      toggle.setAttribute('aria-expanded', String(open));
+      state.open = open;
+      save();
+      if (open) {
+        dot?.classList.add('hidden');
+        if (focus) input.focus();
+      } else if (focus) toggle.focus();
+    };
+
+    // ---- Soru gönderme
+    let busy = false;
+    const ask = async (question: string) => {
+      const q = question.trim().slice(0, assistant.maxLength);
+      if (!q || busy) return;
+      busy = true;
+      sendBtn.disabled = true;
+      input.value = '';
+      const userMsg = { role: 'user' as const, content: q };
+      state.messages.push(userMsg);
+      bubble(userMsg);
+      save();
+      const t = typing();
+      try {
+        const res = await transport.send({
+          question: q,
+          history: state.messages.slice(-assistant.historyLimit).map(({ role, content }) => ({ role, content })),
+          pageUrl: location.pathname,
+          locale: 'tr-TR',
+        });
+        const botMsg = { role: 'assistant' as const, content: res.answer || assistant.error, sources: res.sources };
+        state.messages.push(botMsg);
+        t.remove();
+        bubble(botMsg);
+      } catch {
+        t.remove();
+        const botMsg = { role: 'assistant' as const, content: assistant.error, sources: [] };
+        state.messages.push(botMsg);
+        bubble(botMsg);
+      } finally {
+        save();
+        busy = false;
+        sendBtn.disabled = false;
+        if (!panel.hidden) input.focus();
+      }
+    };
+
+    // ---- Olaylar
+    toggle.addEventListener('click', () => setOpen(panel.hasAttribute('hidden')));
+    root.querySelector('[data-assistant-minimize]')?.addEventListener('click', () => {
+      setOpen(false);
+      if (state.messages.length) dot?.classList.remove('hidden');
+    });
+    root.querySelector('[data-assistant-close]')?.addEventListener('click', () => {
+      state.messages = [];
+      renderAll();
+      setOpen(false);
+    });
+    root.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !panel.hidden) {
+        setOpen(false);
+        if (state.messages.length) dot?.classList.remove('hidden');
+      }
+    });
+    root.querySelectorAll<HTMLButtonElement>('[data-question]').forEach((btn) => btn.addEventListener('click', () => void ask(btn.dataset.question ?? '')));
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      void ask(input.value);
+    });
+
+    // ---- Önceki oturumu geri yükle (sayfa geçişlerinde konuşma korunur)
+    if (state.messages.length) renderAll();
+    if (state.open) setOpen(true, false);
+    else if (state.messages.length) dot?.classList.remove('hidden');
+  }
+</script>

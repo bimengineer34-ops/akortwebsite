@@ -1,0 +1,52 @@
+---
+/**
+ * Blog — tek tasarım kaynağı: docs/reference/pages/blog-approved-reference.jpeg
+ * Section sırası: Hero → (Öne Çıkan Yazı + Kategoriler) → Tüm Yazılar (arama, 3'lü grid, sayfalama) + yan panel → Bülten.
+ */
+import { heroImages } from '@/data/images';
+import PageLayout from '@/layouts/PageLayout.astro';
+import BlogListing from '@/components/blog/BlogListing.astro';
+import NewsletterBand from '@/components/blog/NewsletterBand.astro';
+import { blogHero } from '@/data/blog';
+import { BLOG_PAGE_SIZE, featuredPost, getBlogPosts, pageHref } from '@/utils/blog';
+
+const allPosts = await getBlogPosts();
+const featured = featuredPost(allPosts);
+const rest = allPosts.filter((p) => p !== featured);
+const totalPages = Math.max(1, Math.ceil(rest.length / BLOG_PAGE_SIZE));
+
+const schema = Astro.site
+  ? [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Blog',
+        name: 'AKORT Mühendislik Blog',
+        url: new URL('/blog', Astro.site).href,
+        inLanguage: 'tr-TR',
+        publisher: { '@id': new URL('/#organization', Astro.site).href },
+      },
+    ]
+  : [];
+---
+
+<PageLayout
+  title="Blog"
+  description="BIM, MEP, enerji verimliliği, teknik danışmanlık ve proje yönetimi üzerine AKORT Mühendislik teknik yazıları ve uzman görüşleri."
+  heading={blogHero.title}
+  subtitle={blogHero.subtitle}
+  lead={blogHero.lead}
+  breadcrumbs={[{ label: 'Blog', href: '/blog' }]}
+  annotations={blogHero.annotations}
+  heroImage={heroImages.blog}
+  schema={schema}
+>
+  <BlogListing
+    allPosts={allPosts}
+    posts={rest.slice(0, BLOG_PAGE_SIZE)}
+    featured={featured}
+    currentPage={1}
+    totalPages={totalPages}
+    pageHref={pageHref}
+  />
+  <NewsletterBand />
+</PageLayout>

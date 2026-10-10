@@ -1,0 +1,166 @@
+---
+/**
+ * Blog liste gövdesi — /blog, /blog/sayfa/[n], /blog/kategori/[slug], /blog/etiket/[slug] ortak.
+ * Referans düzeni: sol ana kolon (öne çıkan yazı → başlık + arama → 3'lü grid → sayfalama), sağda yan panel.
+ * Arama yalnızca listelenen sayfadaki yazıları filtreler (site geneli arama: Pagefind kararı bekliyor).
+ */
+import Container from '@/components/common/Container.astro';
+import Icon from '@/components/common/Icon.astro';
+import Button from '@/components/common/Button.astro';
+import BlogFeatured from './BlogFeatured.astro';
+import BlogGridCard from './BlogGridCard.astro';
+import BlogSidebar from './BlogSidebar.astro';
+import Pagination from './Pagination.astro';
+import { blogListing } from '@/data/blog';
+import { categoryHref, postExcerpt, postHref, postReadingTime, type BlogPost } from '@/utils/blog';
+
+interface Props {
+  /** Yan panel için tüm yayınlanmış yazılar */
+  allPosts: BlogPost[];
+  /** Bu sayfada listelenecek yazılar */
+  posts: BlogPost[];
+  featured?: BlogPost | undefined;
+  currentPage: number;
+  totalPages: number;
+  pageHref: (page: number) => string;
+  eyebrow?: string;
+  title?: string;
+  lead?: string;
+  activeCategory?: string;
+  activeTag?: string;
+}
+
+const {
+  allPosts,
+  posts,
+  featured,
+  currentPage,
+  totalPages,
+  pageHref,
+  eyebrow = blogListing.eyebrow,
+  title = blogListing.title,
+  lead = blogListing.lead,
+  activeCategory,
+  activeTag,
+} = Astro.props;
+
+const sidebarProps = {
+  posts: allPosts,
+  ...(activeCategory && { activeCategory }),
+  ...(activeTag && { activeTag }),
+};
+---
+
+<section class="bg-white py-10 lg:py-12">
+  <Container
+    size="wide"
+    class:list={['grid gap-8', allPosts.length > 0 && 'lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]']}
+  >
+    <div class="min-w-0">
+      {
+        featured && (
+          <div class="mb-10">
+            <BlogFeatured
+              eyebrow={blogListing.featuredEyebrow}
+              title={featured.data.title}
+              excerpt={postExcerpt(featured)}
+              category={featured.data.category}
+              categoryHref={categoryHref(featured.data.category)}
+              date={featured.data.pubDate}
+              author={featured.data.author}
+              minutes={postReadingTime(featured)}
+              href={postHref(featured)}
+              image={featured.data.cover}
+              imageAlt={featured.data.coverAlt}
+            />
+          </div>
+        )
+      }
+
+      {
+        allPosts.length === 0 ? (
+          <div class="card-surface flex flex-col items-start gap-4 p-(--space-card) sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p class="text-h3 font-bold text-heading">{blogListing.empty.title}</p>
+              <p class="mt-1.5 max-w-xl text-small text-muted">{blogListing.empty.text}</p>
+            </div>
+            <Button href="/hizmetler" size="md" variant="outline">
+              Hizmetlerimiz
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between" aria-labelledby="posts-title">
+              <div>
+                <p class="eyebrow">{eyebrow}</p>
+                <h2 id="posts-title" class="mt-2 text-h2">{title}</h2>
+                <p class="mt-1.5 text-small text-muted">{lead}</p>
+              </div>
+              <div class="relative w-full md:w-72 md:shrink-0">
+                <label for="blog-search" class="sr-only">Blog yazılarında ara</label>
+                <Icon name="ui/search" size={18} class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-heading" />
+                <input
+                  id="blog-search"
+                  type="search"
+                  placeholder={blogListing.searchPlaceholder}
+                  autocomplete="off"
+                  class="h-11 w-full rounded-control border border-border bg-white pr-3 pl-10 text-small text-heading placeholder:text-muted focus:border-accent-500 focus:outline-none"
+                  data-blog-search
+                />
+              </div>
+            </div>
+
+            <p class="sr-only" aria-live="polite" data-blog-status />
+            <ul class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-blog-list>
+              {posts.map((post) => (
+                <li>
+                  <BlogGridCard
+                    title={post.data.title}
+                    excerpt={postExcerpt(post)}
+                    category={post.data.category}
+                    date={post.data.pubDate}
+                    minutes={postReadingTime(post)}
+                    href={postHref(post)}
+                    image={post.data.cover}
+                    imageAlt={post.data.coverAlt}
+                  />
+                </li>
+              ))}
+            </ul>
+            <p class="mt-8 hidden text-center text-small text-muted" data-blog-empty>
+              {blogListing.noResults}
+            </p>
+            <Pagination current={currentPage} total={totalPages} href={pageHref} />
+          </>
+        )
+      }
+    </div>
+
+    {/* Yayınlanmış yazı yokken yan panel (Tümü 0) gösterilmez */}
+    {allPosts.length > 0 && <BlogSidebar {...sidebarProps} />}
+  </Container>
+</section>
+
+<script>
+  import { foldTr } from '@/utils/search';
+
+  const list = document.querySelector<HTMLElement>('[data-blog-list]');
+  const search = document.querySelector<HTMLInputElement>('[data-blog-search]');
+  const empty = document.querySelector<HTMLElement>('[data-blog-empty]');
+  const status = document.querySelector<HTMLElement>('[data-blog-status]');
+
+  if (list && search) {
+    const cards = [...list.querySelectorAll<HTMLElement>('[data-post]')];
+    search.addEventListener('input', () => {
+      const q = foldTr(search.value);
+      let shown = 0;
+      for (const card of cards) {
+        const visible = !q || (card.dataset.search ?? '').includes(q);
+        (card.parentElement as HTMLElement).hidden = !visible;
+        if (visible) shown++;
+      }
+      empty?.classList.toggle('hidden', shown > 0);
+      if (status) status.textContent = q ? `${shown} yazı bulundu` : '';
+    });
+  }
+</script>

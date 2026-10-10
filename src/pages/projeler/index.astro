@@ -1,0 +1,262 @@
+---
+/**
+ * Projeler — tek tasarım kaynağı: docs/reference/pages/projects-approved-reference.jpeg
+ * Section sırası: Hero → Tüm Projelerimizi Keşfedin (filtre + arama + 3'lü grid) → Öne Çıkan Proje (koyu) →
+ * Rakamlarla AKORT → CTA.
+ *
+ * NO_FAKE_DATA: Yalnızca yayınlanmış (draft: false) projeler listelenir; künye ve rakamlar yalnızca doğrulanmışsa görünür.
+ * Filtre/arama: progressive enhancement — JS yoksa tüm projeler listelenir.
+ */
+import { heroImages } from '@/data/images';
+import PageLayout from '@/layouts/PageLayout.astro';
+import Container from '@/components/common/Container.astro';
+import SectionHeading from '@/components/common/SectionHeading.astro';
+import Icon from '@/components/common/Icon.astro';
+import Button from '@/components/common/Button.astro';
+import CTASection from '@/components/common/CTASection.astro';
+import ProjectListCard from '@/components/projects/ProjectListCard.astro';
+import SpotlightProject, { type Fact } from '@/components/projects/SpotlightProject.astro';
+import { projectsHero, projectsList, projectFilters, spotlightSection, projectMetrics, projectsCta } from '@/data/projectsPage';
+import { sectors } from '@/data/sectors';
+import { getPublished } from '@/utils/content';
+import { isPublishable, publishable } from '@/utils/verified';
+
+const projects = (await getPublished('projects')).sort((a, b) => a.data.order - b.data.order);
+const sectorLabel = (key: string) => sectors.find((s) => s.key === key)?.label ?? key;
+const projectHref = (id: string) => `/projeler/${id}`;
+
+const spotlight = projects.find((p) => p.data.spotlight);
+const spotlightFacts: Fact[] = [];
+if (spotlight) {
+  const candidates: { icon: Fact['icon']; value: string | undefined; label?: string }[] = [
+    { icon: 'ui/location', value: publishable(spotlight.data.location) },
+    { icon: '_pending/area', value: publishable(spotlight.data.area), label: 'Kapalı Alan' },
+    { icon: 'expertise/health', value: publishable(spotlight.data.capacity), label: 'Yatak Kapasitesi' },
+    { icon: 'services/project-management', value: publishable(spotlight.data.year), label: 'Proje Dönemi' },
+  ];
+  for (const c of candidates) {
+    if (c.value) spotlightFacts.push(c.label ? { icon: c.icon, value: c.value, label: c.label } : { icon: c.icon, value: c.value });
+  }
+}
+const spotlightUnverified =
+  !!spotlight && (spotlight.data.draft || [spotlight.data.location, spotlight.data.area, spotlight.data.capacity, spotlight.data.year].some((v) => v && !v.verified));
+
+const metrics = projectMetrics.items.filter((m) => isPublishable(m.value));
+const metricsUnverified = projectMetrics.items.some((m) => !m.value.verified);
+
+const schema =
+  Astro.site && projects.length
+    ? [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          name: 'AKORT Mühendislik Projeleri',
+          itemListElement: projects.map((p, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            item: { '@type': 'CreativeWork', name: p.data.title, url: new URL(projectHref(p.id), Astro.site).href },
+          })),
+        },
+      ]
+    : [];
+---
+
+<PageLayout
+  title="Projeler"
+  description="Sağlık, eğitim, kamu, ticari ve karma kullanım yapılarında AKORT Mühendislik'in mühendislik danışmanlığı, BIM ve enerji projeleri."
+  heading={projectsHero.title}
+  lead={projectsHero.lead}
+  breadcrumbs={[{ label: 'Projeler', href: '/projeler' }]}
+  annotations={projectsHero.annotations}
+  heroImage={heroImages.projeler}
+  schema={schema}
+>
+  <section class="bg-surface-soft pt-11 pb-12" aria-labelledby="projects-list-title">
+    <Container size="content">
+      <SectionHeading eyebrow={projectsList.eyebrow} title={projectsList.title} lead={projectsList.lead} id="projects-list-title" />
+    </Container>
+
+    {
+      projects.length > 0 ? (
+        <Container size="wide" class="mt-7">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between" data-project-controls>
+            <div class="-mx-(--space-gutter) overflow-x-auto px-(--space-gutter) lg:mx-0 lg:overflow-visible lg:px-0">
+              <ul class="flex w-max gap-2.5" aria-label="Proje kategorileri">
+                {projectFilters.map((f, i) => (
+                  <li>
+                    <button
+                      type="button"
+                      data-filter={f.key}
+                      aria-pressed={i === 0 ? 'true' : 'false'}
+                      class="filter-chip inline-flex h-11 items-center gap-2.5 rounded-control border border-border bg-white px-4 text-small font-medium whitespace-nowrap text-heading shadow-card transition-colors hover:border-primary-700"
+                    >
+                      <Icon name={f.icon} size={20} strokeWidth={1.6} />
+                      {f.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div class="relative w-full lg:w-64">
+              <label for="project-search" class="sr-only">
+                Projelerde ara
+              </label>
+              <input
+                id="project-search"
+                type="search"
+                placeholder={projectsList.searchPlaceholder}
+                autocomplete="off"
+                class="h-11 w-full rounded-control border border-border bg-white pr-11 pl-4 text-small text-heading shadow-card placeholder:text-muted focus:border-accent-500 focus:outline-none"
+                data-project-search
+              />
+              <Icon name="ui/search" size={18} class="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-heading" />
+            </div>
+          </div>
+
+          <p class="sr-only" aria-live="polite" data-project-status></p>
+
+          <ul class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-project-list data-sectors={sectors.map((s) => s.key).join(',')}>
+            {projects.map((p) => (
+              <li>
+                <ProjectListCard
+                  title={p.data.title}
+                  sector={p.data.sector}
+                  sectorLabel={sectorLabel(p.data.sector)}
+                  location={publishable(p.data.location)}
+                  summary={p.data.summary}
+                  href={projectHref(p.id)}
+                  image={p.data.cover}
+                  imageAlt={p.data.coverAlt}
+                />
+              </li>
+            ))}
+          </ul>
+          <p class="mt-8 hidden text-center text-small text-muted" data-project-empty>
+            {projectsList.noResults}
+          </p>
+        </Container>
+      ) : (
+        <Container size="content" class="mt-8">
+          <div class="card-surface flex flex-col items-start gap-4 p-(--space-card) sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p class="text-h3 font-bold text-heading">{projectsList.empty.title}</p>
+              <p class="mt-1.5 max-w-2xl text-small text-muted">{projectsList.empty.text}</p>
+            </div>
+            <Button href="/iletisim" size="md">
+              İletişime Geçin
+            </Button>
+          </div>
+        </Container>
+      )
+    }
+  </section>
+
+  {
+    spotlight && (
+      <SpotlightProject
+        eyebrow={spotlightSection.eyebrow}
+        title={`${spotlight.data.title} Projesi`}
+        summary={spotlight.data.summary}
+        href={projectHref(spotlight.id)}
+        ctaLabel={spotlightSection.cta}
+        facts={spotlightFacts}
+        annotations={spotlightSection.annotations}
+        image={spotlight.data.cover}
+        unverifiedNote={spotlightUnverified}
+      />
+    )
+  }
+
+  {
+    metrics.length > 0 && (
+      <section class="bg-surface-soft py-12 lg:py-10" aria-labelledby="metrics-title">
+        <Container size="wide" class="grid gap-8 lg:grid-cols-[minmax(0,19rem)_1fr] lg:items-center lg:gap-10">
+          <div>
+            <p class="eyebrow">{projectMetrics.eyebrow}</p>
+            <h2 id="metrics-title" class="mt-2 text-h2-lg">{projectMetrics.title}</h2>
+          </div>
+          <div>
+            <p class="max-w-xl text-small text-muted">{projectMetrics.lead}</p>
+            {metricsUnverified && (
+              <p class="mt-2 inline-block rounded-sm border border-dashed border-accent-500/60 px-2 py-0.5 text-[11px] font-semibold text-primary-700">
+                TODO-CONTENT · rakamlar doğrulanmadı — production'da gizli
+              </p>
+            )}
+            <dl class="mt-5 grid grid-cols-2 gap-6 lg:grid-cols-4 lg:gap-0">
+              {metrics.map((m) => (
+                <div class="flex items-center gap-4 lg:border-l lg:border-border-strong lg:px-6 lg:first:border-l-0 lg:first:pl-0">
+                  <Icon name={m.icon} size={44} strokeWidth={1.4} class="text-primary-700" />
+                  <div class="flex flex-col">
+                    <dt class="order-last mt-1 text-xs text-muted">{m.label}</dt>
+                    <dd class="text-h2 leading-none font-bold text-heading">{m.value.value}</dd>
+                  </div>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </Container>
+      </section>
+    )
+  }
+
+  <CTASection {...projectsCta} headingId="projects-cta-title" />
+</PageLayout>
+
+<style>
+  .filter-chip[aria-pressed='true'] {
+    background-color: var(--color-primary-800);
+    border-color: var(--color-primary-800);
+    color: #fff;
+  }
+</style>
+
+<script>
+  import { foldTr } from '@/utils/search';
+
+  const list = document.querySelector<HTMLElement>('[data-project-list]');
+  const chips = [...document.querySelectorAll<HTMLButtonElement>('[data-filter]')];
+  const search = document.querySelector<HTMLInputElement>('[data-project-search]');
+  const empty = document.querySelector<HTMLElement>('[data-project-empty]');
+  const status = document.querySelector<HTMLElement>('[data-project-status]');
+
+  if (list && search) {
+    const cards = [...list.querySelectorAll<HTMLElement>('[data-project]')];
+    let active = 'tumu';
+
+    const apply = () => {
+      const q = foldTr(search.value);
+      let shown = 0;
+      for (const card of cards) {
+        const okSector = active === 'tumu' || card.dataset.sector === active;
+        const okSearch = !q || (card.dataset.search ?? '').includes(q);
+        const visible = okSector && okSearch;
+        (card.parentElement as HTMLElement).hidden = !visible;
+        if (visible) shown++;
+      }
+      empty?.classList.toggle('hidden', shown > 0);
+      if (status) status.textContent = `${shown} proje gösteriliyor`;
+      chips.forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.filter === active)));
+
+      const url = new URL(location.href);
+      if (active === 'tumu') url.searchParams.delete('sektor');
+      else url.searchParams.set('sektor', active);
+      history.replaceState(null, '', url);
+    };
+
+    chips.forEach((chip) =>
+      chip.addEventListener('click', () => {
+        active = chip.dataset.filter ?? 'tumu';
+        apply();
+      }),
+    );
+    search.addEventListener('input', apply);
+
+    // Uzmanlık Alanları sayfasından gelen ?sektor= parametresi (çipi olmayan sektörler de filtrelenir)
+    const fromUrl = new URLSearchParams(location.search).get('sektor');
+    const known = (list.dataset.sectors ?? '').split(',');
+    if (fromUrl && known.includes(fromUrl)) {
+      active = fromUrl;
+    }
+    apply();
+  }
+</script>

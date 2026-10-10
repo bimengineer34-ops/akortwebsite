@@ -1,0 +1,130 @@
+---
+/**
+ * Site içi arama — header'daki arama ikonu buraya gelir (?q= desteklenir).
+ * İndeks (/arama-index.json) ilk etkileşimde yüklenir; sayfa açılışında JS/JSON yükü yok denecek kadar azdır.
+ * Onaylı referans tasarımı yok: PageHero + onaylı kart/input dili.
+ */
+import PageLayout from '@/layouts/PageLayout.astro';
+import Container from '@/components/common/Container.astro';
+import Icon from '@/components/common/Icon.astro';
+---
+
+<PageLayout
+  title="Arama"
+  description="AKORT Mühendislik sitesinde hizmet, uzmanlık alanı, proje ve teknik yazı arayın."
+  heading="Arama"
+  lead="Hizmetlerimiz, uzmanlık alanlarımız, projelerimiz ve teknik yazılarımız arasında arayın."
+  breadcrumbs={[{ label: 'Arama', href: '/arama' }]}
+  heroImageTodo="arama hero"
+  noindex
+>
+  <section class="bg-surface-soft py-12 lg:py-14" aria-label="Arama">
+    <Container size="content">
+      <form class="max-w-2xl" role="search" action="/arama" method="get" data-site-search>
+        <label for="site-search" class="sr-only">Sitede ara</label>
+        <div class="relative">
+          <Icon name="ui/search" size={20} class="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-heading" />
+          <input
+            id="site-search"
+            name="q"
+            type="search"
+            autocomplete="off"
+            placeholder="Örn. BIM, enerji verimliliği, hakediş…"
+            class="h-14 w-full rounded-control border border-border bg-white pr-4 pl-12 text-body text-heading shadow-card placeholder:text-muted focus:border-accent-500 focus:outline-none"
+          />
+        </div>
+      </form>
+      <p class="mt-4 text-small text-muted" role="status" aria-live="polite" data-search-status></p>
+      <ul class="mt-4 max-w-2xl space-y-3" data-search-results></ul>
+    </Container>
+  </section>
+</PageLayout>
+
+<script>
+  import { foldTr } from '@/utils/search';
+
+  interface SearchDoc {
+    title: string;
+    url: string;
+    type: string;
+    text: string;
+  }
+
+  const form = document.querySelector<HTMLFormElement>('[data-site-search]');
+  const input = document.querySelector<HTMLInputElement>('#site-search');
+  const list = document.querySelector<HTMLUListElement>('[data-search-results]');
+  const status = document.querySelector<HTMLElement>('[data-search-status]');
+
+  let index: SearchDoc[] | null = null;
+  const loadIndex = async () => {
+    if (!index) index = (await (await fetch('/arama-index.json')).json()) as SearchDoc[];
+    return index;
+  };
+
+  const render = async (raw: string) => {
+    if (!list || !status) return;
+    const q = foldTr(raw.trim());
+    list.replaceChildren();
+    if (q.length < 2) {
+      status.textContent = q ? 'En az 2 karakter girin.' : '';
+      return;
+    }
+    const terms = q.split(/\s+/);
+    const docs = await loadIndex();
+    const scored = docs
+      .map((d) => {
+        const title = foldTr(d.title);
+        const text = foldTr(d.text);
+        if (!terms.every((t) => title.includes(t) || text.includes(t))) return null;
+        const score = terms.reduce((s, t) => s + (title.includes(t) ? 3 : 0) + (text.includes(t) ? 1 : 0), 0);
+        return { d, score };
+      })
+      .filter((x): x is { d: SearchDoc; score: number } => !!x)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20);
+
+    status.textContent = scored.length ? `“${raw.trim()}” için ${scored.length} sonuç` : `“${raw.trim()}” için sonuç bulunamadı.`;
+    for (const { d } of scored) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = d.url;
+      a.className = 'card-surface block p-4 hover:shadow-card-hover';
+      const type = document.createElement('span');
+      type.className = 'eyebrow';
+      type.textContent = d.type;
+      const title = document.createElement('span');
+      title.className = 'mt-1 block text-h3 font-bold text-heading';
+      title.textContent = d.title;
+      const text = document.createElement('span');
+      text.className = 'mt-1 line-clamp-2 block text-small text-muted';
+      text.textContent = d.text;
+      a.append(type, title, text);
+      li.append(a);
+      list.append(li);
+    }
+  };
+
+  if (form && input) {
+    let timer: number | undefined;
+    input.addEventListener('input', () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        void render(input.value);
+        const url = new URL(location.href);
+        if (input.value.trim()) url.searchParams.set('q', input.value.trim());
+        else url.searchParams.delete('q');
+        history.replaceState(null, '', url);
+      }, 150);
+    });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      void render(input.value);
+    });
+    const initial = new URLSearchParams(location.search).get('q');
+    if (initial) {
+      input.value = initial;
+      void render(initial);
+    }
+    input.focus();
+  }
+</script>

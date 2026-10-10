@@ -1,0 +1,25 @@
+---
+/**
+ * /bim — "BIM Modelini İncele" (Faz 18). Kullanıcı kendi IFC dosyasını tarayıcıda açar.
+ * Onaylı referans tasarımı yok: PageHero + AKORT kart dili. noindex (araç sayfası, içerik değil).
+ */
+import PageLayout from '@/layouts/PageLayout.astro';
+import Container from '@/components/common/Container.astro';
+import BimViewer from '@/components/bim/BimViewer.astro';
+---
+
+<PageLayout
+  title="BIM Modelini İncele"
+  description="IFC modelinizi tarayıcıda inceleyin: döndürme, yakınlaştırma, öğe seçimi, özellikler, kat ve disiplin filtreleri."
+  heading="BIM Modelini İncele"
+  lead="IFC dosyanızı tarayıcıda açın, katlara ve disiplinlere göre filtreleyin, öğelerin özelliklerini inceleyin. Dosya cihazınızdan çıkmaz."
+  breadcrumbs={[{ label: 'BIM Modelini İncele', href: '/bim' }]}
+  heroImageTodo="bim hero"
+  noindex
+>
+  <section class="bg-surface-soft py-8 lg:py-10" aria-label="BIM görüntüleyici">
+    <Container size="wide">
+      <BimViewer />
+    </Container>
+  </section>
+</PageLayout>

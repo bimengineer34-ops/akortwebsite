@@ -1,0 +1,239 @@
+---
+/**
+ * Uzmanlık alanı (sektör) sayfası: /uzmanlik-alanlari/<slug> — içerik: src/data/serviceContent/sectors.ts
+ * Düzen: hizmet detay şablonuyla aynı (docs/reference/service-detail-template.webp):
+ * hero → sticky sayfa içi navigasyon → giriş → öne çıkan konular → koyu bant (hizmetler) → SSS + diğer yapı tipleri → CTA.
+ * TODO-ASSET: hero görseli.
+ */
+import type { GetStaticPaths } from 'astro';
+import PageLayout from '@/layouts/PageLayout.astro';
+import Container from '@/components/common/Container.astro';
+import { Image } from 'astro:assets';
+import Icon from '@/components/common/Icon.astro';
+import Button from '@/components/common/Button.astro';
+import Breadcrumbs from '@/components/common/Breadcrumbs.astro';
+import CTASection from '@/components/common/CTASection.astro';
+import FAQ from '@/components/common/FAQ.astro';
+import bimOverlay from '@/assets/graphics/bim/bim-wireframe-overlay.svg?url';
+import type { IconName } from '@/components/common/icons';
+import { sectorImages } from '@/data/images';
+import { getService, navLabel, sectorCatalog, sectorHref, serviceHref, type SectorEntry } from '@/data/serviceCatalog';
+import { servicesCta } from '@/data/servicesPage';
+
+export const getStaticPaths = (() => sectorCatalog.map((sector) => ({ params: { slug: sector.slug }, props: { sector } }))) satisfies GetStaticPaths;
+
+interface Props {
+  sector: SectorEntry;
+}
+
+const { sector: s } = Astro.props;
+const isDev = import.meta.env.DEV;
+const heroPic = sectorImages[s.slug];
+const services = s.services.map((slug) => getService(slug));
+const others = sectorCatalog.filter((x) => x.slug !== s.slug);
+const faqItems = s.faq.map((f) => ({ question: f.q, answer: f.a }));
+const seoDescription = s.summary.length >= 70 ? s.summary : `${s.summary} AKORT Mühendislik uzmanlık alanı.`;
+const seoTitle = `${s.title} Mühendislik Danışmanlığı`.length <= 45 ? `${s.title} Mühendislik Danışmanlığı` : s.title;
+const crumbs = [
+  { label: 'Uzmanlık Alanları', href: '/uzmanlik-alanlari' },
+  { label: s.title, href: sectorHref(s.slug) },
+];
+
+// Hero özeti: yalnızca içerik kaydından sayılan bilgiler (rakam/iddia uydurulmaz)
+const highlights: { icon: IconName; title: string; text: string }[] = [
+  { icon: 'process/check', title: `${s.challenges.length} öne çıkan konu`, text: 'Bu yapı tipinde mühendislik gereksinimleri' },
+  { icon: 'process/report', title: `${services.length} ilgili hizmet`, text: 'Bu alanda sunabileceğimiz hizmetler' },
+  { icon: 'process/strategy', title: `${s.faq.length} sık sorulan soru`, text: 'Kısa ve net yanıtlar' },
+];
+
+const tabs = [
+  { id: 'genel-bakis', label: 'Genel Bakış' },
+  { id: 'konular', label: 'Öne Çıkan Konular' },
+  { id: 'hizmetler', label: 'Hizmetlerimiz' },
+  { id: 'sss', label: 'SSS' },
+];
+---
+
+<PageLayout title={seoTitle} description={seoDescription} heading={s.title} lead={s.summary} breadcrumbs={crumbs}>
+  <section slot="hero" class="relative isolate overflow-hidden bg-white" aria-labelledby="page-title">
+    <Container size="content" class="grid items-center gap-10 py-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-12 lg:py-14">
+      <div class="min-w-0">
+        <Breadcrumbs items={crumbs} tone="light" />
+        <p class="eyebrow mt-6">Uzmanlık Alanı</p>
+        <h1 id="page-title" class="mt-2 text-display text-heading">{s.title}</h1>
+        <p class="mt-4 max-w-xl text-lead text-body">{s.summary}</p>
+
+        <ul class="mt-6 grid gap-4 sm:grid-cols-3" aria-label="Uzmanlık alanı özeti">
+          {
+            highlights.map((h) => (
+              <li class="flex items-start gap-2.5">
+                <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-soft text-accent-600">
+                  <Icon name={h.icon} size={18} strokeWidth={1.8} />
+                </span>
+                <span class="min-w-0 text-xs text-muted">
+                  <span class="block text-small font-bold text-heading">{h.title}</span>
+                  {h.text}
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+
+        <div class="mt-7 flex flex-wrap gap-3">
+          <Button href="/iletisim#hizmet-talep-formu" size="lg">{s.title} Projeniz İçin Görüşelim</Button>
+          <Button href="#konular" variant="outline" size="lg">Öne Çıkan Konular</Button>
+        </div>
+      </div>
+
+      {
+        heroPic ? (
+          <div class="relative isolate aspect-[4/3] overflow-hidden rounded-card bg-navy-900">
+            <Image src={heroPic.image} alt={heroPic.alt} widths={[640, 960, 1280]} sizes="(min-width: 1024px) 45vw, 100vw" class="absolute inset-0 h-full w-full object-cover" loading="eager" fetchpriority="high" />
+          </div>
+        ) : (
+          <div class="relative isolate aspect-[4/3] overflow-hidden rounded-card bg-navy-900" aria-hidden="true">
+          <div class="absolute inset-0 bg-[radial-gradient(120%_90%_at_70%_30%,#24405e_0%,#152638_55%,#0b1a2b_100%)]"></div>
+          <div class="bg-tech-grid absolute inset-0 opacity-40"></div>
+          <img src={bimOverlay} alt="" width="1200" height="500" class="absolute top-1/2 left-1/2 w-[115%] max-w-none -translate-x-1/2 -translate-y-1/2 opacity-80" decoding="async" />
+          <Icon name={s.icon} size={72} strokeWidth={1.2} class="absolute right-6 bottom-6 text-white/85" />
+          {isDev && <span class="absolute top-3 left-3 rounded-sm border border-dashed border-white/40 bg-navy-950/70 px-2 py-1 text-[11px] font-semibold text-white">TODO-ASSET · uzmanlık hero görseli · {s.title}</span>}
+        </div>
+        )
+      }
+    </Container>
+  </section>
+
+  <nav class="sticky top-(--header-height-scrolled) z-20 border-y border-border bg-white/95 backdrop-blur" aria-label="Sayfa içi bölümler" data-section-nav>
+    <Container size="content">
+      <ul class="flex gap-1 overflow-x-auto py-2 text-small font-medium whitespace-nowrap">
+        {
+          tabs.map((t) => (
+            <li>
+              <a href={`#${t.id}`} data-tab={t.id} class="relative inline-flex min-h-11 items-center px-4 text-body transition-colors hover:text-primary-700 aria-[current=true]:font-bold aria-[current=true]:text-heading aria-[current=true]:after:absolute aria-[current=true]:after:inset-x-3 aria-[current=true]:after:bottom-0 aria-[current=true]:after:h-0.5 aria-[current=true]:after:bg-primary-700">
+                {t.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </Container>
+  </nav>
+
+  <section id="genel-bakis" class="scroll-mt-32 bg-white py-12 lg:py-14" aria-labelledby="sector-intro-title">
+    <Container size="content" class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:gap-14">
+      <div class="min-w-0">
+        <h2 id="sector-intro-title" class="text-h2">{s.title} ve Mühendislik</h2>
+        <div class="mt-4 space-y-4 text-[0.9375rem] leading-relaxed text-body">
+          {s.intro.map((p) => <p>{p}</p>)}
+        </div>
+        <div class="mt-6">
+          <Button href="#konular" variant="outline" size="md">Daha Fazla Bilgi</Button>
+        </div>
+      </div>
+      <aside class="card-surface p-(--space-card)" aria-label="İletişim">
+        <Icon name={s.icon} size={44} strokeWidth={1.5} class="text-accent-600" />
+        <p class="mt-4 text-h3 font-bold text-heading">{s.title} projeniz için görüşelim</p>
+        <p class="mt-2 text-small text-muted">İhtiyacınızı paylaşın, uzman ekibimiz sizinle iletişime geçsin.</p>
+        <div class="mt-5">
+          <Button href="/iletisim#hizmet-talep-formu" size="md">Teklif / Bilgi Al</Button>
+        </div>
+        <a href={`/projeler?sektor=${s.sectorKey}`} class="mt-4 inline-flex items-center gap-1.5 text-small font-semibold text-primary-700 hover:underline">
+          Bu alandaki projeler
+          <Icon name="ui/arrow-right" size={14} />
+        </a>
+      </aside>
+    </Container>
+  </section>
+
+  <section id="konular" class="scroll-mt-32 bg-surface-soft py-12 lg:py-14" aria-labelledby="sector-challenges-title">
+    <Container size="content">
+      <h2 id="sector-challenges-title" class="text-h2">{s.title} için Mühendislik Gereksinimleri</h2>
+      <ul class="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {
+          s.challenges.map((c, i) => (
+            <li class="card-surface flex flex-col gap-3 p-(--space-card)">
+              <span class="inline-flex size-11 items-center justify-center rounded-control bg-surface-soft text-small font-bold text-primary-800" aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <h3 class="text-h3 font-bold">{c.title}</h3>
+              <p class="text-small leading-relaxed text-muted">{c.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </Container>
+  </section>
+
+  <section id="hizmetler" class="scroll-mt-32 bg-navy-900 py-12 text-white lg:py-14" aria-labelledby="sector-services-title">
+    <Container size="content">
+      <h2 id="sector-services-title" class="text-h2 text-white">Bu Alanda Sunabileceğimiz Hizmetler</h2>
+      <ul class="mt-7 grid gap-x-8 gap-y-6 sm:grid-cols-2 xl:grid-cols-3">
+        {
+          services.map((sv) => (
+            <li>
+              <a href={serviceHref(sv.slug)} class="group flex items-start gap-3">
+                <span class="inline-flex size-11 shrink-0 items-center justify-center rounded-control bg-white text-primary-700">
+                  <Icon name={sv.icon} size={22} strokeWidth={1.6} />
+                </span>
+                <span class="min-w-0">
+                  <span class="block text-small font-bold text-white group-hover:underline">{navLabel(sv)}</span>
+                  <span class="mt-0.5 line-clamp-2 block text-xs leading-relaxed text-white/80">{sv.summary}</span>
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </Container>
+  </section>
+
+  <section class="bg-white py-12 lg:py-14" aria-label="Sıkça sorulan sorular ve diğer yapı tipleri">
+    <Container size="content" class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,19rem)] lg:gap-12">
+      <div id="sss" class="min-w-0 scroll-mt-32">
+        <h2 class="text-h2">Sıkça Sorulan Sorular</h2>
+        <div class="mt-5">
+          <FAQ items={faqItems} />
+        </div>
+      </div>
+      <aside class="card-surface p-(--space-card) lg:sticky lg:top-36" aria-labelledby="sector-others-title">
+        <h2 id="sector-others-title" class="text-h3 font-bold">Diğer Yapı Tipleri</h2>
+        <ul class="mt-3 divide-y divide-border">
+          {
+            others.map((o) => (
+              <li>
+                <a href={sectorHref(o.slug)} class="flex min-h-11 items-center gap-3 py-2.5 text-small font-medium text-heading hover:text-primary-700">
+                  <Icon name={o.icon} size={22} strokeWidth={1.5} class="shrink-0 text-accent-600" />
+                  <span class="min-w-0 flex-1">{o.title}</span>
+                  <Icon name="ui/arrow-right" size={14} class="shrink-0" />
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+        <div class="mt-4">
+          <Button href="/uzmanlik-alanlari" variant="link">Tüm Uzmanlık Alanları</Button>
+        </div>
+      </aside>
+    </Container>
+  </section>
+
+  <CTASection {...servicesCta} headingId="sector-cta-title" />
+</PageLayout>
+
+<script>
+  // Sayfa içi navigasyonda aktif bölümü vurgular (aria-current); JS yoksa bağlantılar yine çalışır.
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-section-nav] [data-tab]'));
+  const sections = links.map((l) => document.getElementById(l.dataset.tab ?? '')).filter((el): el is HTMLElement => !!el);
+  const setActive = (id: string) => links.forEach((l) => l.setAttribute('aria-current', String(l.dataset.tab === id)));
+  if (sections.length && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible) setActive(visible.target.id);
+      },
+      { rootMargin: '-140px 0px -60% 0px' },
+    );
+    sections.forEach((el) => io.observe(el));
+    setActive(sections[0]!.id);
+  }
+</script>
