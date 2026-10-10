@@ -85,6 +85,8 @@ const sectorLabel = (key: string) => sectors.find((s) => s.key === key)?.label ?
                 <ProjectCard
                   title={p.data.title}
                   sectorLabel={sectorLabel(p.data.sector)}
+                  themeLabel={p.data.serviceGroup === 'yazilim' ? 'Yazılım' : sectorLabel(p.data.sector)}
+                  sample={p.data.sample}
                   href={`/projeler/${p.id}`}
                   image={p.data.cover}
                   imageAlt={p.data.coverAlt}

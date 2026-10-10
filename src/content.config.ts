@@ -92,6 +92,8 @@ const projects = defineCollection({
       spotlight: z.boolean().default(false),
       /** Projenin ait olduğu hizmet grubu — ilgili hizmet sayfasında (ör. Yazılım) proje olarak listelenir */
       serviceGroup: z.enum(['muhendislik', 'bim', 'enerji', 'maliyet', 'yazilim']).optional(),
+      /** Örnek çalışma: yaklaşımı anlatan kurgusal senaryo — GERÇEK müşteri projesi değildir; kart ve sayfada "Örnek Çalışma" olarak işaretlenir */
+      sample: z.boolean().default(false),
       draft: z.boolean().default(true),
       order: z.number().default(0),
       seo: seoOverrides,

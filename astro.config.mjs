@@ -46,6 +46,7 @@ export default defineConfig({
       filter: (page) =>
         !page.includes('/404') &&
         !page.includes('/blog/etiket/') &&
+        !page.includes('/projeler/ornek-') &&
         !/\/(arama|bim|kvkk|gizlilik-politikasi|cerez-tercihleri)$/.test(page.replace(/\/$/, '')),
     }),
   ],

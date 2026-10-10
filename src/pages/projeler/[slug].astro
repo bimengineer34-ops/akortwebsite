@@ -62,7 +62,7 @@ const scopes = [
 
 const results = d.results.map((r) => publishable(r)).filter((r): r is string => !!r);
 const href = `/projeler/${project.id}`;
-const schema = Astro.site
+const schema = Astro.site && !d.sample
   ? [creativeWorkSchema({ name: d.title, description: d.summary, url: new URL(href, Astro.site), siteUrl: Astro.site })]
   : [];
 ---
@@ -89,6 +89,21 @@ const schema = Astro.site
     )
   }
 
+  {
+    d.sample && (
+      <div class="border-b border-border bg-step-bg/50 py-3">
+        <Container size="content">
+          <p class="flex items-start gap-3 text-small text-primary-900">
+            <span class="mt-0.5 shrink-0 rounded-sm bg-white px-2 py-0.5 text-[0.625rem] font-bold tracking-[0.1em] text-primary-800 uppercase">Örnek Çalışma</span>
+            <span>
+              Bu sayfa, hizmetlerimizin nasıl uygulandığını anlatan <b>kurgusal bir senaryodur</b>; gerçek bir müşteri projesi değildir. Konum, tarih, rakam ve sonuç içermez.
+            </span>
+          </p>
+        </Container>
+      </div>
+    )
+  }
+
   <!-- Künye -->
   {
     facts.length > 0 && (
@@ -111,7 +126,7 @@ const schema = Astro.site
   <section class="bg-surface-soft py-12 lg:py-14" aria-labelledby="case-summary-title">
     <Container size="content" class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:gap-16">
       <div>
-        <p class="eyebrow">Case Study</p>
+        <p class="eyebrow">{d.sample ? 'Örnek Çalışma' : 'Case Study'}</p>
         <h2 id="case-summary-title" class="mt-2 text-h2">Proje Özeti</h2>
         <div class="prose-akort mt-4 text-small text-body">
           <Content />

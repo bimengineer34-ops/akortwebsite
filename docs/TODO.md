@@ -174,3 +174,7 @@ Hâlâ eksik (yer tutucu panel/etiket duruyor):
 - [ ] **Projeler:** Gerçek proje yok. Mevcut 6 proje dosyası tasarım referansından gelen örneklerdir (taslak, yayında gizli) ve **uydurma proje yayınlanmamalıdır**. Her gerçek proje için: ad, yapı tipi, konum, yıl, AKORT'un rolü/kapsamı, doğrulanmış sonuçlar ve görsel gerekir → Panel › Projeler.
 
 - [x] **Blog görselleri (10 Ekim 2026):** Kapak görseli olmayan yazılar için kategoriye özel, markaya uygun otomatik kapak (`BlogCover.astro`: gradyan + teknik ızgara + BIM tel kafes + kategori ikonu) kullanılır; ana sayfa, blog listesi, öne çıkan yazı, kart ızgarası, yan panel ve yazı sayfasında. Yazı sayfasında görsel solda, kategori/özet/tarih sağda. Gerçek kapak eklemek için: Panel › Blog yazıları › yazı › "Kapak görseli" (alt metin zorunlu); eklenince otomatik kapağın yerine geçer.
+
+## Örnek Çalışmalar (projeler)
+- 6 proje `sample: true` ile işaretli KURGUSAL senaryodur (gerçek müşteri projesi değil; noindex, sitemap dışı, ItemList şemasında yok).
+- Gerçek referans projeler eklenince panelden örnekleri yayından kaldırın (draft) veya silin; gerçek projelerde `sample` işaretlenmez.

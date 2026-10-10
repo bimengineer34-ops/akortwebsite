@@ -44,14 +44,17 @@ const spotlightUnverified =
 const metrics = projectMetrics.items.filter((m) => isPublishable(m.value));
 const metricsUnverified = projectMetrics.items.some((m) => !m.value.verified);
 
+// Örnek çalışmalar (kurgusal senaryolar) arama motoru şemasına "proje" olarak girmez
+const realProjects = projects.filter((p) => !p.data.sample);
+const hasSamples = projects.some((p) => p.data.sample);
 const schema =
-  Astro.site && projects.length
+  Astro.site && realProjects.length
     ? [
         {
           '@context': 'https://schema.org',
           '@type': 'ItemList',
           name: 'AKORT Mühendislik Projeleri',
-          itemListElement: projects.map((p, i) => ({
+          itemListElement: realProjects.map((p, i) => ({
             '@type': 'ListItem',
             position: i + 1,
             item: { '@type': 'CreativeWork', name: p.data.title, url: new URL(projectHref(p.id), Astro.site).href },
@@ -74,6 +77,13 @@ const schema =
   <section class="bg-surface-soft pt-11 pb-12" aria-labelledby="projects-list-title">
     <Container size="content">
       <SectionHeading eyebrow={projectsList.eyebrow} title={projectsList.title} lead={projectsList.lead} id="projects-list-title" />
+      {
+        hasSamples && (
+          <p class="mt-5 max-w-3xl rounded-control border border-border bg-white px-4 py-3 text-small text-body">
+            <b class="text-heading">Örnek çalışmalar:</b> Aşağıdaki çalışmalar, hizmetlerimizin ve yaklaşımımızın nasıl işlediğini anlatan <b>kurgusal senaryolardır</b>; gerçek müşteri projeleri değildir. Referans projelerimiz yayına alındıkça burada yer alacaktır.
+          </p>
+        )
+      }
     </Container>
 
     {
@@ -122,6 +132,7 @@ const schema =
                   title={p.data.title}
                   sector={p.data.sector}
                   serviceGroup={p.data.serviceGroup}
+                  sample={p.data.sample}
                   sectorLabel={sectorLabel(p.data.sector)}
                   location={publishable(p.data.location)}
                   summary={p.data.summary}
@@ -156,7 +167,9 @@ const schema =
     spotlight && (
       <SpotlightProject
         eyebrow={spotlightSection.eyebrow}
-        title={`${spotlight.data.title} Projesi`}
+        title={spotlight.data.sample ? spotlight.data.title : `${spotlight.data.title} Projesi`}
+        sample={spotlight.data.sample}
+        themeLabel={spotlight.data.serviceGroup === 'yazilim' ? 'Yazılım' : sectorLabel(spotlight.data.sector)}
         summary={spotlight.data.summary}
         href={projectHref(spotlight.id)}
         ctaLabel={spotlightSection.cta}

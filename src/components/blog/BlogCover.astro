@@ -38,6 +38,16 @@ const themes: Record<string, Theme> = {
   'Proje Yönetimi': { icon: 'services/project-management', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#14335a_55%,#1e5f9c_100%)]' },
   'Teknik Danışmanlık': { icon: 'services/owner-advisory', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#0f3552_55%,#0b5d86_100%)]' },
   Sürdürülebilirlik: { icon: 'services/building-performance', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#0c3f4f_55%,#188a8a_100%)]' },
+  // Proje kapakları: sektör etiketleri ve yazılım
+  'Sağlık Yapıları': { icon: 'expertise/health', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#0f3b63_55%,#188a8a_100%)]' },
+  'Eğitim Yapıları': { icon: 'expertise/education', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#14335a_55%,#2a6f9f_100%)]' },
+  Kampüs: { icon: 'expertise/campus', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#0f3552_55%,#1e5f9c_100%)]' },
+  'Ticari Yapılar': { icon: 'expertise/commercial', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#10416b_55%,#0b6f9f_100%)]' },
+  'Mevcut Yapılar': { icon: 'expertise/analysis', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#17344f_55%,#13808f_100%)]' },
+  'Karma Kullanım': { icon: '_pending/layers', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#0d3f5c_55%,#2a6f9f_100%)]' },
+  'Kamu Yapıları': { icon: 'services/owner-advisory', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#0f3552_55%,#0b5d86_100%)]' },
+  'Endüstriyel Yapılar': { icon: '_pending/gear', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#17344f_55%,#2a6f9f_100%)]' },
+  Yazılım: { icon: '_pending/code', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#10416b_55%,#1e8fb5_100%)]' },
 };
 const fallback: Theme = { icon: 'services/engineering-consulting', bg: 'bg-[linear-gradient(135deg,#0b1a2b_0%,#10416b_55%,#0b6f9f_100%)]' };
 const theme = (category && themes[category]) || fallback;
