@@ -7,6 +7,7 @@ import { ROOT, config } from './config.mjs';
 import { HttpError } from './http.mjs';
 import { planPublish, applyPublishToDisk, commitPublish, syncPublishedFiles } from './content.mjs';
 import { isDirty, clearDirty } from './entries.mjs';
+import { generate as i18nGenerate, idle as i18nIdle, startBackground as i18nBackground } from './ext/i18n.mjs';
 
 let current = null; // { id, log:[], status }
 
@@ -80,12 +81,17 @@ export const publish = async (user, { rebuildOnly = false } = {}) => {
       );
       if (code !== 0) throw new Error('Derleme başarısız — canlı site değişmedi');
       if (!fs.existsSync(path.join(config.stagingDir, 'index.html'))) throw new Error('Derleme çıktısı eksik (index.html yok)');
+      // İngilizce site: TM'de olan çeviriler anında uygulanır (API çağrısı yok); eksikler yayın sonrası arka planda çevrilir.
+      // İngilizce hattı hata verirse Türkçe yayın ETKİLENMEZ.
+      try { await i18nGenerate(config.stagingDir, { fallbackDir: config.siteDir, log }); } catch (e) { log(`[i18n] İngilizce sayfalar atlandı: ${e.message}\n`); }
+      await i18nIdle();
       swapDist();
       commitPublish(plan, user);
       clearDirty();
       restore = null;
       status = 'basarili';
       log(`\n[${new Date().toLocaleTimeString('tr-TR')}] ✓ Yayın tamamlandı\n`);
+      try { const r = i18nBackground(config.siteDir); if (r.started) log('[i18n] Eksik İngilizce çeviriler arka planda tamamlanıyor (İngilizce Yayın sayfasından izleyin)\n'); } catch { /* sonraki yayında denenir */ }
     } catch (e) {
       log(`\n✗ ${e.message}\n`);
       if (restore) {

@@ -20,7 +20,7 @@ export const NAV = [
   { to: '/yayin', label: 'Workflow Automation', ic: 'rocket', badge: 'pending', sub: [{ to: '/yayin', label: 'Yayınla ve geçmiş' }, { to: '/yonlendirmeler', label: 'Yönlendirmeler' }] },
   { to: '/istatistik', label: 'Analytics', ic: 'chart2' },
   { to: '/entegrasyonlar', label: 'Settings', ic: 'gear', sub: [
-    { to: '/entegrasyonlar', label: 'Entegrasyonlar ve API' }, { to: '/ayarlar', label: 'E-posta ayarları', admin: true }, { to: '/yasal', label: 'Yasal metinler' },
+    { to: '/entegrasyonlar', label: 'Entegrasyonlar ve API' }, { to: '/dil', label: 'İngilizce Yayın (EN)' }, { to: '/ayarlar', label: 'E-posta ayarları', admin: true }, { to: '/yasal', label: 'Yasal metinler' },
     { to: '/dogrulama', label: 'Doğrulama bekleyenler', badge: 'verify' }, { to: '/kullanicilar', label: 'Kullanıcılar', admin: true }, { to: '/gunluk', label: 'Etkinlik günlüğü', admin: true },
     { to: '/yedekler', label: 'Yedekler', admin: true } ] },
 ];

@@ -12,6 +12,7 @@ import { renderMedia } from './pages/media.js';
 import { renderSeo } from './pages/x-seo-overview.js';
 import { renderSeoEditor, renderSeoEditorList } from './pages/x-seo-editor.js';
 import { renderSpeed } from './pages/x-speed.js';
+import { renderDil } from './pages/x-dil.js';
 import { renderAiStudio } from './pages/x-ai-studio.js';
 import { renderSocialOverview, renderSocialCalendar, renderSocialApproval, renderSocialArchive, renderBrandKit } from './pages/x-social.js';
 import { renderMarket, renderCompetitors, renderBacklinks } from './pages/x-intel.js';
@@ -218,6 +219,7 @@ const routes = [
   [/^\/istatistik$/, () => renderStats(ctx)],
   [/^\/seo$/, () => renderSeo(ctx)],
   [/^\/hiz$/, () => renderSpeed(ctx)],
+  [/^\/dil$/, () => renderDil(ctx)],
   [/^\/seo\/editor$/, () => renderSeoEditorList(ctx)],
   [/^\/seo\/editor\/(blog|projects)\/([a-z0-9-]+)$/, (m) => renderSeoEditor(ctx, m[1], m[2])],
   [/^\/ai$/, () => renderAiStudio(ctx)],

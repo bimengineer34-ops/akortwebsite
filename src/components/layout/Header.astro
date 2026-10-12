@@ -69,6 +69,8 @@ const megaFor: Record<string, 'services' | 'sectors' | 'about'> = { '/hakkimizda
       >
         <Icon name="ui/search" size={20} />
       </a>
+      {/* Dil anahtarı yer tutucusu: İngilizce site etkinse yayın hattı (server/lib/ext/i18n.mjs) doldurur */}
+      <span data-lang-switch hidden></span>
       <div class="hidden lg:block">
         <Button href={site.primaryCta.href} size="sm">
           {site.primaryCta.label}

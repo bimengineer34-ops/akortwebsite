@@ -155,6 +155,18 @@ const rn = await call('POST', `${X}/marka/onizle`, { template: 'duyuru', title: 
 t('marka şablonu PNG üretiyor', rn.status === 200 && rn.data.mime === 'image/png' && Buffer.from(rn.data.data, 'base64').subarray(1, 4).toString() === 'PNG');
 const rnBad = await call('POST', `${X}/marka/onizle`, { title: 'x', bg: '../../etc/passwd' });
 t('şablon arka planı yol gezintisini reddediyor', rnBad.status >= 400);
+// İngilizce yayın (salt okunur: gerçek AI çağrısı/çeviri başlatmaz)
+const dl = await call('GET', `${X}/dil`);
+t('İngilizce yayın durumu okunuyor', dl.status === 200 && ['kapali', 'otomatik'].includes(dl.data.mode) && Array.isArray(dl.data.glossary.keep) && typeof dl.data.tm.toplam === 'number', JSON.stringify(dl.data).slice(0, 140));
+const de = await call('GET', `${X}/dil/tahmin`);
+t('çeviri tahmini (segment/karakter/token)', de.status === 200 && typeof de.data.segments === 'number');
+const dh = await call('GET', `${X}/dil/hafiza?limit=5`);
+t('çeviri hafızası listeleniyor', dh.status === 200 && Array.isArray(dh.data.rows));
+const bogus = await call('PUT', `${X}/dil/hafiza/${'0'.repeat(24)}`, { en: 'x' });
+t('olmayan hafıza kaydı 404', bogus.status === 404);
+const gl0 = dl.data.glossary;
+const gl1 = await call('PUT', `${X}/dil/ayar`, { glossary: { keep: [...gl0.keep], map: gl0.map } });
+t('sözlük kaydediliyor (değişmeden)', gl1.status === 200 && gl1.data.mode === dl.data.mode);
 // yetkisiz
 const anon = await fetch(`${base}${X}/entegrasyonlar`);
 t('oturumsuz erişim 401', anon.status === 401);

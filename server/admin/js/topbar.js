@@ -8,7 +8,7 @@ const PAGES = [
   ['SEO Intelligence', '/seo'], ['Canlı SEO Editörü', '/seo/editor'], ['AI Content Studio', '/ai'], ['Social Studio', '/sosyal'], ['İçerik Takvimi', '/sosyal/takvim'],
   ['Onay Merkezi', '/sosyal/onay'], ['Brand Kit', '/sosyal/marka'], ['İçerik Arşivi', '/sosyal/arsiv'], ['Market & Media Intelligence', '/pazar'],
   ['Competitor Intelligence', '/rakipler'], ['Backlink Intelligence', '/backlink'], ['Speed Engine', '/hiz'], ['Workflow Automation — Yayınla', '/yayin'],
-  ['Yönlendirmeler', '/yonlendirmeler'], ['Kullanıcılar', '/kullanicilar'], ['Etkinlik günlüğü', '/gunluk'], ['Yedekler', '/yedekler'], ['Entegrasyonlar ve API', '/entegrasyonlar'],
+  ['Yönlendirmeler', '/yonlendirmeler'], ['Kullanıcılar', '/kullanicilar'], ['Etkinlik günlüğü', '/gunluk'], ['Yedekler', '/yedekler'], ['Entegrasyonlar ve API', '/entegrasyonlar'], ['İngilizce Yayın (EN)', '/dil'],
   ['Settings — E-posta ayarları', '/ayarlar'], ['Hesabım', '/hesabim'],
 ].map(([t, to]) => ({ t, to, k: 'Sayfa' }));
 

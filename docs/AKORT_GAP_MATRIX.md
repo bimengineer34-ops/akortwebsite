@@ -31,3 +31,4 @@ Durum anahtarı: ✅ gerçek ve test edilmiş · 🟡 kısmen (neden belirtilir)
 | Bütçe merkezi | yeni | ✅ | Aylık token bütçesi, fiyat girilirse maliyet tahmini |
 | Özellik bayrakları | yeni | ✅ | seo/ai/social/intel modülleri panelden kapatılabilir |
 | İzleme/alarm (SSL, uptime) | — | ❌ | |
+| İngilizce site (/en) — otomatik çeviri, çeviri hafızası, dil anahtarı, hreflang/sitemap | yeni | ✅ kod / ⛔ AI anahtarı ile çeviri | Yayınlanan her sayfa HTML düzeyinde çevrilir; tam çevrilmemiş sayfa yayınlanmaz; elle onaylı çeviriler korunur. Slug'lar Türkçe kalır; sayfa içi istemci JS metinlerinin çoğu (arama/form/bülten dışında) Türkçe kalır |

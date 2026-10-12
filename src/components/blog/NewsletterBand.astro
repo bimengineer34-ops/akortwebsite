@@ -91,10 +91,10 @@ const [consentBefore, consentAfter] = newsletter.consent.split('{kvkk}');
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: email.value }),
         });
-        status.textContent = res.ok ? 'Teşekkürler! Bültenimize abone oldunuz.' : 'Bir hata oluştu, lütfen tekrar deneyin.';
+        status.textContent = res.ok ? (document.documentElement.lang === 'en' ? 'Thank you! You have subscribed to our newsletter.' : 'Teşekkürler! Bültenimize abone oldunuz.') : (document.documentElement.lang === 'en' ? 'Something went wrong, please try again.' : 'Bir hata oluştu, lütfen tekrar deneyin.');
         if (res.ok) form.reset();
       } catch {
-        status.textContent = 'Bir hata oluştu, lütfen tekrar deneyin.';
+        status.textContent = (document.documentElement.lang === 'en' ? 'Something went wrong, please try again.' : 'Bir hata oluştu, lütfen tekrar deneyin.');
       }
     });
   });

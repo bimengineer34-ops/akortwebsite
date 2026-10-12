@@ -201,3 +201,25 @@ export const markRun = (id, status, user) => {
 };
 export const recentRuns = () => q.all('SELECT id, ts, provider, model, task, status, user_email, substr(output,1,160) AS preview FROM ai_runs ORDER BY id DESC LIMIT 30');
 export const recentUsage = () => q.all('SELECT ts, provider, model, task, input_tokens, output_tokens, cost_est, ok, error, user_email, ms FROM ai_usage ORDER BY id DESC LIMIT 30');
+
+/** Toplu/sistem görevleri için ham çağrı (bütçe, devre kesici ve kullanım kaydı dahil). Metin güvenilmez kabul edilir; çağıran doğrular. */
+export const rawChat = async ({ provider, system, prompt, max = 2000, task = 'sistem' }, user = { email: 'sistem' }) => {
+  const { key } = need(provider);
+  const cfg = getCfg(provider);
+  if (cfg.monthlyTokenBudget > 0) {
+    const u = monthUsage(provider);
+    if (u.i + u.o >= cfg.monthlyTokenBudget) throw new HttpError(429, `${PROVIDERS[provider].label} aylık token bütçesi doldu (${cfg.monthlyTokenBudget}).`);
+  }
+  checkBreaker(provider);
+  const t0 = Date.now();
+  try {
+    const r = await adapters[provider].chat(key, cfg.model, system, prompt, max);
+    noteResult(provider, true);
+    q.run('INSERT INTO ai_usage (provider, model, task, input_tokens, output_tokens, ok, user_email, ms) VALUES (?,?,?,?,?,1,?,?)', provider, cfg.model, task, r.inTok ?? null, r.outTok ?? null, user.email, Date.now() - t0);
+    return { text: String(r.text ?? ''), model: cfg.model, inTok: r.inTok ?? 0, outTok: r.outTok ?? 0 };
+  } catch (e) {
+    noteResult(provider, false);
+    q.run('INSERT INTO ai_usage (provider, model, task, ok, error, user_email, ms) VALUES (?,?,?,0,?,?,?)', provider, cfg.model, task, String(e.message).slice(0, 300), user.email, Date.now() - t0);
+    throw e;
+  }
+};

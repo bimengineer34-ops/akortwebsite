@@ -57,7 +57,7 @@ import Icon from '@/components/common/Icon.astro';
 
   let index: SearchDoc[] | null = null;
   const loadIndex = async () => {
-    if (!index) index = (await (await fetch('/arama-index.json')).json()) as SearchDoc[];
+    if (!index) index = (await (await fetch(document.documentElement.lang === 'en' ? '/en/arama-index.json' : '/arama-index.json')).json()) as SearchDoc[];
     return index;
   };
 
@@ -66,7 +66,7 @@ import Icon from '@/components/common/Icon.astro';
     const q = foldTr(raw.trim());
     list.replaceChildren();
     if (q.length < 2) {
-      status.textContent = q ? 'En az 2 karakter girin.' : '';
+      status.textContent = q ? (document.documentElement.lang === 'en' ? 'Enter at least 2 characters.' : 'En az 2 karakter girin.') : '';
       return;
     }
     const terms = q.split(/\s+/);
@@ -83,7 +83,7 @@ import Icon from '@/components/common/Icon.astro';
       .sort((a, b) => b.score - a.score)
       .slice(0, 20);
 
-    status.textContent = scored.length ? `“${raw.trim()}” için ${scored.length} sonuç` : `“${raw.trim()}” için sonuç bulunamadı.`;
+    status.textContent = document.documentElement.lang === 'en' ? (scored.length ? `${scored.length} results for “${raw.trim()}”` : `No results found for “${raw.trim()}”.`) : (scored.length ? `“${raw.trim()}” için ${scored.length} sonuç` : `“${raw.trim()}” için sonuç bulunamadı.`);
     for (const { d } of scored) {
       const li = document.createElement('li');
       const a = document.createElement('a');

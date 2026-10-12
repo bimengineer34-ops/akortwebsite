@@ -1,5 +1,6 @@
 // Genişletme paketi yol tablosu — mevcut api.mjs içindeki routes dizisine eklenir (mevcut uç noktalar değişmez)
-import { q, audit } from '../db.mjs';
+import { q, audit, getSetting } from '../db.mjs';
+import { config } from '../config.mjs';
 import { HttpError, readJson, sendJson } from '../http.mjs';
 import { requireUser, requireAdmin } from '../auth.mjs';
 import { getEntry, saveEntry, listEntries } from '../entries.mjs';
@@ -11,6 +12,7 @@ import * as social from './social.mjs';
 import * as intel from './intel.mjs';
 import { runPsi, speedOverview, clearCache, pruneDb } from './speed.mjs';
 import { brandData, renderBrand, saveRender } from './brand.mjs';
+import * as i18n from './i18n.mjs';
 import { dashboard, setPrefs, computeCard, CATALOG } from './kpi.mjs';
 import { getStats } from '../stats.mjs';
 
@@ -212,6 +214,31 @@ export const extRoutes = [
     sendJson(res, 200, { mime: r.mime, w: r.w, h: r.h, data: r.buf.toString('base64') });
   }],
   ['POST', new RegExp(`^${A}/marka/kaydet$`), async ({ req, res }) => sendJson(res, 200, await saveRender(await J(req, 8 * 1024), requireUser(req)))],
+
+  /* ---------- İngilizce site (çeviri hafızası) ---------- */
+  ['GET', new RegExp(`^${A}/dil$`), ({ req, res }) => {
+    requireUser(req);
+    const connected = providerStatus().filter((p) => p.connected).map((p) => ({ id: p.id, label: p.label, model: p.cfg.model }));
+    sendJson(res, 200, { mode: i18n.getMode(), provider: getSetting('i18n.provider', ''), connected, glossary: i18n.getGlossary(), ...i18n.stats(), job: i18n.jobState(), fake: process.env.I18N_FAKE === '1' && process.env.NODE_ENV !== 'production' });
+  }],
+  ['GET', new RegExp(`^${A}/dil/tahmin$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, i18n.estimate()))],
+  ['PUT', new RegExp(`^${A}/dil/ayar$`), async ({ req, res }) => {
+    const u = requireAdmin(req);
+    const b = await J(req, 32 * 1024);
+    if (b.glossary) i18n.setGlossary(b.glossary, u);
+    if (b.mode !== undefined || b.provider !== undefined) i18n.setMode(b.mode ?? i18n.getMode(), b.provider, u);
+    const started = i18n.getMode() === 'otomatik' && b.mode === 'otomatik' ? i18n.startBackground() : { started: false };
+    sendJson(res, 200, { ok: true, mode: i18n.getMode(), started: started.started });
+  }],
+  ['POST', new RegExp(`^${A}/dil/cevir$`), ({ req, res }) => { requireAdmin(req); sendJson(res, 200, i18n.startBackground()); }],
+  ['POST', new RegExp(`^${A}/dil/uret$`), async ({ req, res }) => { requireUser(req); const rep = await i18n.generate(config.siteDir); sendJson(res, 200, { published: rep.published, total: rep.pages?.length ?? 0, missing: rep.missing?.length ?? 0 }); }],
+  ['GET', new RegExp(`^${A}/dil/hafiza$`), ({ req, res, url }) => {
+    requireUser(req);
+    const p = url.searchParams;
+    sendJson(res, 200, i18n.listTm({ status: p.get('durum') ?? '', search: p.get('ara') ?? '', limit: p.get('limit') ?? 50, offset: p.get('offset') ?? 0 }));
+  }],
+  ['PUT', new RegExp(`^${A}/dil/hafiza/([a-f0-9]{24})$`), async ({ req, res, m }) => { const b = await J(req, 32 * 1024); i18n.editTm(m[1], b.en, b.approve === true, requireUser(req)); sendJson(res, 200, { ok: true }); }],
+  ['DELETE', new RegExp(`^${A}/dil/hafiza/([a-f0-9]{24})$`), ({ req, res, m }) => (i18n.deleteTm(m[1], requireAdmin(req)), i18n.scheduleGenerate(), sendJson(res, 200, { ok: true }))],
 
   /* ---------- Market & Media / Rakip / Backlink ---------- */
   ['GET', new RegExp(`^${A}/pazar/ozet$`), ({ req, res, url }) => (requireUser(req), sendJson(res, 200, intel.marketOverview([7, 30, 90].includes(Number(url.searchParams.get('gun'))) ? Number(url.searchParams.get('gun')) : 30)))],

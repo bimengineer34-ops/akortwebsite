@@ -96,6 +96,13 @@ CREATE TABLE IF NOT EXISTS backlink_opps (
   outreach_draft TEXT NOT NULL DEFAULT '', link_url TEXT NOT NULL DEFAULT '', verified_at TEXT,
   created_by TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS i18n_tm (
+  hash TEXT PRIMARY KEY, src TEXT NOT NULL, en TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'otomatik', -- otomatik | onayli | elle | hata
+  attempts INTEGER NOT NULL DEFAULT 0, provider TEXT, model TEXT, error TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')), updated_by TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_tm_status ON i18n_tm (status);
 CREATE TABLE IF NOT EXISTS jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   type TEXT NOT NULL, payload TEXT NOT NULL DEFAULT '{}',

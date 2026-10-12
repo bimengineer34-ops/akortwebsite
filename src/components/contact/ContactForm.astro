@@ -170,9 +170,10 @@ const field =
     const serviceSelect = form.querySelector<HTMLSelectElement>('[data-service-select]');
 
     const messageFor = (el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) => {
-      if (el.validity.valueMissing) return el.type === 'checkbox' ? 'Devam etmek için onay vermeniz gerekiyor.' : 'Bu alan zorunludur.';
-      if (el.validity.typeMismatch) return 'Lütfen geçerli bir e-posta adresi girin.';
-      if (el.validity.tooShort) return `En az ${(el as HTMLTextAreaElement).minLength} karakter girin.`;
+      const en = document.documentElement.lang === 'en';
+      if (el.validity.valueMissing) return el.type === 'checkbox' ? (en ? 'Please confirm to continue.' : 'Devam etmek için onay vermeniz gerekiyor.') : (en ? 'This field is required.' : 'Bu alan zorunludur.');
+      if (el.validity.typeMismatch) return en ? 'Please enter a valid e-mail address.' : 'Lütfen geçerli bir e-posta adresi girin.';
+      if (el.validity.tooShort) return en ? `Enter at least ${(el as HTMLTextAreaElement).minLength} characters.` : `En az ${(el as HTMLTextAreaElement).minLength} karakter girin.`;
       return '';
     };
 
