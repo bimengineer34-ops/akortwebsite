@@ -19,6 +19,7 @@ import { smtpStatus, getRecipients, setRecipients, sendMail } from './mail.mjs';
 import { listRedirects, saveRedirect, deleteRedirect } from './redirects.mjs';
 import { createBackup, listBackups, backupPath } from './backup.mjs';
 import { listEntries, getEntry, saveEntry, deleteEntry, ENTRY_KINDS, isDirty } from './entries.mjs';
+import { extRoutes } from './ext/routes.mjs';
 
 const num = (v) => {
   const n = Number(v);
@@ -37,6 +38,13 @@ const iconNames = () => {
   };
   walk(paths.iconsDir, '');
   return out.sort();
+};
+
+/** Yalnızca GELİŞTİRME: istek doğrudan yerel makineden geliyorsa (soket adresi loopback) ve üretim modunda değilse e-posta alanı önceden doldurulur. Parola ASLA gönderilmez. */
+const devLoginHint = (req) => {
+  const ra = req.socket.remoteAddress ?? '';
+  const local = ra === '127.0.0.1' || ra === '::1' || ra === '::ffff:127.0.0.1';
+  return local && !config.secureCookies && !config.trustProxy ? config.bootstrapEmail : '';
 };
 
 const publicUser = (u) => ({ id: u.id, email: u.email, name: u.name, role: u.role });
@@ -71,7 +79,7 @@ export const routes = [
   [
     'GET',
     /^\/api\/admin\/durum$/,
-    ({ req, res }) => sendJson(res, 200, { setupRequired: userCount() === 0, user: me(req), siteUrl: config.siteUrl, ticker: Date.now() }),
+    ({ req, res }) => sendJson(res, 200, { setupRequired: userCount() === 0, user: me(req), siteUrl: config.siteUrl, ticker: Date.now(), loginHint: devLoginHint(req) }),
   ],
   [
     'POST',
@@ -518,7 +526,7 @@ export const routes = [
 ];
 
 export const dispatch = async (req, res, url) => {
-  for (const [method, re, handler] of routes) {
+  for (const [method, re, handler] of [...routes, ...extRoutes]) {
     if (req.method !== method && !(method === 'GET' && req.method === 'HEAD')) continue;
     const m = re.exec(url.pathname);
     if (!m) continue;

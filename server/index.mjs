@@ -10,6 +10,7 @@ import { dispatch } from './lib/api.mjs';
 import { resolveFile, serveFile } from './lib/static.mjs';
 import { mediaFilePath, MIME_BY_EXT } from './lib/media.mjs';
 import { bootstrapAdmin } from './lib/auth.mjs';
+import { startScheduler } from './lib/ext/intel.mjs';
 import { ensureInitialBuild } from './lib/build.mjs';
 import { audit } from './lib/db.mjs';
 import { matchRedirect } from './lib/redirects.mjs';
@@ -131,6 +132,7 @@ server.headersTimeout = 20_000;
 server.keepAliveTimeout = 10_000;
 
 bootstrapAdmin();
+startScheduler();
 pruneStats();
 setInterval(pruneStats, 24 * 3_600_000).unref();
 server.listen(config.port, config.host, () => {

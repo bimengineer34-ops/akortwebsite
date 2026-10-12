@@ -7,6 +7,11 @@ import { renderEntryList, renderEntryEditor } from './pages/entries.js';
 import { renderPublish } from './pages/publish.js';
 import { renderForms, renderSubscribers } from './pages/forms.js';
 import { renderMedia } from './pages/media.js';
+import { renderSeo } from './pages/x-seo.js';
+import { renderAiStudio } from './pages/x-ai.js';
+import { renderSocial } from './pages/x-social.js';
+import { renderMarket, renderCompetitors, renderBacklinks } from './pages/x-intel.js';
+import { renderIntegrations } from './pages/x-integrations.js';
 import { renderUsers, renderAudit, renderBackups, renderAccount, renderVerification, renderRedirects, renderSettings, renderStats } from './pages/system.js';
 
 const app = document.getElementById('app');
@@ -49,7 +54,8 @@ const authScreen = (setup) => {
     h('h1', {}, setup ? 'İlk kurulum' : 'AKORT Yönetim Paneli'),
     h('p', { class: 'muted' }, setup ? 'Henüz hiç kullanıcı yok. Sitenin ilk yönetici hesabını oluşturun.' : 'Devam etmek için giriş yapın.'),
     form)));
-  (setup ? name : email).focus();
+  if (!setup && session.loginHint) email.value = session.loginHint;
+  (setup ? name : email.value ? pass : email).focus();
 };
 
 /** "Parolamı unuttum": e-posta ile sıfırlama bağlantısı iste */
@@ -151,11 +157,20 @@ const NAV = [
     { to: '/aboneler', label: 'Bülten aboneleri', ic: 'users', match: '/aboneler' },
     { to: '/istatistik', label: 'Ziyaret istatistikleri', ic: 'eye', match: '/istatistik' },
   ] },
+  { h: 'Büyüme ve Pazarlama', items: [
+    { to: '/seo', label: 'SEO Intelligence', ic: 'search', match: '/seo' },
+    { to: '/ai', label: 'AI İçerik Stüdyosu', ic: 'spark', match: '/ai' },
+    { to: '/sosyal', label: 'Social Studio', ic: 'share', match: '/sosyal' },
+    { to: '/pazar', label: 'Market & Media', ic: 'radar', match: '/pazar' },
+    { to: '/rakipler', label: 'Competitor Intelligence', ic: 'eye', match: '/rakipler' },
+    { to: '/backlink', label: 'Backlink Intelligence', ic: 'link', match: '/backlink' },
+  ] },
   { h: 'Yayın', items: [{ to: '/yayin', label: 'Yayınla ve geçmiş', ic: 'rocket', badge: 'pending' }, { to: '/yonlendirmeler', label: 'Yönlendirmeler', ic: 'chevron' }] },
   { h: 'Sistem', admin: true, items: [
     { to: '/kullanicilar', label: 'Kullanıcılar', ic: 'users' },
     { to: '/gunluk', label: 'Etkinlik günlüğü', ic: 'log' },
     { to: '/yedekler', label: 'Yedekler', ic: 'archive' },
+    { to: '/entegrasyonlar', label: 'Entegrasyonlar ve API', ic: 'plug' },
     { to: '/ayarlar', label: 'Ayarlar (e-posta)', ic: 'gear' },
   ] },
 ];
@@ -240,6 +255,13 @@ const routes = [
   [/^\/yonlendirmeler$/, () => renderRedirects(ctx)],
   [/^\/ayarlar$/, () => renderSettings(ctx)],
   [/^\/istatistik$/, () => renderStats(ctx)],
+  [/^\/seo$/, () => renderSeo(ctx)],
+  [/^\/ai$/, () => renderAiStudio(ctx)],
+  [/^\/sosyal$/, () => renderSocial(ctx)],
+  [/^\/pazar$/, () => renderMarket(ctx)],
+  [/^\/rakipler$/, () => renderCompetitors(ctx)],
+  [/^\/backlink$/, () => renderBacklinks(ctx)],
+  [/^\/entegrasyonlar$/, () => renderIntegrations(ctx)],
 ];
 
 let leaveGuard = null;

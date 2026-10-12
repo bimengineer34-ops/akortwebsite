@@ -1,5 +1,5 @@
 // API istemcisi — CSRF belirteci, JSON hata çözümleme
-export const session = { user: null, csrf: '', setupRequired: false };
+export const session = { user: null, csrf: '', setupRequired: false, loginHint: '' };
 
 export class ApiError extends Error {
   constructor(status, message, data) {
@@ -44,6 +44,7 @@ export const api = {
     session.user = d.user;
     session.csrf = d.user?.csrf ?? '';
     session.setupRequired = d.setupRequired;
+    session.loginHint = d.loginHint ?? '';
     return d;
   },
   login: async (email, password) => {

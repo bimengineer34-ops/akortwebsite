@@ -1,0 +1,12 @@
+# Claude Code kontrol listesi
+- [ ] Önce audit, stack tespiti, gap matrix, tasarım snapshot
+- [ ] İzinli entegrasyon/feature matrix + demo/real etiketleme
+- [ ] Veritabanı yedek, migration, rol matrisi, sırların yönetimi
+- [ ] SEO editör ve görsel SEO gerçek kayıt/yayın
+- [ ] Speed Engine ve cache güvenliği
+- [ ] AI content editor/provider gerçek çağrılar ve maliyet izleme
+- [ ] Social approval/scheduler/idempotency + gerçek entegrasyon hataları
+- [ ] Market & Media AI + kaynak linkleri
+- [ ] Rakip ve backlink modülleri izinli veri kaynakları
+- [ ] CRM, analitik, iş akışları
+- [ ] E2E/accessibility/security/performance test + rollback
