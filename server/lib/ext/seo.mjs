@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../config.mjs';
 import { q } from '../db.mjs';
+import { getStats } from '../stats.mjs';
+import { listEntries, getEntry } from '../entries.mjs';
 import './schema.mjs';
 
 const attr = (tag, name) => new RegExp(`${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, 'i').exec(tag)?.slice(2).find((x) => x !== undefined);
@@ -48,10 +50,10 @@ export const analyzePage = (html, url) => {
   else if (!canonicalHref.startsWith(config.siteUrl.replace(/\/$/, ''))) issues.push(['warn', `Canonical farklı alan adına işaret ediyor: ${canonicalHref}`]);
   if (h1 !== 1) issues.push([h1 === 0 ? 'err' : 'warn', `H1 sayısı ${h1} (1 olmalı)`]);
   if (noAlt) issues.push(['err', `${noAlt} görselde alt özniteliği yok`]);
-  if (!ogImage) issues.push(['warn', 'og:image yok (sosyal paylaşım önizlemesi)']);
-  if (!jsonld.length) issues.push(['warn', 'Yapısal veri (JSON-LD) yok']);
-  if (words < 120 && !robots.includes('noindex')) issues.push(['warn', `İçerik az (${words} kelime)`]);
-  const score = Math.max(0, 100 - issues.reduce((s, [k]) => s + (k === 'err' ? 18 : 7), 0));
+  if (!ogImage) issues.push(['info', 'og:image yok (sosyal paylaşım önizlemesi)']);
+  if (!jsonld.length) issues.push(['info', 'Yapısal veri (JSON-LD) yok']);
+  if (words < 120 && !robots.includes('noindex')) issues.push(['info', `İçerik az (${words} kelime)`]);
+  const score = Math.max(0, 100 - issues.reduce((s, [k]) => s + (k === 'err' ? 18 : k === 'warn' ? 7 : 3), 0));
   return { url, title, description, canonical: canonicalHref, h1, images: imgs.length, imagesNoAlt: noAlt, ogImage: !!ogImage, noindex: robots.includes('noindex'), schema: [...new Set(jsonld)], words, issues, score };
 };
 
@@ -87,6 +89,8 @@ export const scanSite = (force = false) => {
     avgScore: pages.length ? Math.round(pages.reduce((s, p) => s + p.score, 0) / pages.length) : 0,
     errors: pages.reduce((s, p) => s + p.issues.filter(([k]) => k === 'err').length, 0),
     warnings: pages.reduce((s, p) => s + p.issues.filter(([k]) => k === 'warn').length, 0),
+    infos: pages.reduce((s, p) => s + p.issues.filter(([k]) => k === 'info').length, 0),
+    checksTotal: pages.length * 9,
     sitemap: { urls: smPaths.size, indexableNotInSitemap: notInSitemap, orphans: sitemapOrphans },
     robots: { present: robotsTxt !== null, hasSitemapLine: /sitemap:/i.test(robotsTxt ?? ''), adminBlocked: /disallow:\s*\/yonetim/i.test(robotsTxt ?? '') },
     duplicateTitles: dup('title'),
@@ -131,4 +135,86 @@ export const speedReport = () => {
     cdn: { available: false, reason: 'CDN/Proxy adaptörü bağlı değil. Veridyen planı veya Cloudflare gibi bir proxy ile sunucu düzeyinde etkinleştirilebilir.' },
     cwv: { available: false, reason: 'Alan verisi (CrUX/RUM) için Search Console / PageSpeed API anahtarı gerekir; sentetik ve alan verisi ayrı tutulur.' },
   };
+};
+
+/* ---------- SEO Intelligence genel bakış: yalnızca gerçek veriler ---------- */
+export const seoOverview = (n = 30) => {
+  const scan = scanSite();
+  const st = getStats(n);
+  const prev = getStats(2 * n);
+  const cur = st.total, before = prev.total - st.total;
+  const indexable = scan.pages.filter((p) => !p.noindex);
+  const home = scan.pages.find((p) => p.url === '/') ?? scan.pages[0] ?? null;
+  const typeCount = {};
+  for (const p of scan.pages) for (const t of p.schema) typeCount[t] = (typeCount[t] ?? 0) + 1;
+  const imgs = scan.pages.reduce((a, p) => a + p.images, 0);
+  const noAlt = scan.pages.reduce((a, p) => a + p.imagesNoAlt, 0);
+  let speed = null;
+  try { speed = speedReport(); } catch { /* derleme yok */ }
+  const passed = Math.max(0, scan.checksTotal - scan.errors - scan.warnings - scan.infos);
+
+  // fırsatlar: içerik kayıtlarındaki gerçek eksikler
+  const opps = [];
+  const rows = [];
+  for (const kind of ['blog', 'projects']) for (const e of listEntries(kind)) rows.push({ kind, ...e });
+  const noDesc = [], noFocus = [], noLink = [];
+  for (const r of rows.filter((x) => !x.draft)) {
+    try {
+      const e = getEntry(r.kind, r.slug);
+      const d = e.data;
+      const desc = d.seo?.description ?? d.description ?? d.summary ?? '';
+      if (desc.length < 120) noDesc.push(r);
+      if (!getFocus(r.kind, r.slug)) noFocus.push(r);
+      if (!/\]\(\//.test(e.body)) noLink.push(r);
+    } catch { /* bozuk kayıt */ }
+  }
+  const first = (arr) => (arr[0] ? `/seo/editor/${arr[0].kind}/${arr[0].slug}` : '/seo/editor');
+  if (noDesc.length) opps.push({ icon: 'edit', color: '#f79009', title: `${noDesc.length} içerikte meta açıklama kısa/eksik`, sub: 'İdeal uzunluk 120–160 karakter', to: first(noDesc) });
+  if (noFocus.length) opps.push({ icon: 'search', color: '#0b7bd6', title: `${noFocus.length} içerik için odak sorgu tanımlı değil`, sub: 'Canlı SEO editöründe odak sorgu girin', to: first(noFocus) });
+  if (noLink.length) opps.push({ icon: 'link', color: '#8b5cf6', title: `${noLink.length} içerikte iç bağlantı yok`, sub: 'İlgili hizmet/yazılara bağlantı ekleyin', to: first(noLink) });
+  if (scan.duplicateTitles.length) opps.push({ icon: 'alert', color: '#f04438', title: `${scan.duplicateTitles.length} yinelenen sayfa başlığı`, sub: 'Her sayfa için benzersiz başlık kullanın', to: '/seo' });
+  if (scan.sitemap.indexableNotInSitemap.length) opps.push({ icon: 'doc', color: '#12b76a', title: `${scan.sitemap.indexableNotInSitemap.length} sayfa sitemap'te yok`, sub: scan.sitemap.indexableNotInSitemap.slice(0, 2).join(', '), to: '/seo' });
+  const noOg = scan.pages.filter((p) => !p.ogImage && !p.noindex).length;
+  if (noOg) opps.push({ icon: 'image', color: '#06b6d4', title: `${noOg} sayfada og:image yok`, sub: 'Sosyal paylaşım önizlemesi için görsel ekleyin', to: '/seo' });
+
+  const top = st.topPages.slice(0, 8).map((p) => {
+    const pg = scan.pages.find((x) => x.url === p.path);
+    return { path: p.path, title: pg?.title ?? p.path, views: p.views, score: pg?.score ?? null };
+  });
+  const totalTop = Math.max(...top.map((x) => x.views), 1);
+  return {
+    range: n,
+    scannedAt: scan.scannedAt,
+    kpi: { indexed: scan.sitemap.urls, pages: scan.total, excluded: scan.pages.length - indexable.length, avgScore: scan.avgScore, visits: cur, visitsDelta: before > 0 ? ((cur - before) / before) * 100 : null, visitSeries: st.daily.map((d) => d.views) },
+    labels: st.daily.map((d) => `${d.day.slice(8)}/${d.day.slice(5, 7)}`),
+    health: { critical: scan.errors, important: scan.warnings, improve: scan.infos, passed, score: scan.avgScore },
+    opportunities: opps.slice(0, 6),
+    sitemap: { urls: scan.sitemap.urls, indexable: indexable.length, excluded: scan.pages.length - indexable.length, notInSitemap: scan.sitemap.indexableNotInSitemap.length, orphans: scan.sitemap.orphans.length, robots: scan.robots },
+    schema: { typeCount, typeKinds: Object.keys(typeCount).length, pagesWithSchema: scan.pages.filter((p) => p.schema.length).length, pages: scan.total, images: imgs, imagesNoAlt: noAlt, altPct: imgs ? Math.round(((imgs - noAlt) / imgs) * 100) : 100, modernPct: speed?.available && speed.images.count ? Math.round((speed.images.modern / speed.images.count) * 100) : null },
+    serp: home ? { url: home.url, title: home.title, description: home.description, canonical: home.canonical } : null,
+    topPages: top.map((x) => ({ ...x, pct: Math.round((x.views / totalTop) * 100) })),
+    siteUrl: process.env.PUBLIC_SITE_URL || '',
+  };
+};
+
+/* ---------- İç bağlantı önerileri: gerçek sayfa başlıkları ile kelime örtüşmesi ---------- */
+const STOP = new Set('ve veya ile için bir bu şu da de mi mı mu mü olarak daha çok en gibi ise ama fakat the and for of to in a is'.split(' '));
+const words = (t) => String(t).toLocaleLowerCase('tr').replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter((w) => w.length > 3 && !STOP.has(w));
+export const internalLinkSuggestions = (kind, slug) => {
+  const e = getEntry(kind, slug);
+  const body = e.body ?? '';
+  const mine = new Set([...words(e.data.title ?? ''), ...words(body).slice(0, 400)]);
+  const selfUrl = kind === 'blog' ? `/blog/${slug}` : `/projeler/${slug}`;
+  const scan = scanSite();
+  const out = [];
+  for (const p of scan.pages) {
+    if (p.noindex || p.url === selfUrl || p.url === '/' || /^\/(blog\/(etiket|sayfa)|arama|404)/.test(p.url) || !p.title) continue;
+    if (body.includes(`](${p.url})`)) continue;
+    const tw = words(p.title.replace(/\|.*$/, ''));
+    if (!tw.length) continue;
+    const hit = tw.filter((w) => mine.has(w)).length;
+    if (!hit) continue;
+    out.push({ title: p.title.replace(/\s*[|—-]\s*AKORT.*$/i, ''), url: p.url, score: Math.round((hit / tw.length) * 100) });
+  }
+  return out.sort((a, b) => b.score - a.score).slice(0, 5);
 };

@@ -6,9 +6,11 @@ import { getEntry, saveEntry, listEntries } from '../entries.mjs';
 import { setSecret, deleteSecret, hasSecret, secretMeta } from './vault.mjs';
 import { featureOn } from './schema.mjs';
 import { PROVIDERS, providerStatus, setCfg, testProvider, listModels, generate, TASKS, markRun, recentRuns, recentUsage } from './ai.mjs';
-import { scanSite, speedReport, getFocus, setFocus } from './seo.mjs';
+import { scanSite, speedReport, getFocus, setFocus, seoOverview, internalLinkSuggestions } from './seo.mjs';
 import * as social from './social.mjs';
 import * as intel from './intel.mjs';
+import { runPsi, speedOverview, clearCache, pruneDb } from './speed.mjs';
+import { brandData, renderBrand, saveRender } from './brand.mjs';
 import { dashboard, setPrefs, computeCard, CATALOG } from './kpi.mjs';
 import { getStats } from '../stats.mjs';
 
@@ -32,7 +34,7 @@ const integrations = () => {
     other: [
       need('Google Search Console', 'OAuth + doğrulanmış mülk gerekir (Search Analytics, URL Inspection, sitemap). Genel sayfalar için Indexing API kullanılmaz.'),
       need('Google Analytics 4', 'GA4 Data API için servis hesabı/OAuth ve çerez onayına uygun ölçüm kurulumu gerekir.'),
-      need('PageSpeed Insights / CrUX', 'Google API anahtarı gerekir; sentetik ve alan verisi ayrı raporlanır.'),
+      { name: 'PageSpeed Insights (Google)', connected: hasSecret('google.psi'), how: 'Anahtar isteğe bağlıdır (anahtarsız düşük kota); Speed Engine sayfasında test çalıştırılır. Sentetik ve alan verisi ayrı raporlanır.', psi: true },
       need('Google Business Profile', 'Yalnızca uygun/onaylı erişimi olan işletmeler için (başvuru gerekir).'),
       need('SERP / sıralama veri sağlayıcısı', 'Lisanslı üçüncü taraf API (isteğe bağlı). Olmadan sıralama verisi gösterilmez.'),
       need('Backlink veri sağlayıcısı', 'Lisanslı üçüncü taraf API (isteğe bağlı). Olmadan yalnızca elle/doğrulama taraması vardır.'),
@@ -81,6 +83,18 @@ export const extRoutes = [
     });
   }],
 
+  /* ---------- Speed Engine ---------- */
+  ['GET', new RegExp(`^${A}/hiz$`), ({ req, res, url }) => (requireUser(req), sendJson(res, 200, speedOverview([7, 30, 90].includes(Number(url.searchParams.get('gun'))) ? Number(url.searchParams.get('gun')) : 30)))],
+  ['POST', new RegExp(`^${A}/hiz/test$`), async ({ req, res }) => {
+    const u = requireUser(req);
+    const b = await J(req, 2048);
+    sendJson(res, 200, await runPsi(String(b.url ?? ''), String(b.strategy ?? 'mobile'), u));
+  }],
+  ['POST', new RegExp(`^${A}/hiz/onbellek-temizle$`), ({ req, res }) => sendJson(res, 200, clearCache(requireAdmin(req)))],
+  ['POST', new RegExp(`^${A}/hiz/veritabani-temizle$`), ({ req, res }) => sendJson(res, 200, pruneDb(requireAdmin(req)))],
+  ['PUT', new RegExp(`^${A}/anahtar/psi$`), async ({ req, res }) => { const u = requireAdmin(req); setSecret('google.psi', (await J(req, 2048)).key, u); sendJson(res, 200, { ok: true }); }],
+  ['DELETE', new RegExp(`^${A}/anahtar/psi$`), ({ req, res }) => { const u = requireAdmin(req); if (hasSecret('google.psi')) deleteSecret('google.psi', u); sendJson(res, 200, { ok: true }); }],
+
   /* ---------- entegrasyonlar + sır kasası ---------- */
   ['GET', new RegExp(`^${A}/entegrasyonlar$`), ({ req, res }) => {
     requireUser(req);
@@ -121,6 +135,7 @@ export const extRoutes = [
 
   /* ---------- SEO ---------- */
   ['GET', new RegExp(`^${A}/seo/tarama$`), ({ req, res, url }) => (requireUser(req), flag('seo'), sendJson(res, 200, scanSite(url.searchParams.get('yenile') === '1')))],
+  ['GET', new RegExp(`^${A}/seo/ozet$`), ({ req, res, url }) => (requireUser(req), flag('seo'), sendJson(res, 200, seoOverview([7, 30, 90].includes(Number(url.searchParams.get('gun'))) ? Number(url.searchParams.get('gun')) : 30)))],
   ['GET', new RegExp(`^${A}/seo/hiz$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, speedReport()))],
   ['GET', new RegExp(`^${A}/seo/girdiler$`), ({ req, res }) => {
     requireUser(req);
@@ -131,15 +146,20 @@ export const extRoutes = [
     const e = getEntry(m[1], m[2]);
     sendJson(res, 200, { kind: m[1], slug: m[2], data: e.data, body: e.body, focus: getFocus(m[1], m[2]), siteUrl: process.env.PUBLIC_SITE_URL || '' });
   }],
+  ['GET', new RegExp(`^${A}/seo/ic-baglanti/(blog|projects)/([a-z0-9-]+)$`), ({ req, res, m }) => (requireUser(req), sendJson(res, 200, { rows: internalLinkSuggestions(m[1], m[2]) }))],
   ['PUT', new RegExp(`^${A}/seo/girdi/(blog|projects)/([a-z0-9-]+)$`), async ({ req, res, m }) => {
     const u = requireUser(req);
     flag('seo');
-    const b = await J(req, 16 * 1024);
+    const b = await J(req, 600 * 1024);
     const e = getEntry(m[1], m[2]);
     const seo = { ...(e.data.seo ?? {}) };
-    for (const k of ['title', 'description']) if (typeof b[k] === 'string') seo[k] = b[k].trim();
+    const data = { ...e.data };
+    if (typeof b.seoTitle === 'string') seo.title = b.seoTitle.trim();
+    if (typeof b.description === 'string') seo.description = b.description.trim();
     if (typeof b.noindex === 'boolean') seo.noindex = b.noindex;
-    saveEntry(m[1], m[2], { data: { ...e.data, seo }, body: e.body }, u);
+    if (typeof b.h1 === 'string' && b.h1.trim()) data.title = b.h1.trim();
+    data.seo = seo;
+    saveEntry(m[1], m[2], { data, body: typeof b.body === 'string' ? b.body : e.body }, u);
     if (typeof b.focus === 'string') setFocus(m[1], m[2], b.focus);
     sendJson(res, 200, { ok: true });
   }],
@@ -182,7 +202,20 @@ export const extRoutes = [
     sendJson(res, 200, post);
   }],
 
+  ['GET', new RegExp(`^${A}/sosyal/ozet$`), ({ req, res, url }) => (requireUser(req), sendJson(res, 200, social.socialOverview([7, 30, 90].includes(Number(url.searchParams.get('gun'))) ? Number(url.searchParams.get('gun')) : 30)))],
+  ['PUT', new RegExp(`^${A}/sosyal/ozelgun$`), async ({ req, res }) => { const b = await J(req, 1024); social.setAutoDay(String(b.date ?? ''), b.enabled === true, requireUser(req)); sendJson(res, 200, { ok: true, made: b.enabled === true ? social.autoDraftSpecialDays() : 0 }); }],
+  ['POST', new RegExp(`^${A}/sosyal/hashtag$`), async ({ req, res }) => { requireUser(req); sendJson(res, 200, { tags: social.hashtagSuggestions(String((await J(req, 20 * 1024)).text ?? '')) }); }],
+  ['GET', new RegExp(`^${A}/marka$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, brandData()))],
+  ['POST', new RegExp(`^${A}/marka/onizle$`), async ({ req, res }) => {
+    requireUser(req);
+    const r = await renderBrand(await J(req, 8 * 1024));
+    sendJson(res, 200, { mime: r.mime, w: r.w, h: r.h, data: r.buf.toString('base64') });
+  }],
+  ['POST', new RegExp(`^${A}/marka/kaydet$`), async ({ req, res }) => sendJson(res, 200, await saveRender(await J(req, 8 * 1024), requireUser(req)))],
+
   /* ---------- Market & Media / Rakip / Backlink ---------- */
+  ['GET', new RegExp(`^${A}/pazar/ozet$`), ({ req, res, url }) => (requireUser(req), sendJson(res, 200, intel.marketOverview([7, 30, 90].includes(Number(url.searchParams.get('gun'))) ? Number(url.searchParams.get('gun')) : 30)))],
+  ['GET', new RegExp(`^${A}/rakip-ozet$`), ({ req, res, url }) => (requireUser(req), sendJson(res, 200, intel.competitorOverview([7, 30, 90].includes(Number(url.searchParams.get('gun'))) ? Number(url.searchParams.get('gun')) : 30)))],
   ['GET', new RegExp(`^${A}/pazar$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, { sources: intel.listSources(), trending: intel.trending(), jobs: intel.listJobs() }))],
   ['POST', new RegExp(`^${A}/pazar/kaynaklar$`), async ({ req, res }) => (flag('intel'), intel.saveSource(0, await J(req), requireUser(req)), sendJson(res, 200, { ok: true }))],
   ['PUT', new RegExp(`^${A}/pazar/kaynaklar/(\\d+)$`), async ({ req, res, m }) => (intel.saveSource(id(m[1]), await J(req), requireUser(req)), sendJson(res, 200, { ok: true }))],

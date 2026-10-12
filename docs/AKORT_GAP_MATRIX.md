@@ -22,6 +22,9 @@ Durum anahtarı: ✅ gerçek ve test edilmiş · 🟡 kısmen (neden belirtilir)
 | Backlink | yeni | ✅ | Fırsat defteri, elle onaylı taslak, gerçek bağlantı doğrulama; veri servisi ⛔ |
 | CRM / Leads | genişlet | 🟡 | Mevcut form talepleri + fırsat önerisi; aşama/sahip/atıf raporu ❌ |
 | Referans dashboard tasarımı (koyu tema, KPI kartları, grafikler, genel arama) | genişlet | ✅ | Kullanıcı başına KPI seçimi/sırası/hedefi (24 gerçek metrik), SVG grafik kütüphanesi, açık/koyu tema; mockup ekranlarıyla birebir karşılaştırma ❌ |
+| 10 referans ekran düzeni (SEO, Market, Takvim, Brand Kit, Social, AI Studio, Speed, Backlink, Competitor, Canlı SEO Editörü) | yeni | 🟡 | Düzen/bileşenler referansa göre, AÇIK temada; veri gerçek. GSC/GA4/sıralama/backlink sağlayıcı/OAuth olmayan kartlar "Bağlantı gerekli" gösterir. Piksel-doğru kopya değildir |
+| Brand Kit şablon oluşturucu (logo + marka metni katmanı, PNG/JPG/WebP) | yeni | ✅ | sharp ile deterministik; SVG/PDF çıktısı ❌ |
+| PageSpeed Insights entegrasyonu | yeni | ✅ kod / ⛔ herkese açık adres | Yerel adresler test edilemez; canlıya çıkınca çalışır |
 | RBAC (7 rol) | genişlet | ❌ | Şimdilik admin/editor. `users.role` CHECK kısıtı nedeniyle tablo yeniden kurulumu gerekir → ayrı, yedekli migrasyon |
 | İş kuyruğu | yeni | ✅ | `jobs` tablosu, idempotent anahtar, üstel geri çekilme, ölü kuyruk; şimdilik yalnızca RSS çekimi |
 | Sır kasası / denetim | yeni | ✅ | AES-256-GCM, değer API'ye/günlüğe çıkmaz |

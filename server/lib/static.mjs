@@ -32,6 +32,8 @@ const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.mjs', '.json', '.xml', '
 
 const gzCache = new Map(); // dosya → { mtime, buf }
 let gzBytes = 0;
+/** Speed Engine: bellekteki gzip önbelleğini boşaltır */
+export const clearGzCache = () => { const n = gzCache.size; gzCache.clear(); gzBytes = 0; return n; };
 const gz = (file, mtimeMs, data) => {
   const hit = gzCache.get(file);
   if (hit && hit.mtime === mtimeMs) return hit.buf;

@@ -106,6 +106,8 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs (state, run_at);
 `);
 
+try { db.exec("ALTER TABLE competitors ADD COLUMN region TEXT NOT NULL DEFAULT 'TR'"); } catch { /* sütun zaten var */ }
+
 /** Özellik bayrağı (varsayılan: açık) — modülleri sorun çıkarsa panelden kapatmak için */
 export const featureOn = (key) => {
   const r = db.prepare('SELECT enabled FROM feature_flags WHERE key = ?').get(key);

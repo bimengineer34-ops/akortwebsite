@@ -7,6 +7,7 @@ import { q, audit } from '../db.mjs';
 import { HttpError } from '../http.mjs';
 import { config } from '../config.mjs';
 import './schema.mjs';
+import { autoDraftSpecialDays } from './social.mjs';
 
 const UA = `AKORT-Panel/1.0 (+${config.siteUrl}; izinli RSS/izleme)`;
 
@@ -173,7 +174,7 @@ export const listItems = ({ status = '', minRel = 0, search = '', limit = 60 } =
   const args = [Number(minRel) || 0];
   if (status) { where.push('i.status = ?'); args.push(status); }
   if (search) { where.push('(i.title LIKE ? OR i.summary LIKE ?)'); const s = `%${search.replace(/[%_]/g, '')}%`; args.push(s, s); }
-  return q.all(`SELECT i.id, i.title, i.summary, i.canonical_url, i.published_at, i.fetched_at, i.relevance, i.tags, i.status, i.method, s.name AS source, s.license_note FROM source_items i JOIN sources s ON s.id = i.source_id WHERE ${where.join(' AND ')} ORDER BY COALESCE(i.published_at, i.fetched_at) DESC LIMIT ?`, ...args, Math.min(Number(limit) || 60, 200));
+  return q.all(`SELECT i.id, i.title, i.summary, i.canonical_url, i.published_at, i.fetched_at, i.relevance, i.tags, i.status, i.method, s.name AS source, s.country, s.category, s.kind AS source_kind, s.lang, s.license_note FROM source_items i JOIN sources s ON s.id = i.source_id WHERE ${where.join(' AND ')} ORDER BY COALESCE(i.published_at, i.fetched_at) DESC LIMIT ?`, ...args, Math.min(Number(limit) || 60, 200));
 };
 export const setItemStatus = (id, status, user) => {
   if (!['yeni', 'ilgili', 'elendi', 'fikir'].includes(status)) throw new HttpError(400, 'Geçersiz durum');
@@ -207,8 +208,9 @@ export const saveCompetitor = (id, b, user) => {
   try { new URL(url); } catch { throw new HttpError(400, 'Geçerli bir adres girin'); }
   if (!name) throw new HttpError(400, 'Ad zorunlu');
   try {
-    if (id) q.run('UPDATE competitors SET name=?, url=?, sector=?, note=? WHERE id=?', name, url, String(b.sector ?? '').slice(0, 60), String(b.note ?? '').slice(0, 300), id);
-    else q.run('INSERT INTO competitors (name, url, sector, note) VALUES (?,?,?,?)', name, url, String(b.sector ?? '').slice(0, 60), String(b.note ?? '').slice(0, 300));
+    const region = b.region === 'GLOBAL' ? 'GLOBAL' : 'TR';
+    if (id) q.run('UPDATE competitors SET name=?, url=?, sector=?, note=?, region=? WHERE id=?', name, url, String(b.sector ?? '').slice(0, 60), String(b.note ?? '').slice(0, 300), region, id);
+    else q.run('INSERT INTO competitors (name, url, sector, note, region) VALUES (?,?,?,?,?)', name, url, String(b.sector ?? '').slice(0, 60), String(b.note ?? '').slice(0, 300), region);
   } catch (e) { if (String(e.message).includes('UNIQUE')) throw new HttpError(409, 'Bu adres zaten kayıtlı'); throw e; }
   audit(user, id ? 'rakip.guncelle' : 'rakip.ekle', name);
 };
@@ -238,7 +240,7 @@ export const checkCompetitor = async (id, user) => {
 export const competitorHistory = (id) => q.all('SELECT ts, status, title, words, changed, error FROM competitor_checks WHERE competitor_id = ? ORDER BY id DESC LIMIT 30', id);
 
 /* ---------- backlink fırsatları ---------- */
-const BL_STATUS = ['aday', 'taslak', 'onay_bekliyor', 'gonderildi', 'kazanildi', 'reddedildi', 'kayip'];
+const BL_STATUS = ['aday', 'taslak', 'onay_bekliyor', 'gonderildi', 'yanitlandi', 'kazanildi', 'reddedildi', 'kayip'];
 export const listBacklinks = () => q.all('SELECT * FROM backlink_opps ORDER BY id DESC');
 export const saveBacklink = (id, b, user) => {
   const name = String(b.name ?? '').trim().slice(0, 120);
@@ -290,7 +292,45 @@ export const runDueSources = async () => {
   }
 };
 export const startScheduler = () => {
-  const t = setInterval(() => runDueSources().catch(() => {}), 5 * 60_000);
+  const t = setInterval(() => { runDueSources().catch(() => {}); try { autoDraftSpecialDays(); } catch { /* sonraki turda */ } }, 5 * 60_000);
   t.unref();
 };
 export const listJobs = () => q.all('SELECT id, type, payload, state, attempts, run_at, last_error, finished_at FROM jobs ORDER BY id DESC LIMIT 30');
+
+/* ---------- genel bakış toplulaştırmaları (referans ekranlar için) ---------- */
+const dayKeys = (n) => Array.from({ length: n }, (_, i) => new Date(Date.now() - (n - 1 - i) * 86_400_000).toLocaleDateString('sv-SE', { timeZone: 'Europe/Istanbul' }));
+
+export const competitorOverview = (n = 30) => {
+  const rows = q.all(`SELECT c.*, (SELECT COUNT(*) FROM competitor_checks k WHERE k.competitor_id = c.id AND k.changed = 1 AND k.ts >= datetime('now', ?)) AS changes,
+    (SELECT words FROM competitor_checks k WHERE k.competitor_id = c.id AND k.words IS NOT NULL ORDER BY k.id DESC LIMIT 1) AS words FROM competitors c ORDER BY c.id DESC`, `-${n} days`);
+  const events = q.all(`SELECT k.ts, k.changed, k.error, c.name, c.url FROM competitor_checks k JOIN competitors c ON c.id = k.competitor_id WHERE (k.changed = 1 OR k.error IS NOT NULL) AND k.ts >= datetime('now', ?) ORDER BY k.id DESC LIMIT 12`, `-${n} days`);
+  const days = dayKeys(n);
+  const byDay = new Map(q.all(`SELECT date(ts, '+3 hours') AS day, COUNT(*) AS v FROM competitor_checks WHERE changed = 1 AND ts >= datetime('now', ?) GROUP BY 1`, `-${n} days`).map((r) => [r.day, r.v]));
+  return { range: n, rows, events, changeSeries: days.map((d) => byDay.get(d) ?? 0), sectors: [...new Set(rows.map((r) => r.sector).filter(Boolean))] };
+};
+
+export const marketOverview = (n = 30) => {
+  const days = dayKeys(n);
+  const since = days[0];
+  const byDay = new Map(q.all(`SELECT date(fetched_at, '+3 hours') AS day, COUNT(*) AS v FROM source_items WHERE date(fetched_at, '+3 hours') >= ? GROUP BY 1`, since).map((r) => [r.day, r.v]));
+  const prev = q.get(`SELECT COUNT(*) AS n FROM source_items WHERE fetched_at >= datetime('now', ?) AND fetched_at < datetime('now', ?)`, `-${2 * n} days`, `-${n} days`).n;
+  const cur = q.get(`SELECT COUNT(*) AS n FROM source_items WHERE fetched_at >= datetime('now', ?)`, `-${n} days`).n;
+  // konu trendleri: etiket × gün
+  const tagRows = q.all(`SELECT date(fetched_at, '+3 hours') AS day, tags FROM source_items WHERE tags != '' AND date(fetched_at, '+3 hours') >= ?`, since);
+  const totals = {}, per = {};
+  for (const r of tagRows) for (const t of r.tags.split(',')) { totals[t] = (totals[t] ?? 0) + 1; (per[t] ??= {})[r.day] = (per[t][r.day] ?? 0) + 1; }
+  const top = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t]) => t);
+  return {
+    range: n,
+    sources: { total: q.get('SELECT COUNT(*) AS n FROM sources').n, active: q.get('SELECT COUNT(*) AS n FROM sources WHERE enabled = 1').n, failing: q.get('SELECT COUNT(*) AS n FROM sources WHERE last_error IS NOT NULL').n },
+    news: { cur, prev, series: days.map((d) => byDay.get(d) ?? 0) },
+    ideas: q.get(`SELECT COUNT(*) AS n FROM source_items WHERE relevance >= 60 OR status = 'fikir'`).n,
+    leads: q.get(`SELECT COUNT(*) AS n FROM forms WHERE kind = 'firsat'`).n,
+    labels: days.map((d) => d.slice(8) + '/' + d.slice(5, 7)),
+    trends: top.map((t) => ({ tag: t, total: totals[t], values: days.map((d) => per[t]?.[d] ?? 0) })),
+    categories: [...new Set(q.all('SELECT DISTINCT category FROM sources').map((r) => r.category))],
+    countries: [...new Set(q.all('SELECT DISTINCT country FROM sources').map((r) => r.country))],
+    ranking: q.all(`SELECT i.id, i.title, i.canonical_url, i.relevance, i.tags, i.status, s.name AS source FROM source_items i JOIN sources s ON s.id = i.source_id WHERE i.relevance >= 20 AND i.status != 'elendi' ORDER BY i.relevance DESC, i.id DESC LIMIT 6`),
+    changeEvents: q.all(`SELECT k.ts, c.name, c.url FROM competitor_checks k JOIN competitors c ON c.id = k.competitor_id WHERE k.changed = 1 ORDER BY k.id DESC LIMIT 20`),
+  };
+};

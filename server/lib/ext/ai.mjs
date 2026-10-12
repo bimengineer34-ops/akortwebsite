@@ -159,6 +159,7 @@ export const TASKS = {
   genislet: { label: 'Genişlet', sys: 'Verilen metni, yeni olgu eklemeden, açıklayıcı cümlelerle genişlet. Yalnızca yeni metni döndür.', max: 1500 },
   cevir: { label: 'İngilizceye çevir', sys: 'Verilen Türkçe metni teknik terimleri koruyarak profesyonel İngilizceye çevir. Yalnızca çeviriyi döndür.', max: 1500 },
   'meta-oneri': { label: 'Başlık/meta önerileri', sys: 'Verilen içerik için 3 farklı SEO başlığı (en çok 60 karakter) ve 3 meta açıklaması (120-160 karakter) öner. Şu biçimde numaralı liste ver: "BAŞLIK 1: …" ve "AÇIKLAMA 1: …".', max: 700 },
+  'prompt-iyilestir': { label: 'Prompt iyileştir', sys: 'Kullanıcının yazı üretimi için yazdığı istemi (prompt) daha net, ölçülebilir ve uygulanabilir hale getir: hedef kitle, ton, uzunluk ve biçimi belirt, ama yeni olgu/rakam ekleme. Yalnızca iyileştirilmiş istemi döndür.', max: 400 },
   'seo-analiz': { label: 'SEO uyum yorumu', sys: 'Verilen içeriği odak sorgusuna göre değerlendir: güçlü yönler, eksikler ve 5 somut iyileştirme önerisi ver. Bu bir tahmindir, Google puanı değildir.', max: 900 },
 };
 

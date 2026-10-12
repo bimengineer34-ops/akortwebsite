@@ -1,10 +1,19 @@
 // Arayüz yardımcıları — DOM üretimi (innerHTML'siz: veri her zaman metin düğümü olarak eklenir → XSS güvenli)
+/** "a:b;--c:d" dizgisini CSSOM ile uygular (CSP uyumlu) */
+export const applyStyle = (el, css) => {
+  for (const part of String(css).split(';')) {
+    const i = part.indexOf(':');
+    if (i < 1) continue;
+    el.style.setProperty(part.slice(0, i).trim(), part.slice(i + 1).trim());
+  }
+};
 export const h = (tag, attrs = {}, ...children) => {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs ?? {})) {
     if (v === undefined || v === null || v === false) continue;
     if (k === 'class') el.className = v;
     else if (k === 'dataset') Object.assign(el.dataset, v);
+    else if (k === 'style') applyStyle(el, v); // CSP (style-src 'self') satır içi style özniteliğini engeller → CSSOM kullanılır
     else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
     else if (k === 'value') el.value = v;
     else if (k === 'checked' || k === 'disabled' || k === 'selected' || k === 'hidden' || k === 'required' || k === 'readOnly' || k === 'multiple') el[k] = !!v;
@@ -58,6 +67,14 @@ const SVG = {
   chevron: '<path d="m9 6 6 6-6 6"/>',
   eye: '<path d="M2 12s3.500-6.500 10-6.500S22 12 22 12s-3.500 6.500-10 6.500S2 12 2 12z"/><circle cx="12" cy="12" r="2.800"/>',
   history: '<path d="M4 12a8 8 0 1 0 3-6.200M4 4v5h5M12 8v4l3 2"/>',
+  chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  chart2: '<path d="M3 17l5-6 4 4 8-10M15 5h5v5"/>',
+  bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  palette: '<path d="M12 3a9 9 0 1 0 0 18c1.500 0 2-1 1.500-2.200-.5-1.200.2-2.300 1.500-2.300H17a4 4 0 0 0 4-4C21 6.800 17 3 12 3z"/><circle cx="8" cy="11" r="1"/><circle cx="12" cy="7.500" r="1"/><circle cx="16" cy="11" r="1"/>',
+  moon: '<path d="M20 14.500A8 8 0 0 1 9.500 4 8 8 0 1 0 20 14.500z"/>',
+  bell: '<path d="M6 17V11a6 6 0 1 1 12 0v6l1.500 2h-15zM10 21h4"/>',
+  grid: '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>',
   spark: '<path d="M12 3l1.8 5.2L19 10l-5.200 1.800L12 17l-1.800-5.200L5 10l5.200-1.800zM18 16l.8 2.200L21 19l-2.200.8L18 22l-.8-2.200L15 19l2.200-.8z"/>',
   share: '<circle cx="6" cy="12" r="2.500"/><circle cx="18" cy="6" r="2.500"/><circle cx="18" cy="18" r="2.500"/><path d="m8.200 10.800 7.600-3.600M8.200 13.200l7.600 3.600"/>',
   link: '<path d="M10 14a4 4 0 0 0 5.700 0l3-3a4 4 0 0 0-5.700-5.700l-1 1M14 10a4 4 0 0 0-5.700 0l-3 3a4 4 0 0 0 5.700 5.700l1-1"/>',

@@ -3,8 +3,8 @@ import { api, session } from '../api.js';
 import { h, icon, chip, fmtDate, modal, toast, spinner, errorBanner } from '../ui.js';
 import { kpiCard, areaChart, barChart, donut, hbars, panel, PALETTE, fmtNum } from '../charts.js';
 
-const FORM_ST = { yeni: ['Yeni', '#7367f0'], islemde: ['İşlemde', '#ff9f43'], yanitlandi: ['Yanıtlandı', '#28c76f'], kapali: ['Kapalı', '#a8aaae'], spam: ['Spam', '#ea5455'] };
-const SOC_ST = { taslak: ['Taslak', '#a8aaae'], onay_bekliyor: ['Onay bekliyor', '#ff9f43'], revizyon: ['Revizyon', '#ff6bb5'], onaylandi: ['Onaylandı', '#7367f0'], planlandi: ['Planlandı', '#00cfe8'], yayimlandi: ['Yayımlandı', '#28c76f'], hata: ['Hata', '#ea5455'] };
+const FORM_ST = { yeni: ['Yeni', '#0b7bd6'], islemde: ['İşlemde', '#ff9f43'], yanitlandi: ['Yanıtlandı', '#28c76f'], kapali: ['Kapalı', '#a8aaae'], spam: ['Spam', '#ea5455'] };
+const SOC_ST = { taslak: ['Taslak', '#a8aaae'], onay_bekliyor: ['Onay bekliyor', '#ff9f43'], revizyon: ['Revizyon', '#ff6bb5'], onaylandi: ['Onaylandı', '#0b7bd6'], planlandi: ['Planlandı', '#00cfe8'], yayimlandi: ['Yayımlandı', '#28c76f'], hata: ['Hata', '#ea5455'] };
 const statusChip = (s) => ({ yeni: chip('Yeni', 'info'), islemde: chip('İşlemde', 'warn'), yanitlandi: chip('Yanıtlandı', 'ok'), kapali: chip('Kapalı'), spam: chip('Spam', 'danger') }[s] ?? chip(s));
 
 /** KPI düzenleyici: hangi kartlar, hangi sırada, hangi hedefle */
@@ -60,10 +60,10 @@ export const renderDashboard = async (ctx) => {
       // Kişiye özel yapılacaklar: gerçek duruma göre üretilir
       const todos = [];
       if (open) todos.push(['#ff9f43', 'mail', `${open} yeni form talebini yanıtlayın`, 'Müşteriler yanıt bekliyor', '/formlar', 'Aç']);
-      if (pending) todos.push(['#7367f0', 'rocket', `${pending} değişikliği yayınlayın`, 'Kaydedilen içerikler siteye henüz yansımadı', '/yayin', 'Yayına git']);
+      if (pending) todos.push(['#0b7bd6', 'rocket', `${pending} değişikliği yayınlayın`, 'Kaydedilen içerikler siteye henüz yansımadı', '/yayin', 'Yayına git']);
       if (g.awaitingApproval && session.user.role === 'admin') todos.push(['#ff6bb5', 'share', `${g.awaitingApproval} sosyal içerik onayınızı bekliyor`, 'Onaylanmadan hiçbir içerik yayımlanmaz', '/sosyal', 'İncele']);
       if (d.unverifiedCount) todos.push(['#00cfe8', 'shield', `${d.unverifiedCount} alanı doğrulayın`, 'Doğrulanmamış bilgiler canlı sitede gizli', '/dogrulama', 'Listele']);
-      if (!g.aiConnected && session.user.role === 'admin') todos.push(['#9f87ff', 'spark', 'Bir yapay zekâ sağlayıcısı bağlayın', 'AI İçerik Stüdyosu için API anahtarı gerekli', '/entegrasyonlar', 'Bağla']);
+      if (!g.aiConnected && session.user.role === 'admin') todos.push(['#8b5cf6', 'spark', 'Bir yapay zekâ sağlayıcısı bağlayın', 'AI İçerik Stüdyosu için API anahtarı gerekli', '/entegrasyonlar', 'Bağla']);
       if (session.user.role === 'admin' && !d.myTwoFactor) todos.push(['#ea5455', 'shield', '2 adımlı doğrulamayı açın', 'Yönetici hesabınızı koruyun', '/hesabim', 'Aç']);
       const todo = panel('Yapılacaklarım', todos.length
         ? h('ul', { class: 'todo' }, todos.map(([c, ic, t, s, to, label]) => h('li', { style: `--kc:${c}` }, h('span', { class: 'tic' }, icon(ic, 18)), h('div', { class: 'grow' }, h('b', {}, t), h('span', {}, s)), h('a', { class: 'btn secondary sm', href: `#${to}` }, label))))
@@ -80,9 +80,9 @@ export const renderDashboard = async (ctx) => {
       const dest = { visits: '/istatistik', forms: '/formlar', forms_open: '/formlar', conversion: '/formlar', subscribers: '/aboneler', subscribers_total: '/aboneler', blog: '/blog', projects: '/projeler', drafts: '/blog', media: '/medya', seo_score: '/seo', seo_errors: '/seo', social_total: '/sosyal', social_awaiting: '/sosyal', social_planned: '/sosyal', social_published: '/sosyal', ai_tokens: '/ai', ai_calls: '/ai', news: '/pazar', competitor_changes: '/rakipler', backlinks_won: '/backlink', pending: '/yayin' };
       const kpis = h('div', { class: 'kpis' }, k.cards.map((c) => kpiCard({ ic: c.icon, label: c.label, value: c.value, unit: c.unit, delta: c.flow || c.prev !== null ? c.delta : null, deltaLabel: c.flow ? `önceki ${range} gün` : '', series: c.series, color: c.color, to: dest[c.id], hint: c.hint, target: c.target, goodUp: c.goodUp })));
 
-      const trend = panel('Ziyaret ve talep trendi', areaChart({ labels: g.labels, series: [{ name: 'Ziyaret', color: '#7367f0', values: g.visits }, { name: 'Form talebi (×10)', color: '#28c76f', values: g.forms.map((v) => v * 10) }], height: 250 }), { ic: 'eye', sub: `Son ${range} gün · form talebi okunabilirlik için ×10 ölçeklidir` });
+      const trend = panel('Ziyaret ve talep trendi', areaChart({ labels: g.labels, series: [{ name: 'Ziyaret', color: '#0b7bd6', values: g.visits }, { name: 'Form talebi (×10)', color: '#28c76f', values: g.forms.map((v) => v * 10) }], height: 250 }), { ic: 'eye', sub: `Son ${range} gün · form talebi okunabilirlik için ×10 ölçeklidir` });
       const formDonut = panel('Form durumları', donut({ items: g.formStatus.map((s) => ({ label: FORM_ST[s.status]?.[0] ?? s.status, value: s.n, color: FORM_ST[s.status]?.[1] })), sub: 'talep', empty: 'Henüz form talebi yok' }), { ic: 'mail', action: h('a', { class: 'small', href: '#/formlar' }, 'Tümü') });
-      const topPages = panel('En çok görüntülenen sayfalar', hbars(g.topPages.map((p) => ({ label: p.path, value: p.views })), { color: '#7367f0', empty: 'Henüz ziyaret verisi yok (çerezsiz sayaç siteyi gezdikçe dolar)' }), { ic: 'doc', action: h('a', { class: 'small', href: '#/istatistik' }, 'Ayrıntı') });
+      const topPages = panel('En çok görüntülenen sayfalar', hbars(g.topPages.map((p) => ({ label: p.path, value: p.views })), { color: '#0b7bd6', empty: 'Henüz ziyaret verisi yok (çerezsiz sayaç siteyi gezdikçe dolar)' }), { ic: 'doc', action: h('a', { class: 'small', href: '#/istatistik' }, 'Ayrıntı') });
       const socDonut = panel('Sosyal içerik hattı', donut({ items: Object.keys(SOC_ST).map((k2) => ({ label: SOC_ST[k2][0], value: g.socialStatus.find((s) => s.status === k2)?.n ?? 0, color: SOC_ST[k2][1] })).filter((x) => x.value), sub: 'içerik', empty: 'Henüz sosyal içerik yok' }), { ic: 'share', action: h('a', { class: 'small', href: '#/sosyal' }, 'Social Studio') });
       const content = panel('Haber ve AI kullanımı', barChart({ labels: g.labels, series: [{ name: 'Yeni sektör haberi', color: '#00cfe8', values: g.news }], height: 170 }), { ic: 'radar', sub: 'Haber akışı (günlük)' });
       const recent = panel('Son form talepleri', d.recentForms.length ? h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('tbody', {}, d.recentForms.map((f) => h('tr', { class: `clickable${f.status === 'yeni' ? ' fresh' : ''}`, onclick: () => ctx.nav(`/formlar/${f.id}`) }, h('td', {}, h('b', {}, f.name), h('div', { class: 'muted small' }, f.subject || f.email)), h('td', {}, statusChip(f.status)), h('td', { class: 'muted small' }, fmtDate(f.created_at))))))) : h('div', { class: 'empty' }, 'Henüz form talebi yok.'), { ic: 'mail' });

@@ -3,21 +3,24 @@ import { api, session } from './api.js';
 import { h, icon, clear, toast, spinner, errorBanner } from './ui.js';
 import { renderDashboard } from './pages/dashboard.js';
 import { buildTopbar } from './topbar.js';
+import { buildNav } from './nav.js';
 import { renderDocList, renderDocEditor } from './pages/content.js';
 import { renderEntryList, renderEntryEditor } from './pages/entries.js';
 import { renderPublish } from './pages/publish.js';
 import { renderForms, renderSubscribers } from './pages/forms.js';
 import { renderMedia } from './pages/media.js';
-import { renderSeo } from './pages/x-seo.js';
-import { renderAiStudio } from './pages/x-ai.js';
-import { renderSocial } from './pages/x-social.js';
+import { renderSeo } from './pages/x-seo-overview.js';
+import { renderSeoEditor, renderSeoEditorList } from './pages/x-seo-editor.js';
+import { renderSpeed } from './pages/x-speed.js';
+import { renderAiStudio } from './pages/x-ai-studio.js';
+import { renderSocialOverview, renderSocialCalendar, renderSocialApproval, renderSocialArchive, renderBrandKit } from './pages/x-social.js';
 import { renderMarket, renderCompetitors, renderBacklinks } from './pages/x-intel.js';
 import { renderIntegrations } from './pages/x-integrations.js';
 import { renderUsers, renderAudit, renderBackups, renderAccount, renderVerification, renderRedirects, renderSettings, renderStats } from './pages/system.js';
 
 const app = document.getElementById('app');
 const state = { badges: { forms: 0, pending: 0, verify: 0 }, siteUrl: '' };
-let shell, view, topbar, publishBtn, navLinks;
+let shell, view, topbar, publishBtn, nav;
 
 /* ---------------- giriş / kurulum ---------------- */
 const authScreen = (setup) => {
@@ -149,68 +152,20 @@ const twoFactorScreen = (ticket, remember = false) => {
 };
 
 /* ---------------- düzen ---------------- */
-const NAV = [
-  { h: null, items: [{ to: '/', label: 'Pano', ic: 'home' }] },
-  { h: 'İçerik', items: [
-    { to: '/icerik', label: 'Sayfa metinleri', ic: 'doc', match: '/icerik' },
-    { to: '/blog', label: 'Blog yazıları', ic: 'blog', match: '/blog' },
-    { to: '/projeler', label: 'Projeler', ic: 'project', match: '/projeler' },
-    { to: '/yasal', label: 'Yasal metinler', ic: 'scale', match: '/yasal' },
-    { to: '/medya', label: 'Medya kütüphanesi', ic: 'image', match: '/medya' },
-    { to: '/dogrulama', label: 'Doğrulama bekleyenler', ic: 'shield', badge: 'verify', soft: true },
-  ] },
-  { h: 'Etkileşim', items: [
-    { to: '/formlar', label: 'Form talepleri', ic: 'mail', badge: 'forms', match: '/formlar' },
-    { to: '/aboneler', label: 'Bülten aboneleri', ic: 'users', match: '/aboneler' },
-    { to: '/istatistik', label: 'Ziyaret istatistikleri', ic: 'eye', match: '/istatistik' },
-  ] },
-  { h: 'Büyüme ve Pazarlama', items: [
-    { to: '/seo', label: 'SEO Intelligence', ic: 'search', match: '/seo' },
-    { to: '/ai', label: 'AI İçerik Stüdyosu', ic: 'spark', match: '/ai' },
-    { to: '/sosyal', label: 'Social Studio', ic: 'share', match: '/sosyal' },
-    { to: '/pazar', label: 'Market & Media', ic: 'radar', match: '/pazar' },
-    { to: '/rakipler', label: 'Competitor Intelligence', ic: 'eye', match: '/rakipler' },
-    { to: '/backlink', label: 'Backlink Intelligence', ic: 'link', match: '/backlink' },
-  ] },
-  { h: 'Yayın', items: [{ to: '/yayin', label: 'Yayınla ve geçmiş', ic: 'rocket', badge: 'pending' }, { to: '/yonlendirmeler', label: 'Yönlendirmeler', ic: 'chevron' }] },
-  { h: 'Sistem', admin: true, items: [
-    { to: '/kullanicilar', label: 'Kullanıcılar', ic: 'users' },
-    { to: '/gunluk', label: 'Etkinlik günlüğü', ic: 'log' },
-    { to: '/yedekler', label: 'Yedekler', ic: 'archive' },
-    { to: '/entegrasyonlar', label: 'Entegrasyonlar ve API', ic: 'plug' },
-    { to: '/ayarlar', label: 'Ayarlar (e-posta)', ic: 'gear' },
-  ] },
-];
-
 const buildShell = () => {
   clear(app);
-  navLinks = [];
-  const navEl = h('nav', { class: 'nav', 'aria-label': 'Ana menü' });
-  for (const g of NAV) {
-    if (g.admin && session.user.role !== 'admin') continue;
-    if (g.h) navEl.append(h('h6', {}, g.h));
-    for (const it of g.items) {
-      const badge = it.badge ? h('span', { class: `badge${it.soft ? ' soft' : ''} hidden`, dataset: { badge: it.badge } }) : null;
-      const a = h('a', { href: `#${it.to}`, onclick: () => shell.classList.remove('nav-open') }, icon(it.ic), h('span', {}, it.label), badge);
-      a.dataset.to = it.match ?? it.to;
-      navLinks.push(a);
-      navEl.append(a);
-    }
-  }
-  publishBtn = h('a', { class: 'btn', href: '#/yayin' }, icon('rocket', 16), 'Yayınla');
+  nav = buildNav(session.user, () => shell.classList.remove('nav-open'));
+  publishBtn = h('a', { class: 'btn publish-pill hidden', href: '#/yayin' }, icon('rocket', 16), 'Yayınla');
   topbar = buildTopbar({ user: session.user, onMenu: () => shell.classList.toggle('nav-open'), publishBtn });
   view = h('main', { class: 'content', id: 'main', tabindex: '-1' });
   shell = h('div', { class: 'shell' },
     h('aside', { class: 'sidebar' },
-      h('div', { class: 'brand' }, h('img', { src: '/favicon/favicon-48.png', alt: '' }), h('div', {}, h('b', {}, 'AKORT'), h('span', {}, 'Yönetim Paneli'))),
-      navEl,
+      h('a', { class: 'brand', href: '#/', 'aria-label': 'AKORT Mühendislik — Dashboard' }, h('img', { src: '/yonetim/img/logo-h.png', alt: 'AKORT Mühendislik', width: 190 })),
+      nav.el,
+      h('a', { class: 'side-promo', href: '/', target: '_blank', rel: 'noopener' }, h('img', { src: '/yonetim/img/logo-mark-dark.png', alt: '' }), h('div', {}, h('span', {}, 'Mühendislikte'), h('b', {}, 'Daha İleriye')), h('span', { class: 'go' }, icon('external', 16))),
       h('div', { class: 'sidebar-foot' },
-        h('div', {}, h('b', { style: undefined }, session.user.name), ' · ', session.user.role === 'admin' ? 'Yönetici' : 'Editör'),
-        h('div', { class: 'row', style: undefined }, h('a', { href: '#/hesabim' }, 'Hesabım'), ' · ', h('a', { href: '/', target: '_blank', rel: 'noopener' }, 'Siteyi aç'), ' · ',
-          h('a', { href: '#', onclick: async (e) => { e.preventDefault(); await api.logout().catch(() => {}); session.user = null; boot(); } }, 'Çıkış')))),
-    h('div', { class: 'main' },
-      topbar.el,
-      view));
+        h('a', { href: '#/hesabim' }, 'Hesabım'), ' · ', h('a', { href: '#', onclick: async (e) => { e.preventDefault(); await api.logout().catch(() => {}); session.user = null; boot(); } }, 'Çıkış'))),
+    h('div', { class: 'main' }, topbar.el, view));
   app.append(shell);
 };
 
@@ -235,7 +190,7 @@ const refreshBadges = async () => {
     }
     topbar?.setBell(state.badges.forms);
     publishBtn?.replaceChildren(icon('rocket', 16), state.badges.pending ? `Yayınla (${state.badges.pending})` : 'Yayınla');
-    publishBtn?.classList.toggle('secondary', !state.badges.pending);
+    publishBtn?.classList.toggle('hidden', !state.badges.pending);
   } catch {
     /* oturum bitmişse api.js logout olayı tetikler */
   }
@@ -262,8 +217,15 @@ const routes = [
   [/^\/ayarlar$/, () => renderSettings(ctx)],
   [/^\/istatistik$/, () => renderStats(ctx)],
   [/^\/seo$/, () => renderSeo(ctx)],
+  [/^\/hiz$/, () => renderSpeed(ctx)],
+  [/^\/seo\/editor$/, () => renderSeoEditorList(ctx)],
+  [/^\/seo\/editor\/(blog|projects)\/([a-z0-9-]+)$/, (m) => renderSeoEditor(ctx, m[1], m[2])],
   [/^\/ai$/, () => renderAiStudio(ctx)],
-  [/^\/sosyal$/, () => renderSocial(ctx)],
+  [/^\/sosyal$/, () => renderSocialOverview(ctx)],
+  [/^\/sosyal\/takvim$/, () => renderSocialCalendar(ctx)],
+  [/^\/sosyal\/onay$/, () => renderSocialApproval(ctx)],
+  [/^\/sosyal\/marka$/, () => renderBrandKit(ctx)],
+  [/^\/sosyal\/arsiv$/, () => renderSocialArchive(ctx)],
   [/^\/pazar$/, () => renderMarket(ctx)],
   [/^\/rakipler$/, () => renderCompetitors(ctx)],
   [/^\/backlink$/, () => renderBacklinks(ctx)],
@@ -277,13 +239,7 @@ const route = async () => {
   if (!session.user) return;
   const path = (location.hash.replace(/^#/, '') || '/').split('?')[0];
   leaveGuard = null;
-  for (const a of navLinks) {
-    const base = a.dataset.to;
-    const on = base === '/' ? path === '/' : path === base || path.startsWith(`${base}/`);
-    a.toggleAttribute('aria-current', on);
-    if (on) a.setAttribute('aria-current', 'page');
-    else a.removeAttribute('aria-current');
-  }
+  nav.update(path);
   view.replaceChildren(spinner());
   for (const [re, fn] of routes) {
     const m = re.exec(path);

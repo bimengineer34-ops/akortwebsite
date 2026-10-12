@@ -29,12 +29,12 @@ const snap = (fn) => () => ({ value: fn(), prev: null, series: [] });
 
 /** id → {label, group, unit, icon, color, goodUp, hint, compute(n)} */
 export const CATALOG = {
-  visits: { label: 'Site ziyareti', group: 'Trafik', icon: 'eye', color: '#7367f0', hint: 'Çerezsiz sayfa görüntüleme', compute: (n) => {
+  visits: { label: 'Site ziyareti', group: 'Trafik', icon: 'eye', color: '#0b7bd6', hint: 'Çerezsiz sayfa görüntüleme', compute: (n) => {
     const s = getStats(2 * n).daily.map((d) => d.views);
     return { value: sum(s.slice(n)), prev: sum(s.slice(0, n)), series: s.slice(n) };
   } },
   forms: { label: 'Form talebi', group: 'Dönüşüm', icon: 'mail', color: '#28c76f', hint: 'Seçili dönemde gelen iletişim/teklif talepleri', compute: flowMetric(`SELECT ${ist('created_at')} AS day, COUNT(*) AS v FROM forms WHERE kind != 'firsat' AND ${ist('created_at')} >= ? GROUP BY 1`) },
-  conversion: { label: 'Dönüşüm oranı', group: 'Dönüşüm', unit: '%', icon: 'rocket', color: '#9f87ff', hint: 'Form talebi ÷ ziyaret', compute: (n) => {
+  conversion: { label: 'Dönüşüm oranı', group: 'Dönüşüm', unit: '%', icon: 'rocket', color: '#8b5cf6', hint: 'Form talebi ÷ ziyaret', compute: (n) => {
     const v = getStats(2 * n).daily.map((d) => d.views);
     const f = series(`SELECT ${ist('created_at')} AS day, COUNT(*) AS v FROM forms WHERE kind != 'firsat' AND ${ist('created_at')} >= ? GROUP BY 1`, n);
     const vc = v.slice(n), vp = v.slice(0, n);
@@ -44,18 +44,18 @@ export const CATALOG = {
   forms_open: { label: 'Yanıt bekleyen talep', group: 'Dönüşüm', icon: 'mail', color: '#ff9f43', goodUp: false, hint: 'Durumu "yeni" olan form talepleri', compute: snap(() => q.get(`SELECT COUNT(*) AS n FROM forms WHERE status = 'yeni' AND kind != 'firsat'`).n) },
   subscribers: { label: 'Yeni bülten abonesi', group: 'Dönüşüm', icon: 'users', color: '#00cfe8', compute: flowMetric(`SELECT ${ist('created_at')} AS day, COUNT(*) AS v FROM subscribers WHERE ${ist('created_at')} >= ? GROUP BY 1`) },
   subscribers_total: { label: 'Toplam aktif abone', group: 'Dönüşüm', icon: 'users', color: '#00cfe8', compute: snap(() => q.get(`SELECT COUNT(*) AS n FROM subscribers WHERE status = 'aktif'`).n) },
-  blog: { label: 'Yayında blog yazısı', group: 'İçerik', icon: 'blog', color: '#7367f0', compute: snap(() => listEntries('blog').filter((e) => !e.draft).length) },
-  projects: { label: 'Yayında proje', group: 'İçerik', icon: 'project', color: '#7367f0', compute: snap(() => listEntries('projects').filter((e) => !e.draft).length) },
+  blog: { label: 'Yayında blog yazısı', group: 'İçerik', icon: 'blog', color: '#0b7bd6', compute: snap(() => listEntries('blog').filter((e) => !e.draft).length) },
+  projects: { label: 'Yayında proje', group: 'İçerik', icon: 'project', color: '#0b7bd6', compute: snap(() => listEntries('projects').filter((e) => !e.draft).length) },
   drafts: { label: 'Taslak içerik', group: 'İçerik', icon: 'edit', color: '#ff9f43', goodUp: false, compute: snap(() => listEntries('blog').filter((e) => e.draft).length + listEntries('projects').filter((e) => e.draft).length) },
   media: { label: 'Medya dosyası', group: 'İçerik', icon: 'image', color: '#ff6bb5', compute: snap(() => q.get('SELECT COUNT(*) AS n FROM media').n) },
   seo_score: { label: 'Teknik SEO puanı', group: 'SEO', unit: '/100', icon: 'search', color: '#28c76f', hint: 'Google skoru değildir; açıklanabilir teknik kontroller', compute: snap(() => { try { return scanSite().avgScore; } catch { return 0; } }) },
   seo_errors: { label: 'SEO hatası', group: 'SEO', icon: 'alert', color: '#ea5455', goodUp: false, compute: snap(() => { try { return scanSite().errors; } catch { return 0; } }) },
-  social_total: { label: 'Sosyal içerik', group: 'Sosyal', icon: 'share', color: '#9f87ff', compute: flowMetric(`SELECT ${ist('created_at')} AS day, COUNT(*) AS v FROM social_posts WHERE ${ist('created_at')} >= ? GROUP BY 1`) },
+  social_total: { label: 'Sosyal içerik', group: 'Sosyal', icon: 'share', color: '#8b5cf6', compute: flowMetric(`SELECT ${ist('created_at')} AS day, COUNT(*) AS v FROM social_posts WHERE ${ist('created_at')} >= ? GROUP BY 1`) },
   social_awaiting: { label: 'Onay bekleyen içerik', group: 'Sosyal', icon: 'shield', color: '#ff9f43', goodUp: false, compute: snap(() => q.get(`SELECT COUNT(*) AS n FROM social_posts WHERE status = 'onay_bekliyor'`).n) },
-  social_planned: { label: 'Planlanan paylaşım', group: 'Sosyal', icon: 'share', color: '#7367f0', compute: snap(() => q.get(`SELECT COUNT(*) AS n FROM social_posts WHERE status IN ('onaylandi','planlandi')`).n) },
+  social_planned: { label: 'Planlanan paylaşım', group: 'Sosyal', icon: 'share', color: '#0b7bd6', compute: snap(() => q.get(`SELECT COUNT(*) AS n FROM social_posts WHERE status IN ('onaylandi','planlandi')`).n) },
   social_published: { label: 'Yayımlanan paylaşım', group: 'Sosyal', icon: 'check', color: '#28c76f', compute: snap(() => q.get(`SELECT COUNT(*) AS n FROM social_posts WHERE status = 'yayimlandi'`).n) },
-  ai_tokens: { label: 'AI token kullanımı', group: 'AI', icon: 'spark', color: '#9f87ff', goodUp: false, compute: flowMetric(`SELECT ${ist('ts')} AS day, COALESCE(SUM(input_tokens),0)+COALESCE(SUM(output_tokens),0) AS v FROM ai_usage WHERE ok = 1 AND ${ist('ts')} >= ? GROUP BY 1`) },
-  ai_calls: { label: 'AI çağrısı', group: 'AI', icon: 'spark', color: '#9f87ff', goodUp: false, compute: flowMetric(`SELECT ${ist('ts')} AS day, COUNT(*) AS v FROM ai_usage WHERE ${ist('ts')} >= ? GROUP BY 1`) },
+  ai_tokens: { label: 'AI token kullanımı', group: 'AI', icon: 'spark', color: '#8b5cf6', goodUp: false, compute: flowMetric(`SELECT ${ist('ts')} AS day, COALESCE(SUM(input_tokens),0)+COALESCE(SUM(output_tokens),0) AS v FROM ai_usage WHERE ok = 1 AND ${ist('ts')} >= ? GROUP BY 1`) },
+  ai_calls: { label: 'AI çağrısı', group: 'AI', icon: 'spark', color: '#8b5cf6', goodUp: false, compute: flowMetric(`SELECT ${ist('ts')} AS day, COUNT(*) AS v FROM ai_usage WHERE ${ist('ts')} >= ? GROUP BY 1`) },
   news: { label: 'Yeni sektör haberi', group: 'Pazar', icon: 'radar', color: '#00cfe8', compute: flowMetric(`SELECT ${ist('fetched_at')} AS day, COUNT(*) AS v FROM source_items WHERE ${ist('fetched_at')} >= ? GROUP BY 1`) },
   competitor_changes: { label: 'Rakip değişikliği', group: 'Pazar', icon: 'eye', color: '#ea5455', goodUp: false, compute: flowMetric(`SELECT ${ist('ts')} AS day, COUNT(*) AS v FROM competitor_checks WHERE changed = 1 AND ${ist('ts')} >= ? GROUP BY 1`) },
   backlinks_won: { label: 'Doğrulanmış backlink', group: 'SEO', icon: 'link', color: '#28c76f', compute: snap(() => q.get(`SELECT COUNT(*) AS n FROM backlink_opps WHERE status = 'kazanildi'`).n) },

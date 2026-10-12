@@ -116,6 +116,42 @@ t('boş KPI listesi reddedildi', (await call('PUT', `${X}/kpi`, { cards: [] })).
 await call('PUT', `${X}/kpi`, { range: 30, cards: ['visits', 'forms', 'conversion', 'seo_score', 'social_awaiting'].map((id) => ({ id })) });
 const gr = await call('GET', `${X}/grafik?gun=30`);
 t('grafik verisi (30 günlük seriler + dağılımlar)', gr.status === 200 && gr.data.visits.length === 30 && gr.data.forms.length === 30 && Array.isArray(gr.data.socialStatus), JSON.stringify(gr.data).slice(0, 160));
+// referans ekran uç noktaları (SEO / hız / pazar / rakip / sosyal / marka)
+const so = await call('GET', `${X}/seo/ozet?gun=30`);
+t('SEO genel bakış: gerçek tarama verisi + sitemap + schema', so.status === 200 && so.data.kpi.pages > 0 && so.data.health.passed >= 0 && so.data.schema.typeKinds > 0, JSON.stringify(so.data).slice(0, 160));
+t('SEO genel bakış: sahte metrik yok (GSC alanları dönmüyor)', !('clicks' in so.data.kpi) && !('impressions' in so.data.kpi));
+const ents2 = await call('GET', `${X}/seo/girdiler`);
+const first = ents2.data.rows.find((r) => r.kind === 'blog');
+const il = await call('GET', `${X}/seo/ic-baglanti/blog/${first.slug}`);
+t('iç bağlantı önerisi çalışıyor', il.status === 200 && Array.isArray(il.data.rows));
+const hz = await call('GET', `${X}/hiz`);
+t('Speed Engine: yerel ağırlık ölçümü', hz.status === 200 && hz.data.local.available && hz.data.local.html.count > 0);
+const lp = await call('POST', `${X}/hiz/test`, { url: 'http://127.0.0.1:4332', strategy: 'mobile' });
+t('PageSpeed testi yerel adresi reddediyor', lp.status === 400, JSON.stringify(lp.data));
+const cc2 = await call('POST', `${X}/hiz/onbellek-temizle`);
+t('önbellek temizleme çalışıyor', cc2.status === 200 && typeof cc2.data.cleared === 'number');
+const pr = await call('POST', `${X}/hiz/veritabani-temizle`);
+t('veritabanı temizliği çalışıyor', pr.status === 200 && typeof pr.data.sessions === 'number');
+const mo = await call('GET', `${X}/pazar/ozet?gun=30`);
+t('Market genel bakış', mo.status === 200 && mo.data.news.series.length === 30);
+const ro = await call('GET', `${X}/rakip-ozet?gun=30`);
+t('Rakip genel bakış', ro.status === 200 && ro.data.changeSeries.length === 30);
+const sz = await call('GET', `${X}/sosyal/ozet?gun=30`);
+t('Social genel bakış: hiçbir hesap bağlı değil', sz.status === 200 && sz.data.platforms.every((p) => p.connected === false) && sz.data.perfCreated.length === 30);
+const ht = await call('POST', `${X}/sosyal/hashtag`, { text: 'bim enerji' });
+t('hashtag önerisi (gerçek etiketlerden)', ht.status === 200 && ht.data.tags.length > 0);
+const sd = sz.data.specialDays[0];
+if (sd) {
+  const on = await call('PUT', `${X}/sosyal/ozelgun`, { date: sd.date, enabled: true });
+  t('özel gün otomasyonu açılıyor', on.status === 200);
+  await call('PUT', `${X}/sosyal/ozelgun`, { date: sd.date, enabled: false });
+}
+const bd = await call('GET', `${X}/marka`);
+t('Brand Kit: gerçek palet + ikonlar + logolar', bd.status === 200 && bd.data.palette.length >= 8 && bd.data.icons.length > 10 && bd.data.logos.length === 4);
+const rn = await call('POST', `${X}/marka/onizle`, { template: 'duyuru', title: 'Test Başlık', subtitle: 'Alt başlık', theme: 'koyu', format: 'ig-kare' });
+t('marka şablonu PNG üretiyor', rn.status === 200 && rn.data.mime === 'image/png' && Buffer.from(rn.data.data, 'base64').subarray(1, 4).toString() === 'PNG');
+const rnBad = await call('POST', `${X}/marka/onizle`, { title: 'x', bg: '../../etc/passwd' });
+t('şablon arka planı yol gezintisini reddediyor', rnBad.status >= 400);
 // yetkisiz
 const anon = await fetch(`${base}${X}/entegrasyonlar`);
 t('oturumsuz erişim 401', anon.status === 401);

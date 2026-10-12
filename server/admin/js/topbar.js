@@ -1,13 +1,15 @@
-// Üst çubuk: genel arama (Ctrl+K), tema düğmesi, bildirim zili, yayın düğmesi, kullanıcı kartı
-import { api } from './api.js';
+// Üst çubuk: genel arama (Ctrl+K), bildirim zili, tema düğmesi, kullanıcı menüsü (referans düzeni)
+import { api, session } from './api.js';
 import { h, icon, debounce } from './ui.js';
 
 const PAGES = [
-  ['Pano', '/'], ['Sayfa metinleri', '/icerik'], ['Blog yazıları', '/blog'], ['Projeler', '/projeler'], ['Yasal metinler', '/yasal'], ['Medya kütüphanesi', '/medya'],
-  ['Doğrulama bekleyenler', '/dogrulama'], ['Form talepleri', '/formlar'], ['Bülten aboneleri', '/aboneler'], ['Ziyaret istatistikleri', '/istatistik'],
-  ['SEO Intelligence', '/seo'], ['AI İçerik Stüdyosu', '/ai'], ['Social Studio', '/sosyal'], ['Market & Media', '/pazar'], ['Competitor Intelligence', '/rakipler'],
-  ['Backlink Intelligence', '/backlink'], ['Yayınla ve geçmiş', '/yayin'], ['Yönlendirmeler', '/yonlendirmeler'], ['Kullanıcılar', '/kullanicilar'],
-  ['Etkinlik günlüğü', '/gunluk'], ['Yedekler', '/yedekler'], ['Entegrasyonlar ve API', '/entegrasyonlar'], ['Ayarlar', '/ayarlar'], ['Hesabım', '/hesabim'],
+  ['Dashboard', '/'], ['Pages — Sayfa metinleri', '/icerik'], ['Blog yazıları', '/blog'], ['Projeler', '/projeler'], ['Yasal metinler', '/yasal'], ['Medya kütüphanesi', '/medya'],
+  ['Doğrulama bekleyenler', '/dogrulama'], ['CRM / Leads — Form talepleri', '/formlar'], ['Bülten aboneleri', '/aboneler'], ['Analytics — Ziyaret istatistikleri', '/istatistik'],
+  ['SEO Intelligence', '/seo'], ['Canlı SEO Editörü', '/seo/editor'], ['AI Content Studio', '/ai'], ['Social Studio', '/sosyal'], ['İçerik Takvimi', '/sosyal/takvim'],
+  ['Onay Merkezi', '/sosyal/onay'], ['Brand Kit', '/sosyal/marka'], ['İçerik Arşivi', '/sosyal/arsiv'], ['Market & Media Intelligence', '/pazar'],
+  ['Competitor Intelligence', '/rakipler'], ['Backlink Intelligence', '/backlink'], ['Speed Engine', '/hiz'], ['Workflow Automation — Yayınla', '/yayin'],
+  ['Yönlendirmeler', '/yonlendirmeler'], ['Kullanıcılar', '/kullanicilar'], ['Etkinlik günlüğü', '/gunluk'], ['Yedekler', '/yedekler'], ['Entegrasyonlar ve API', '/entegrasyonlar'],
+  ['Settings — E-posta ayarları', '/ayarlar'], ['Hesabım', '/hesabim'],
 ].map(([t, to]) => ({ t, to, k: 'Sayfa' }));
 
 let corpus = null;
@@ -25,7 +27,7 @@ const loadCorpus = async () => {
 const fold = (s) => String(s).toLocaleLowerCase('tr').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ı/g, 'i');
 
 export const buildTopbar = ({ user, onMenu, publishBtn }) => {
-  const input = h('input', { type: 'search', placeholder: 'Her şeyde ara…', 'aria-label': 'Genel arama', autocomplete: 'off' });
+  const input = h('input', { type: 'search', placeholder: 'Ara.. (sayfa, proje, blog, anahtar kelime vb.)', 'aria-label': 'Genel arama', autocomplete: 'off' });
   const res = h('div', { class: 'gsearch-res hidden', role: 'listbox' });
   let items = [], idx = -1;
   const go = (to) => { location.hash = `#${to}`; input.value = ''; res.classList.add('hidden'); input.blur(); };
@@ -52,18 +54,23 @@ export const buildTopbar = ({ user, onMenu, publishBtn }) => {
   input.addEventListener('focus', () => { loadCorpus(); if (items.length) res.classList.remove('hidden'); });
   document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); input.focus(); input.select(); } });
 
-  const themeBtn = h('button', { class: 'tb-btn', 'aria-label': 'Tema değiştir', title: 'Koyu / açık tema', onclick: () => {
-    const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  const isLight = () => document.documentElement.getAttribute('data-theme') !== 'dark';
+  const themeBtn = h('button', { class: 'tb-btn', 'aria-label': 'Koyu / açık tema', title: 'Koyu / açık tema', onclick: () => {
+    const next = isLight() ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', next);
     try { localStorage.setItem('akort-theme-v2', next); } catch { /* özel pencere */ }
-  } }, icon('eye', 18));
+  } }, icon('moon', 18));
   const dot = h('span', { class: 'dot hidden' });
-  const bell = h('a', { class: 'tb-btn', href: '#/formlar', 'aria-label': 'Yeni form talepleri', title: 'Yeni form talepleri' }, icon('mail', 18), dot);
+  const bell = h('a', { class: 'tb-btn', href: '#/formlar', 'aria-label': 'Bildirimler: yeni form talepleri', title: 'Yeni form talepleri' }, icon('bell', 18), dot);
   const initials = (user.name || user.email).split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+  const menu = h('div', { class: 'usermenu hidden' }, h('a', { href: '#/hesabim' }, 'Hesabım'), h('a', { href: '/', target: '_blank', rel: 'noopener' }, 'Siteyi aç'),
+    h('a', { href: '#', onclick: async (e) => { e.preventDefault(); await api.logout().catch(() => {}); session.user = null; location.reload(); } }, 'Çıkış yap'));
+  const chip = h('button', { class: 'userchip', 'aria-haspopup': 'true', onclick: (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); } },
+    h('span', { class: 'av' }, initials), h('div', {}, h('b', {}, user.name), h('span', {}, user.role === 'admin' ? 'Yönetici' : 'Editör')), icon('down', 14));
+  document.addEventListener('click', () => menu.classList.add('hidden'));
   const el = h('header', { class: 'topbar' },
     h('button', { class: 'btn ghost icon menu-btn', 'aria-label': 'Menü', onclick: onMenu }, icon('menu')),
     h('div', { class: 'gsearch' }, h('span', { class: 'ic' }, icon('search', 16)), input, h('kbd', {}, 'Ctrl K'), res),
-    h('div', { class: 'grow' }), themeBtn, bell, publishBtn,
-    h('a', { class: 'userchip', href: '#/hesabim', title: 'Hesabım' }, h('span', { class: 'av' }, initials), h('div', {}, h('b', {}, user.name), h('span', {}, user.role === 'admin' ? 'Yönetici' : 'Editör'))));
+    h('div', { class: 'grow' }), publishBtn, bell, themeBtn, h('div', { class: 'userwrap' }, chip, menu));
   return { el, setBell: (n) => dot.classList.toggle('hidden', !n) };
 };
