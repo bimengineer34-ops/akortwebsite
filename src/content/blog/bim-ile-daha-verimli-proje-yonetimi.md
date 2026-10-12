@@ -1,15 +1,21 @@
 ---
-title: 'BIM ile Daha Verimli ve Sürdürülebilir Proje Yönetimi'
-description: 'BIM, proje yaşam döngüsünün her aşamasında daha iyi koordinasyon, daha az hata ve daha yüksek verimlilik sağlar.'
-excerpt: 'BIM teknolojisi, proje yaşam döngüsünün her aşamasında daha iyi koordinasyon, daha az hata ve daha yüksek verimlilik sağlayarak modern yapım süreçlerinin vazgeçilmez bir parçası haline gelmiştir.'
+title: BIM ile Daha Verimli ve Sürdürülebilir Proje Yönetimi
+description: BIM, proje yaşam döngüsünün her aşamasında daha iyi koordinasyon, daha az hata ve daha yüksek verimlilik sağlar.
+excerpt: BIM teknolojisi, proje yaşam döngüsünün her aşamasında daha iyi koordinasyon, daha az hata ve daha yüksek verimlilik sağlayarak modern yapım süreçlerinin vazgeçilmez bir parçası haline gelmiştir.
 pubDate: 2026-10-08
-category: 'BIM & Dijital Mühendislik'
-tags: ['BIM', 'Yapı Bilgi Modellemesi', 'Proje Yönetimi']
+category: BIM & Dijital Mühendislik
+tags:
+  - BIM
+  - Yapı Bilgi Modellemesi
+  - Proje Yönetimi
+cover: ../../assets/images/uploads/fc92f3f1-04e6-42f2-877f-75b8e206d527.png
+coverAlt: tre
+author: fgz
 featured: true
 popular: true
 draft: false
 seo:
-  title: 'BIM ile Verimli Proje Yönetimi'
+  title: BIM ile Verimli Proje Yönetimi
 ---
 
 BIM (Building Information Modeling), yapının yalnızca üç boyutlu bir modelini üretmek değil; geometriyi, malzemeyi, sistemi ve zaman ile maliyet bilgisini tek bir ortak veri yapısında yönetmektir. Proje yönetimi açısından asıl değeri, bilginin dağınık dosyalardan çıkıp tek bir güvenilir kaynakta toplanmasıdır.

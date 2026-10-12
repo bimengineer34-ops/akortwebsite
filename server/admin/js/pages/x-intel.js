@@ -59,9 +59,9 @@ export const renderMarket = async (ctx) => {
     try {
       const o = await api.get(`/x/pazar/ozet?gun=${getRange()}`);
       const kpis = h('div', { class: 'kpis' },
-        kpiCard({ ic: 'radar', label: 'Takip Edilen Kaynaklar', value: o.sources.active, deltaLabel: o.sources.failing ? `${o.sources.failing} kaynakta hata` : `${o.sources.total} kayıtlı`, color: '#8b5cf6', to: '/pazar' }),
-        kpiCard({ ic: 'blog', label: 'Yeni Sektör Güncellemeleri', value: o.news.cur, delta: deltaPct(o.news.cur, o.news.prev), series: o.news.series, color: '#0b7bd6' }),
-        kpiCard({ ic: 'spark', label: 'Yüksek Değerli İçerik Fikirleri', value: o.ideas, deltaLabel: 'ilgililik ≥ 60 veya fikir', color: '#f79009' }),
+        kpiCard({ ic: 'radar', label: 'Takip Edilen Kaynaklar', onClick: () => { tab = 'kaynak'; show(); }, value: o.sources.active, deltaLabel: o.sources.failing ? `${o.sources.failing} kaynakta hata` : `${o.sources.total} kayıtlı`, color: '#8b5cf6', to: '/pazar' }),
+        kpiCard({ ic: 'blog', label: 'Yeni Sektör Güncellemeleri', onClick: () => { tab = 'haber'; show(); }, value: o.news.cur, delta: deltaPct(o.news.cur, o.news.prev), series: o.news.series, color: '#0b7bd6' }),
+        kpiCard({ ic: 'spark', label: 'Yüksek Değerli İçerik Fikirleri', scroll: 'İçerik Fikirleri & Fırsatlar', value: o.ideas, deltaLabel: 'ilgililik ≥ 60 veya fikir', color: '#f79009' }),
         kpiCard({ ic: 'link', label: 'Tespit Edilen Fırsatlar (CRM önerisi)', value: o.leads, color: '#12b76a', to: '/formlar' }));
 
       const bar = h('div', { class: 'pill-row' },
@@ -128,10 +128,10 @@ export const renderCompetitors = async (ctx) => {
       const o = await api.get(`/x/rakip-ozet?gun=${getRange()}`);
       const changed = o.rows.filter((r) => r.changes > 0).length;
       const kpis = h('div', { class: 'kpis' },
-        kpiCard({ ic: 'users', label: 'Takip Edilen Rakipler', value: o.rows.length, deltaLabel: `${o.rows.filter((r) => r.region !== 'GLOBAL').length} yerli · ${o.rows.filter((r) => r.region === 'GLOBAL').length} uluslararası`, color: '#0b7bd6' }),
-        kpiCard({ ic: 'eye', label: 'Sayfa Değişikliği (dönem)', value: o.changeSeries.reduce((a, b) => a + b, 0), deltaLabel: `${changed} rakipte`, series: o.changeSeries, color: '#f04438', goodUp: false }),
-        kpiCard({ ic: 'chart', label: 'Anahtar Kelime Çakışması', connect: true, color: '#8b5cf6' }),
-        kpiCard({ ic: 'doc', label: 'Sıralama Kazanç / Kayıp', connect: true, color: '#12b76a' }));
+        kpiCard({ ic: 'users', label: 'Takip Edilen Rakipler', scroll: 'Rakip Karşılaştırması', value: o.rows.length, deltaLabel: `${o.rows.filter((r) => r.region !== 'GLOBAL').length} yerli · ${o.rows.filter((r) => r.region === 'GLOBAL').length} uluslararası`, color: '#0b7bd6' }),
+        kpiCard({ ic: 'eye', label: 'Sayfa Değişikliği (dönem)', scroll: 'Stratejik Rakip Uyarıları', value: o.changeSeries.reduce((a, b) => a + b, 0), deltaLabel: `${changed} rakipte`, series: o.changeSeries, color: '#f04438', goodUp: false }),
+        kpiCard({ ic: 'chart', label: 'Anahtar Kelime Çakışması', to: '/entegrasyonlar', connect: true, color: '#8b5cf6' }),
+        kpiCard({ ic: 'doc', label: 'Sıralama Kazanç / Kayıp', to: '/entegrasyonlar', connect: true, color: '#12b76a' }));
 
       const rowsF = o.rows.filter((r) => !sector || r.sector === sector);
       const secSel = h('div', { class: 'pillsel' }, 'Sektör', h('select', {}, [['', 'Tümü'], ...o.sectors.map((s) => [s, s])].map(([v, l]) => h('option', { value: v, selected: v === sector }, l))));
@@ -194,10 +194,10 @@ export const renderBacklinks = async (ctx) => {
       const lost = rows.filter((r) => r.status === 'kayip').length;
       const outreach = rows.filter((r) => ['onay_bekliyor', 'gonderildi', 'yanitlandi'].includes(r.status)).length;
       const kpis = h('div', { class: 'kpis' },
-        kpiCard({ ic: 'link', label: 'Toplam Backlink Fırsatı', value: rows.length, deltaLabel: `${rows.filter((r) => within(r.created_at)).length} yeni (dönem)`, color: '#0b7bd6' }),
-        kpiCard({ ic: 'plus', label: 'Doğrulanmış Backlink', value: won.length, deltaLabel: `${wonNew} bu dönemde doğrulandı`, color: '#12b76a' }),
-        kpiCard({ ic: 'trash', label: 'Kaybedilen Backlink', value: lost, color: '#f04438', goodUp: false }),
-        kpiCard({ ic: 'share', label: 'Aktif Outreach', value: outreach, deltaLabel: 'onay/gönderim/yanıt aşamasında', color: '#8b5cf6' }));
+        kpiCard({ ic: 'link', label: 'Toplam Backlink Fırsatı', scroll: 'Tüm Fırsatlar', value: rows.length, deltaLabel: `${rows.filter((r) => within(r.created_at)).length} yeni (dönem)`, color: '#0b7bd6' }),
+        kpiCard({ ic: 'plus', label: 'Doğrulanmış Backlink', scroll: 'Doğrulanmış Yönlendiren Siteler', value: won.length, deltaLabel: `${wonNew} bu dönemde doğrulandı`, color: '#12b76a' }),
+        kpiCard({ ic: 'trash', label: 'Kaybedilen Backlink', scroll: 'Backlink Uyarıları', value: lost, color: '#f04438', goodUp: false }),
+        kpiCard({ ic: 'share', label: 'Aktif Outreach', scroll: 'Outreach Pipeline', value: outreach, deltaLabel: 'onay/gönderim/yanıt aşamasında', color: '#8b5cf6' }));
 
       const q3 = { yuksek: rows.filter((r) => r.relevance >= 4 && r.risk !== 'yuksek').length, orta: rows.filter((r) => r.relevance === 3 && r.risk !== 'yuksek').length, dusuk: rows.filter((r) => r.relevance <= 2 && r.risk !== 'yuksek').length, riskli: rows.filter((r) => r.risk === 'yuksek').length };
       const quality = panel('Backlink Kalite Dağılımı', donut({ items: [{ label: 'Yüksek Kalite', value: q3.yuksek, color: '#12b76a' }, { label: 'Orta Kalite', value: q3.orta, color: '#f79009' }, { label: 'Düşük Kalite', value: q3.dusuk, color: '#0b7bd6' }, { label: 'Riskli / Spam', value: q3.riskli, color: '#f04438' }], sub: 'fırsat', empty: 'Fırsat eklendikçe dağılım görünür' }), { ic: 'chart' });

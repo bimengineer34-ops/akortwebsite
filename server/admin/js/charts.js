@@ -63,7 +63,9 @@ export const sparkArea = (values, color = 'var(--c-blue)', w = 130, hgt = 54) =>
  * delta: yüzde değişim (null → gösterilmez). goodUp=false ise artış kötü sayılır. target: hedef (ilerleme çubuğu).
  * connect: veri kaynağı bağlı değil → değer yerine "Bağlantı gerekli" gösterilir (sahte rakam yok).
  */
-export const kpiCard = ({ ic, label, value, unit = '', delta = null, deltaLabel = '', series = [], color = 'var(--c-blue)', to = '', hint = '', target = null, goodUp = true, spark = 'area', connect = false }) => {
+export const slug = (t) => String(t).toLocaleLowerCase('tr').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+export const kpiCard = ({ onClick, scroll, ic, label, value, unit = '', delta = null, deltaLabel = '', series = [], color = 'var(--c-blue)', to = '', hint = '', target = null, goodUp = true, spark = 'area', connect = false }) => {
   const up = delta !== null && delta > 0, down = delta !== null && delta < 0;
   const good = (up && goodUp) || (down && !goodUp);
   const deltaEl = delta === null ? null : h('div', { class: `kpi-delta ${delta === 0 ? '' : good ? 'up' : 'down'}` }, h('b', {}, `${up ? '↗' : down ? '↘' : '→'} %${Math.abs(Math.round(delta))}`), h('span', {}, deltaLabel || 'Önceki döneme göre'));
@@ -77,6 +79,16 @@ export const kpiCard = ({ ic, label, value, unit = '', delta = null, deltaLabel 
       pct !== null ? h('div', { class: 'kpi-goal', title: `Hedef: ${fmtNum(target)}` }, h('div', { class: 'progress-bar' }, h('i', { style: `width:${pct}%;background:${pct >= 100 ? 'var(--ok)' : color}` })), h('span', { class: 'small muted' }, `Hedef ${fmtNum(target)} · %${pct}`)) : null),
     !connect && series.length ? h('div', { class: 'kpi-spark' }, spark === 'bars' ? sparkBars(series, color) : spark === 'line' ? sparkLine(series, color) : sparkArea(series, color)) : null,
   ];
+  if (onClick || scroll) {
+    return h('button', { class: 'card kpi link', type: 'button', 'aria-label': `${label}: ilgili bölüme git`, onclick: (e) => {
+      if (onClick) return onClick(e);
+      const el = document.getElementById(slug(scroll));
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.add('flash');
+      setTimeout(() => el.classList.remove('flash'), 1500);
+    } }, ...body);
+  }
   return to ? h('a', { class: 'card kpi', href: `#${to}` }, ...body) : h('div', { class: 'card kpi' }, ...body);
 };
 
@@ -185,4 +197,4 @@ export const hbars = (rows, { color = 'var(--c-blue)', fmt = fmtNum, empty = 'Ve
 
 /** Panel kabuğu: başlık + sağda eylem */
 export const panel = (title, body, { action, sub, ic } = {}) =>
-  h('section', { class: 'card panel' }, h('div', { class: 'panel-head' }, ic ? h('span', { class: 'panel-ic' }, icon(ic, 18)) : null, h('div', { class: 'grow' }, h('h3', {}, title), sub ? h('div', { class: 'small muted' }, sub) : null), action ?? null), h('div', { class: 'panel-body' }, body));
+  h('section', { class: 'card panel', id: slug(title) }, h('div', { class: 'panel-head' }, ic ? h('span', { class: 'panel-ic' }, icon(ic, 18)) : null, h('div', { class: 'grow' }, h('h3', {}, title), sub ? h('div', { class: 'small muted' }, sub) : null), action ?? null), h('div', { class: 'panel-body' }, body));

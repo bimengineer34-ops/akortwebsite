@@ -11,15 +11,17 @@
  */
 type Fs = typeof import('node:fs');
 type Path = typeof import('node:path');
-type NodeProcess = { getBuiltinModule?: (id: string) => unknown; cwd: () => string };
+type NodeProcess = { getBuiltinModule?: (id: string) => unknown; cwd: () => string; env?: Record<string, string | undefined> };
 
 const nodeProcess = (globalThis as unknown as { process?: NodeProcess }).process;
 const fs = nodeProcess?.getBuiltinModule?.('node:fs') as Fs | undefined;
 const path = nodeProcess?.getBuiltinModule?.('node:path') as Path | undefined;
 
 const root = nodeProcess && path ? nodeProcess.cwd() : '';
-const publishedDir = path ? path.join(root, 'data', 'content', 'published') : '';
-const defaultsDir = path ? path.join(root, 'data', 'defaults') : '';
+// Sunucu DATA_DIR ile farklı bir veri klasörü kullanıyorsa (ör. Veridyen kalıcı disk) varsayılanlar/yayımlanan içerik oradan okunur/yazılır
+const dataRoot = path ? (nodeProcess?.env?.DATA_DIR ? path.resolve(root, nodeProcess.env.DATA_DIR) : path.join(root, 'data')) : '';
+const publishedDir = path ? path.join(dataRoot, 'content', 'published') : '';
+const defaultsDir = path ? path.join(dataRoot, 'defaults') : '';
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 

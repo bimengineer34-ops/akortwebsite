@@ -33,18 +33,21 @@ t('"Beni hatırla" açıkken oturum çerezi 30 gün', (await maxAge(true)) === 3
 const ig = await call('GET', `${X}/entegrasyonlar`);
 t('entegrasyon durumu: hiçbir sosyal platform "bağlı" değil', ig.status === 200 && ig.data.other.every((o) => o.connected === false));
 t('AI sağlayıcıları listelendi', ig.data.providers.length === 3);
-// anahtar yokken üretim
-const g0 = await call('POST', `${X}/ai/uret`, { provider: 'openai', task: 'kisalt', text: 'Merhaba dünya' });
-t('anahtar yokken AI üretimi 409 "Bağlantı gerekli"', g0.status === 409 && /bağlantı gerekli/i.test(g0.data.error), JSON.stringify(g0.data));
-// sır kasası: kaydet → yanıtta düz anahtar yok
-const secret = 'sk-test-' + 'x'.repeat(24);
-const sk = await call('PUT', `${X}/ai/openai/anahtar`, { key: secret });
-t('anahtar kaydedildi, yanıtta yalnızca maskeli ipucu', sk.status === 200 && !JSON.stringify(sk.data).includes(secret), JSON.stringify(sk.data));
-const ig2 = await call('GET', `${X}/entegrasyonlar`);
-t('entegrasyon listesi anahtarı sızdırmıyor', !JSON.stringify(ig2.data).includes(secret));
-const bad = await call('POST', `${X}/ai/openai/test`);
-t('sahte anahtarla bağlantı testi hata döner (401/502/429)', [401, 502, 429, 503].includes(bad.status), JSON.stringify(bad));
-await call('DELETE', `${X}/ai/openai/anahtar`);
+// sır kasası testleri GERÇEK kullanıcı anahtarına dokunmaz: OpenAI zaten bağlıysa bu bölüm atlanır
+const openaiConnected = ig.data.providers.find((p) => p.id === 'openai')?.connected;
+if (openaiConnected) console.log('(OpenAI anahtarı kayıtlı — kasa testleri gerçek anahtarı korumak için atlandı)');
+else {
+  const g0 = await call('POST', `${X}/ai/uret`, { provider: 'openai', task: 'kisalt', text: 'Merhaba dünya' });
+  t('anahtar yokken AI üretimi 409 "Bağlantı gerekli"', g0.status === 409 && /bağlantı gerekli/i.test(g0.data.error), JSON.stringify(g0.data));
+  const secret = 'sk-test-' + 'x'.repeat(24);
+  const sk = await call('PUT', `${X}/ai/openai/anahtar`, { key: secret });
+  t('anahtar kaydedildi, yanıtta yalnızca maskeli ipucu', sk.status === 200 && !JSON.stringify(sk.data).includes(secret), JSON.stringify(sk.data));
+  const ig2 = await call('GET', `${X}/entegrasyonlar`);
+  t('entegrasyon listesi anahtarı sızdırmıyor', !JSON.stringify(ig2.data).includes(secret));
+  const bad = await call('POST', `${X}/ai/openai/test`);
+  t('sahte anahtarla bağlantı testi hata döner (401/502/429)', [401, 502, 429, 503].includes(bad.status), JSON.stringify(bad));
+  await call('DELETE', `${X}/ai/openai/anahtar`);
+}
 // SEO
 const scan = await call('GET', `${X}/seo/tarama?yenile=1`);
 t('SEO taraması çalışıyor', scan.status === 200 && scan.data.total > 0, JSON.stringify(scan.data).slice(0, 200));

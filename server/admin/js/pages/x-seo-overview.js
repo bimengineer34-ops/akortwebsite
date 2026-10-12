@@ -17,10 +17,10 @@ export const renderSeo = async (ctx) => {
       const d = await api.get(`/x/seo/ozet?gun=${getRange()}`);
       const k = d.kpi, hl = d.health;
       const kpis = h('div', { class: 'kpis' },
-        kpiCard({ ic: 'eye', label: 'Organik Tıklamalar', connect: true, color: '#0b7bd6' }),
-        kpiCard({ ic: 'chart', label: 'Gösterimler', connect: true, color: '#8b5cf6' }),
-        kpiCard({ ic: 'chart2', label: 'Ortalama Sıra', connect: true, color: '#12b76a' }),
-        kpiCard({ ic: 'doc', label: 'Sitemap\'teki Sayfalar', value: k.indexed, delta: null, deltaLabel: `${k.pages} sayfa tarandı · ${k.excluded} noindex`, color: '#0b7bd6', series: [], to: '/seo' }));
+        kpiCard({ ic: 'eye', label: 'Organik Tıklamalar', to: '/entegrasyonlar', connect: true, color: '#0b7bd6' }),
+        kpiCard({ ic: 'chart', label: 'Gösterimler', to: '/entegrasyonlar', connect: true, color: '#8b5cf6' }),
+        kpiCard({ ic: 'chart2', label: 'Ortalama Sıra', to: '/entegrasyonlar', connect: true, color: '#12b76a' }),
+        kpiCard({ ic: 'doc', label: 'Sitemap\'teki Sayfalar', scroll: 'Dizin & Sitemap Durumu', value: k.indexed, delta: null, deltaLabel: `${k.pages} sayfa tarandı · ${k.excluded} noindex`, color: '#0b7bd6', series: [], to: '/seo' }));
 
       const perf = panel('Site Ziyareti (son ' + d.range + ' gün)', h('div', {},
         areaChart({ labels: d.labels, series: [{ name: 'Sayfa görüntüleme', color: '#0b7bd6', values: k.visitSeries }], height: 250 }),

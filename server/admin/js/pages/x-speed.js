@@ -34,17 +34,17 @@ export const renderSpeed = async (ctx) => {
       const hasPsi = !!(lm || ld);
       const kpis = hasPsi
         ? h('div', { class: 'kpis' },
-          kpiCard({ ic: 'chart', label: 'Mobil Performans', value: lm?.perf ?? '—', delta: delta(lm?.perf, fm?.perf), color: '#12b76a', series: P.runs.filter((r) => r.strategy === 'mobile').map((r) => r.perf) }),
-          kpiCard({ ic: 'grid', label: 'Masaüstü Performans', value: ld?.perf ?? '—', delta: delta(ld?.perf, fd?.perf), color: '#0b7bd6', series: P.runs.filter((r) => r.strategy === 'desktop').map((r) => r.perf) }),
-          kpiCard({ ic: 'bolt', label: 'LCP (Largest Contentful Paint)', value: lm?.lcp ? (lm.lcp / 1000).toFixed(1) : '—', unit: 'sn', delta: delta(lm?.lcp, fm?.lcp, true), goodUp: true, color: '#8b5cf6', series: P.runs.filter((r) => r.strategy === 'mobile').map((r) => r.lcp ?? 0) }),
-          kpiCard({ ic: 'eye', label: lm?.inp ? 'INP (alan verisi)' : 'TBT (INP yerine, laboratuvar)', value: lm?.inp ?? (lm?.tbt ? Math.round(lm.tbt) : '—'), unit: 'ms', color: '#0b7bd6', series: P.runs.filter((r) => r.strategy === 'mobile').map((r) => r.tbt ?? 0) }),
-          kpiCard({ ic: 'doc', label: 'CLS (Cumulative Layout Shift)', value: lm?.cls !== null && lm?.cls !== undefined ? Number(lm.cls).toFixed(2) : '—', color: '#f79009', series: P.runs.filter((r) => r.strategy === 'mobile').map((r) => r.cls ?? 0) }))
+          kpiCard({ ic: 'chart', label: 'Mobil Performans', scroll: 'Site Performans Trendi', value: lm?.perf ?? '—', delta: delta(lm?.perf, fm?.perf), color: '#12b76a', series: P.runs.filter((r) => r.strategy === 'mobile').map((r) => r.perf) }),
+          kpiCard({ ic: 'grid', label: 'Masaüstü Performans', scroll: 'Site Performans Trendi', value: ld?.perf ?? '—', delta: delta(ld?.perf, fd?.perf), color: '#0b7bd6', series: P.runs.filter((r) => r.strategy === 'desktop').map((r) => r.perf) }),
+          kpiCard({ ic: 'bolt', label: 'LCP (Largest Contentful Paint)', scroll: 'Site Performans Trendi', value: lm?.lcp ? (lm.lcp / 1000).toFixed(1) : '—', unit: 'sn', delta: delta(lm?.lcp, fm?.lcp, true), goodUp: true, color: '#8b5cf6', series: P.runs.filter((r) => r.strategy === 'mobile').map((r) => r.lcp ?? 0) }),
+          kpiCard({ ic: 'eye', scroll: 'Site Performans Trendi', label: lm?.inp ? 'INP (alan verisi)' : 'TBT (INP yerine, laboratuvar)', value: lm?.inp ?? (lm?.tbt ? Math.round(lm.tbt) : '—'), unit: 'ms', color: '#0b7bd6', series: P.runs.filter((r) => r.strategy === 'mobile').map((r) => r.tbt ?? 0) }),
+          kpiCard({ ic: 'doc', label: 'CLS (Cumulative Layout Shift)', scroll: 'Site Performans Trendi', value: lm?.cls !== null && lm?.cls !== undefined ? Number(lm.cls).toFixed(2) : '—', color: '#f79009', series: P.runs.filter((r) => r.strategy === 'mobile').map((r) => r.cls ?? 0) }))
         : h('div', { class: 'kpis' },
-          kpiCard({ ic: 'doc', label: 'Ortalama HTML boyutu', value: L.html.avgKb, unit: 'KB', color: '#0b7bd6', deltaLabel: `${L.html.count} sayfa` }),
-          kpiCard({ ic: 'bolt', label: 'JavaScript toplamı', value: kb(L.js.totalKb), color: '#f79009', deltaLabel: `${L.js.count} dosya` }),
-          kpiCard({ ic: 'edit', label: 'CSS toplamı', value: kb(L.css.totalKb), color: '#8b5cf6', deltaLabel: `${L.css.count} dosya` }),
-          kpiCard({ ic: 'image', label: 'Görsel toplamı', value: kb(L.images.totalKb), color: '#12b76a', deltaLabel: `${L.images.count} dosya` }),
-          kpiCard({ ic: 'check', label: 'Modern görsel oranı (WebP/AVIF)', value: L.images.count ? Math.round((L.images.modern / L.images.count) * 100) : 0, unit: '%', color: '#06b6d4', target: 90 }));
+          kpiCard({ ic: 'doc', label: 'Ortalama HTML boyutu', scroll: 'Sayfa Ağırlığı (yerel ölçüm)', value: L.html.avgKb, unit: 'KB', color: '#0b7bd6', deltaLabel: `${L.html.count} sayfa` }),
+          kpiCard({ ic: 'bolt', label: 'JavaScript toplamı', scroll: 'Kritik İyileştirme Önerileri', value: kb(L.js.totalKb), color: '#f79009', deltaLabel: `${L.js.count} dosya` }),
+          kpiCard({ ic: 'edit', label: 'CSS toplamı', scroll: 'Kritik İyileştirme Önerileri', value: kb(L.css.totalKb), color: '#8b5cf6', deltaLabel: `${L.css.count} dosya` }),
+          kpiCard({ ic: 'image', label: 'Görsel toplamı', scroll: 'Kritik İyileştirme Önerileri', value: kb(L.images.totalKb), color: '#12b76a', deltaLabel: `${L.images.count} dosya` }),
+          kpiCard({ ic: 'check', label: 'Modern görsel oranı (WebP/AVIF)', scroll: 'Kritik İyileştirme Önerileri', value: L.images.count ? Math.round((L.images.modern / L.images.count) * 100) : 0, unit: '%', color: '#06b6d4', target: 90 }));
 
       const trend = panel('Site Performans Trendi', P.runs.length >= 2
         ? areaChart({ labels: P.runs.filter((r) => r.strategy === 'mobile').map((r) => r.ts.slice(5, 10).replace('-', '/')), series: [{ name: 'Mobil Skor', color: '#12b76a', values: P.runs.filter((r) => r.strategy === 'mobile').map((r) => r.perf) }, { name: 'Masaüstü Skor', color: '#0b7bd6', values: P.runs.filter((r) => r.strategy === 'desktop').map((r) => r.perf).slice(-P.runs.filter((r) => r.strategy === 'mobile').length) }], height: 250 })

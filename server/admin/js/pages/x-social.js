@@ -24,10 +24,10 @@ export const renderSocialOverview = async (ctx) => {
       setPlatforms(o.platforms);
       const k = o.kpi;
       const kpis = h('div', { class: 'kpis' },
-        kpiCard({ ic: 'users', label: 'Toplam Erişim', connect: true, color: '#0b7bd6' }),
-        kpiCard({ ic: 'eye', label: 'Etkileşim Oranı', connect: true, color: '#ec4899' }),
+        kpiCard({ ic: 'users', label: 'Toplam Erişim', to: '/entegrasyonlar', connect: true, color: '#0b7bd6' }),
+        kpiCard({ ic: 'eye', label: 'Etkileşim Oranı', to: '/entegrasyonlar', connect: true, color: '#ec4899' }),
         kpiCard({ ic: 'share', label: 'Planlanan Paylaşımlar', value: k.planned, deltaLabel: `${k.awaiting} onay bekliyor`, series: o.perfPlanned, color: '#12b76a', to: '/sosyal/takvim' }),
-        kpiCard({ ic: 'chart', label: 'Takipçi Artışı', connect: true, color: '#8b5cf6' }));
+        kpiCard({ ic: 'chart', label: 'Takipçi Artışı', to: '/entegrasyonlar', connect: true, color: '#8b5cf6' }));
 
       const accounts = panel('Bağlı Sosyal Medya Hesapları', h('div', { class: 'acc-grid' }, o.platforms.slice(0, 6).map((p) => h('div', { class: 'acc' }, h('div', { class: 'row' }, pbadge(p.id, 34), h('div', {}, h('b', {}, p.label), h('div', { class: 'small muted' }, 'hesap bağlı değil'))),
         h('button', { class: 'btn secondary sm', style: 'width:100%;margin-top:10px', disabled: true, title: p.needs }, 'Bağlantı gerekli')))),
@@ -146,7 +146,7 @@ export const renderSocialApproval = async (ctx) => {
     const strip = h('div', { class: 'kpis', style: 'grid-template-columns:repeat(auto-fit,minmax(280px,1fr))' },
       kpiCard({ ic: 'shield', label: `Onay bekleyen ${ov.kpi.awaiting} içerik`, value: ov.kpi.awaiting, deltaLabel: 'ekibinizin onayını bekliyor', color: '#f79009', to: '/sosyal/onay' }),
       kpiCard({ ic: 'share', label: 'Planlı / onaylı içerik', value: ov.kpi.planned, deltaLabel: 'yayın bekliyor', color: '#0b7bd6', to: '/sosyal/takvim' }),
-      kpiCard({ ic: 'check', label: 'Yayımlanan içerik', value: ov.kpi.published, deltaLabel: 'elle işaretlenenler dahil', color: '#12b76a' }));
+      kpiCard({ ic: 'check', label: 'Yayımlanan içerik', to: '/sosyal/arsiv', value: ov.kpi.published, deltaLabel: 'elle işaretlenenler dahil', color: '#12b76a' }));
     root.replaceChildren(pageHead('Onay Merkezi', 'İçeriklerinizin onay sürecini yönetin; onaylanan metin+medya+platform+zaman SHA-256 ile mühürlenir.', { crumbs: 'Social Studio › Onay Merkezi', range: false }),
       strip, h('div', { class: 'board' }, cols.map(([key, t, sub, c]) => { const items = rows.filter((r) => r.status === key); return h('div', { class: 'bcol', style: `--bc:${c}` }, h('div', { class: 'bh' }, h('b', {}, t), h('span', {}, String(items.length))), h('div', { class: 'small muted', style: 'margin:-4px 0 4px' }, sub),
         ...items.map((r) => h('button', { class: 'bcard', onclick: () => editor(r, reload) }, r.media ? h('img', { src: r.media, alt: '' }) : null, h('b', {}, r.title), h('span', { class: 'small muted' }, `${fmtLocal(r.scheduled_at)}`), h('div', { class: 'row', style: 'gap:4px;flex-wrap:wrap' }, r.platforms.map((p) => pbadge(p, 18)), r.category ? chip(r.category, 'info') : null, r.sealed ? chip('Mühürlü', 'ok') : null), r.review_note ? h('div', { class: 'rev' }, r.review_note) : null)),
