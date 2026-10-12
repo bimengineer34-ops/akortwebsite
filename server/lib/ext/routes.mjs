@@ -30,18 +30,18 @@ const J = (req, max = 64 * 1024) => readJson(req, max);
 /** Entegrasyon durum matrisi: gerçek durum; bağlı olmayan "Bağlantı gerekli" görünür */
 const integrations = () => {
   const ai = providerStatus();
-  const need = (name, how) => ({ name, connected: false, how });
+  const need = (name, how, url, links = []) => ({ name, connected: false, how, url, links });
   return {
-    ai: ai.map((p) => ({ id: p.id, name: p.label, connected: p.connected, hint: p.secret?.hint ?? null })),
+    ai: ai.map((p) => ({ id: p.id, name: p.label, connected: p.connected, hint: p.secret?.hint ?? null, url: PROVIDERS[p.id].docs })),
     other: [
-      need('Google Search Console', 'OAuth + doğrulanmış mülk gerekir (Search Analytics, URL Inspection, sitemap). Genel sayfalar için Indexing API kullanılmaz.'),
-      need('Google Analytics 4', 'GA4 Data API için servis hesabı/OAuth ve çerez onayına uygun ölçüm kurulumu gerekir.'),
-      { name: 'PageSpeed Insights (Google)', connected: hasSecret('google.psi'), how: 'Anahtar isteğe bağlıdır (anahtarsız düşük kota); Speed Engine sayfasında test çalıştırılır. Sentetik ve alan verisi ayrı raporlanır.', psi: true },
-      need('Google Business Profile', 'Yalnızca uygun/onaylı erişimi olan işletmeler için (başvuru gerekir).'),
-      need('SERP / sıralama veri sağlayıcısı', 'Lisanslı üçüncü taraf API (isteğe bağlı). Olmadan sıralama verisi gösterilmez.'),
-      need('Backlink veri sağlayıcısı', 'Lisanslı üçüncü taraf API (isteğe bağlı). Olmadan yalnızca elle/doğrulama taraması vardır.'),
-      need('CDN / proxy', 'Veridyen planı veya Cloudflare gibi proxy gerekir.'),
-      ...Object.entries(social.PLATFORMS).map(([k, p]) => need(p.label, p.needs)),
+      need('Google Search Console', 'OAuth + doğrulanmış mülk gerekir (Search Analytics, URL Inspection, sitemap). Genel sayfalar için Indexing API kullanılmaz.', 'https://search.google.com/search-console', [['API belgeleri', 'https://developers.google.com/webmaster-tools']]),
+      need('Google Analytics 4', 'GA4 Data API için servis hesabı/OAuth ve çerez onayına uygun ölçüm kurulumu gerekir.', 'https://analytics.google.com/', [['Data API belgeleri', 'https://developers.google.com/analytics/devguides/reporting/data/v1']]),
+      { name: 'PageSpeed Insights (Google)', connected: hasSecret('google.psi'), how: 'Anahtar isteğe bağlıdır (anahtarsız düşük kota); Speed Engine sayfasında test çalıştırılır. Sentetik ve alan verisi ayrı raporlanır.', psi: true, url: 'https://console.cloud.google.com/apis/credentials', links: [['Anahtar nasıl alınır', 'https://developers.google.com/speed/docs/insights/v5/get-started'], ['Speed Engine sayfası', '#/hiz']] },
+      need('Google Business Profile', 'Yalnızca uygun/onaylı erişimi olan işletmeler için (başvuru gerekir).', 'https://business.google.com/', [['API erişim başvurusu', 'https://developers.google.com/my-business/content/prereqs']]),
+      need('SERP / sıralama veri sağlayıcısı', 'Lisanslı üçüncü taraf API (isteğe bağlı). Olmadan sıralama verisi gösterilmez.', 'https://dataforseo.com/apis/serp-api', [['Alternatif: SerpApi', 'https://serpapi.com/']]),
+      need('Backlink veri sağlayıcısı', 'Lisanslı üçüncü taraf API (isteğe bağlı). Olmadan yalnızca elle/doğrulama taraması vardır.', 'https://ahrefs.com/api', [['Alternatif: Semrush API', 'https://www.semrush.com/api-analytics/']]),
+      need('CDN / proxy', 'Veridyen planı veya Cloudflare gibi proxy gerekir.', 'https://dash.cloudflare.com/', [['Cloudflare belgeleri', 'https://developers.cloudflare.com/fundamentals/']]),
+      ...Object.entries(social.PLATFORMS).map(([k, p]) => need(p.label, p.needs, p.url, p.docs ? [['API belgeleri', p.docs]] : [])),
     ],
   };
 };
@@ -167,7 +167,7 @@ export const extRoutes = [
   }],
 
   /* ---------- Social Studio ---------- */
-  ['GET', new RegExp(`^${A}/sosyal$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, { summary: social.socialSummary(), platforms: Object.entries(social.PLATFORMS).map(([k, p]) => ({ id: k, label: p.label, limit: p.limit, caps: p.caps, needs: p.needs, connected: false })), specialDays: social.upcomingSpecialDays(), statuses: social.STATUSES }))],
+  ['GET', new RegExp(`^${A}/sosyal$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, { summary: social.socialSummary(), platforms: Object.entries(social.PLATFORMS).map(([k, p]) => ({ id: k, label: p.label, limit: p.limit, caps: p.caps, needs: p.needs, url: p.url, docs: p.docs, connected: false })), specialDays: social.upcomingSpecialDays(), statuses: social.STATUSES }))],
   ['GET', new RegExp(`^${A}/sosyal/gonderiler$`), ({ req, res, url }) => {
     requireUser(req);
     const p = url.searchParams;

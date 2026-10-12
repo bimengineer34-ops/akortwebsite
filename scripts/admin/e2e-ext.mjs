@@ -33,6 +33,9 @@ t('"Beni hatırla" açıkken oturum çerezi 30 gün', (await maxAge(true)) === 3
 const ig = await call('GET', `${X}/entegrasyonlar`);
 t('entegrasyon durumu: hiçbir sosyal platform "bağlı" değil', ig.status === 200 && ig.data.other.every((o) => o.connected === false));
 t('AI sağlayıcıları listelendi', ig.data.providers.length === 3);
+t('her "diğer entegrasyon" kartının bağlantı adresi var (https)', ig.data.other.length >= 14 && ig.data.other.every((o) => /^https:\/\//.test(o.url ?? '')), JSON.stringify(ig.data.other.filter((o) => !/^https:/.test(o.url ?? '')).map((o) => o.name)));
+const sg = (await call('GET', `${X}/sosyal/ozet?gun=7`)).data;
+t('her sosyal platform kartının geliştirici konsolu bağlantısı var', sg.platforms.length === 8 && sg.platforms.every((p) => /^https:\/\//.test(p.url ?? '') && /^https:\/\//.test(p.docs ?? '')));
 // sır kasası testleri GERÇEK kullanıcı anahtarına dokunmaz: OpenAI zaten bağlıysa bu bölüm atlanır
 const openaiConnected = ig.data.providers.find((p) => p.id === 'openai')?.connected;
 if (openaiConnected) console.log('(OpenAI anahtarı kayıtlı — kasa testleri gerçek anahtarı korumak için atlandı)');

@@ -55,10 +55,10 @@ t('EN: data-messages çevrildi', /data-messages="[^"]*\[EN\] Mesajınız alınd�
 t('EN: meta açıklama çevrildi', /<meta name="description" content="\[EN\]/.test(en));
 t('EN: canonical /en', en.includes('rel="canonical" href="https://www.example.test/en/hizmetler/bim"') || /canonical[^>]*\/en\/hizmetler\/bim/.test(en));
 t('EN: hreflang tr+en+x-default', en.includes('hreflang="tr"') && en.includes('hreflang="en"') && en.includes('x-default'));
-t('EN: dil anahtarı TR\'ye gider', /data-lang-switch[^>]*><a href="\/hizmetler\/bim" hreflang="tr"/.test(rd('en/hizmetler/bim.html')), rd('en/hizmetler/bim.html').match(/<span data-lang-switch[\s\S]*?<\/span>/)?.[0]);
+t('EN: dil anahtarı TR\'ye gider', /data-lang-switch[^>]*><a href="\/hizmetler\/bim" hreflang="tr"[^>]*class="lang-opt"/.test(rd('en/hizmetler/bim.html')), rd('en/hizmetler/bim.html').match(/<span data-lang-switch[\s\S]*?<\/span>/)?.[0]);
 t('EN: JSON-LD çevrildi ve url /en', /"name":"\[EN\] BIM Danışmanlığı"/.test(en) && en.includes('"url":"https://www.example.test/en/hizmetler/bim"'));
 const tr = rd('index.html');
-t('TR: dil anahtarı EN\'e gider', /data-lang-switch[^>]*><a href="\/en" hreflang="en"/.test(tr), tr.match(/<span data-lang-switch[\s\S]*?<\/span>/)?.[0]);
+t('TR: dil anahtarı EN\'e gider', /data-lang-switch[^>]*><span class="lang-cur" lang="tr"[^>]*>TR<\/span><a href="\/en" hreflang="en"/.test(tr), tr.match(/<span data-lang-switch[\s\S]*?<\/span>/)?.[0]);
 t('TR: içerik bozulmadı', tr.includes('Uyumun <em>Mühendisliği</em>') && tr.includes('Türkçe metin değişmemeli'));
 t('TR: hreflang eklendi', tr.includes('hreflang="en"'));
 t('EN arama indeksi üretildi, url /en', fs.existsSync(path.join(dist, 'en', 'arama-index.json')) && JSON.parse(rd('en/arama-index.json'))[0].url === '/en/hizmetler/bim');
@@ -70,7 +70,7 @@ t('sitemap yedeği alındı', fs.existsSync(path.join(dist, 'sitemap-0.tr.xml'))
 const before = rd('index.html');
 await i18n.generate(dist);
 t('ikinci üretim TR sayfayı değiştirmez (idempotent)', rd('index.html') === before && (rd('index.html').match(/data-lang-switch/g) ?? []).length === 1);
-t('hreflang tekrarlanmıyor', (rd('index.html').match(/hreflang="en"/g) ?? []).length === 2); // 1 link + 1 anahtar
+t('hreflang tekrarlanmıyor', (rd('index.html').match(/hreflang="en"/g) ?? []).length === 2); // 1 link rel + 1 anahtar
 
 // 5) TR içerik değişirse eski EN kalmaz (tam çeviri olmayan sayfa atlanır)
 fs.writeFileSync(path.join(dist, 'hizmetler', 'bim.html'), page('BIM | AKORT', '<h1>BIM Danışmanlığı</h1><p>Yepyeni bir paragraf eklendi.</p>'));

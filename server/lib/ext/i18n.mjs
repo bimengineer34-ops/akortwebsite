@@ -243,8 +243,13 @@ const rewriteLinks = (n) => {
 
 const pageUrlOf = (rel) => { const p = '/' + rel.replace(/\\/g, '/').replace(/\.html$/, '').replace(/(^|\/)index$/, ''); return p === '/' ? '/' : p.replace(/\/$/, ''); };
 
-const LANG_SW = (to, label, aria, lang) => `<span data-lang-switch class="lang-slot"><a href="${to}" hreflang="${lang}" lang="${lang}" class="inline-flex size-11 items-center justify-center rounded-control text-heading text-small font-semibold transition-colors hover:text-primary-700" aria-label="${aria}">${label}</a></span>`;
-const SW_RE = /<span\b[^>]*data-lang-switch[^>]*>[\s\S]*?<\/span>/g;
+const LANG_SW = (to, label, aria, lang) => {
+  // lang = HEDEF dil. Hedef EN ise sayfa TR'dir: [TR (geçerli)] [EN bağlantı]; hedef TR ise: [TR bağlantı] [EN (geçerli)]
+  const opt = `<a href="${to}" hreflang="${lang}" lang="${lang}" class="lang-opt" aria-label="${aria}">${label}</a>`;
+  const cur = (l) => `<span class="lang-cur" lang="${l}" aria-current="true">${l.toUpperCase()}</span>`;
+  return `<span data-lang-switch class="lang-slot">${lang === 'en' ? cur('tr') + opt : opt + cur('en')}</span>`;
+};
+const SW_RE = /<span\b[^>]*data-lang-switch[^>]*>(?:<span\b[^>]*>[^<]*<\/span>|<a\b[^>]*>[^<]*<\/a>)*<\/span>/g;
 const EMPTY_SW = '<span data-lang-switch hidden></span>';
 const ALT_RE = /<link\b[^>]*rel=["']?alternate["']?[^>]*hreflang=[^>]*>/gi;
 

@@ -30,7 +30,8 @@ export const renderSocialOverview = async (ctx) => {
         kpiCard({ ic: 'chart', label: 'Takipçi Artışı', to: '/entegrasyonlar', connect: true, color: '#8b5cf6' }));
 
       const accounts = panel('Bağlı Sosyal Medya Hesapları', h('div', { class: 'acc-grid' }, o.platforms.slice(0, 6).map((p) => h('div', { class: 'acc' }, h('div', { class: 'row' }, pbadge(p.id, 34), h('div', {}, h('b', {}, p.label), h('div', { class: 'small muted' }, 'hesap bağlı değil'))),
-        h('button', { class: 'btn secondary sm', style: 'width:100%;margin-top:10px', disabled: true, title: p.needs }, 'Bağlantı gerekli')))),
+        h('a', { class: 'btn secondary sm', style: 'width:100%;margin-top:10px', href: p.url, target: '_blank', rel: 'noopener noreferrer', title: p.needs }, icon('external', 14), 'Bağlan (geliştirici konsolu)'),
+        h('div', { class: 'small', style: 'margin-top:6px' }, h('a', { href: p.docs, target: '_blank', rel: 'noopener noreferrer' }, 'API belgeleri'), ' · ', h('a', { href: '#/entegrasyonlar' }, 'Durum'))))),
         { ic: 'users', action: h('a', { class: 'btn secondary sm', href: '#/entegrasyonlar' }, 'Hesap Yönetimi') });
 
       const cons = o.consistency;

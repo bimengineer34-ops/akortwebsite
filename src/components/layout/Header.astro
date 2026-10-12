@@ -100,3 +100,61 @@ const megaFor: Record<string, 'services' | 'sectors' | 'about'> = { '/hakkimizda
     update();
   }
 </script>
+<style is:global>
+  /* Dil anahtarı (İngilizce site etkinse yayın hattı doldurur): "TR | EN", geçerli dil vurgulu */
+  .lang-slot { display: inline-flex; align-items: center; gap: 2px; font-size: 0.8125rem; font-weight: 600; }
+  .lang-slot .lang-cur, .lang-slot .lang-opt { display: inline-flex; align-items: center; min-height: 2rem; padding: 0 0.55rem; border-radius: 0.4rem; line-height: 1; text-decoration: none; }
+  .lang-slot .lang-cur { background: var(--color-step-bg); color: var(--color-primary-800); }
+  .lang-slot .lang-opt { color: var(--color-heading); }
+  .lang-slot .lang-opt:hover { color: var(--color-primary-700); background: var(--color-surface-soft); }
+  .lang-banner { position: fixed; left: 1rem; bottom: 1rem; z-index: 70; max-width: 22rem; padding: 0.9rem 1rem; background: #fff; color: var(--color-heading); border: 1px solid var(--color-border); border-radius: 0.75rem; box-shadow: 0 12px 32px -12px rgb(14 34 54 / 0.35); font-size: 0.875rem; line-height: 1.45; }
+  .lang-banner p { margin: 0 0 0.6rem; }
+  .lang-banner small { display: block; color: var(--color-muted); }
+  .lang-banner .row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .lang-banner button { cursor: pointer; border-radius: 0.5rem; padding: 0.5rem 0.8rem; font: inherit; font-weight: 600; border: 1px solid var(--color-border-strong); background: #fff; color: var(--color-heading); }
+  .lang-banner button.primary { background: var(--color-primary-700); border-color: var(--color-primary-700); color: #fff; }
+  @media (max-width: 640px) { .lang-banner { left: 0.75rem; right: 0.75rem; max-width: none; } }
+</style>
+
+<script>
+  // Dil tercihi: yalnızca İngilizce site etkinse (dil anahtarı doldurulmuşsa) çalışır. Tercih tarayıcıda (localStorage) tutulur; çerez yok.
+  const opt = document.querySelector<HTMLAnchorElement>('a.lang-opt[hreflang]');
+  if (opt) {
+    const KEY = 'akort-lang';
+    const target = opt.hreflang;
+    const get = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
+    const set = (v: string) => { try { localStorage.setItem(KEY, v); } catch { /* özel pencere */ } };
+    document.querySelectorAll<HTMLAnchorElement>('a.lang-opt[hreflang]').forEach((a) => a.addEventListener('click', () => set(a.hreflang)));
+    const isHome = location.pathname === '/' || location.pathname === '';
+    if (isHome && target === 'en') {
+      const pref = get();
+      if (pref === 'en') {
+        location.replace(opt.href);
+      } else if (!pref && navigator.language.toLowerCase().startsWith('en')) {
+        const box = document.createElement('div');
+        box.className = 'lang-banner';
+        box.setAttribute('role', 'dialog');
+        box.setAttribute('aria-label', 'Language / Dil');
+        const p = document.createElement('p');
+        p.textContent = 'This website is also available in English.';
+        const sm = document.createElement('small');
+        sm.textContent = 'Bu site İngilizce olarak da mevcut.';
+        p.append(sm);
+        const row = document.createElement('div');
+        row.className = 'row';
+        const yes = document.createElement('button');
+        yes.className = 'primary';
+        yes.textContent = 'View in English';
+        yes.addEventListener('click', () => { set('en'); location.href = opt.href; });
+        const no = document.createElement('button');
+        no.textContent = 'Türkçe devam et';
+        const close = () => { set('tr'); box.remove(); };
+        no.addEventListener('click', close);
+        row.append(yes, no);
+        box.append(p, row);
+        document.body.append(box);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); }, { once: true });
+      }
+    }
+  }
+</script>

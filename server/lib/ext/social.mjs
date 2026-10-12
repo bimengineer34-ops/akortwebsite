@@ -17,6 +17,19 @@ export const PLATFORMS = {
   tiktok: { label: 'TikTok', limit: 2200, caps: { yazi: false, gorsel: false, carousel: false, zamanla: false, insights: false }, needs: 'TikTok Content Posting API (denetim/onay gerektirir)' },
 };
 
+// Resmî geliştirici konsolu (hesap/uygulama oluşturma) ve API belgeleri
+const LINKS = {
+  linkedin: ['https://www.linkedin.com/developers/apps', 'https://learn.microsoft.com/linkedin/'],
+  instagram: ['https://developers.facebook.com/apps/', 'https://developers.facebook.com/docs/instagram-platform'],
+  facebook: ['https://developers.facebook.com/apps/', 'https://developers.facebook.com/docs/pages-api'],
+  x: ['https://developer.x.com/en/portal/dashboard', 'https://docs.x.com/'],
+  youtube: ['https://console.cloud.google.com/apis/library/youtube.googleapis.com', 'https://developers.google.com/youtube/v3'],
+  threads: ['https://developers.facebook.com/apps/', 'https://developers.facebook.com/docs/threads'],
+  pinterest: ['https://developers.pinterest.com/apps/', 'https://developers.pinterest.com/docs/'],
+  tiktok: ['https://developers.tiktok.com/', 'https://developers.tiktok.com/doc/content-posting-api-get-started'],
+};
+for (const [k, [url, docs]] of Object.entries(LINKS)) Object.assign(PLATFORMS[k], { url, docs });
+
 export const STATUSES = ['taslak', 'onay_bekliyor', 'onaylandi', 'planlandi', 'yayimlandi', 'hata', 'revizyon'];
 // izinli geçişler (yalnızca bu yollar)
 const FLOW = {
@@ -223,7 +236,7 @@ export const socialOverview = (n = 30) => {
     consistency: { score: scored.length ? Math.round(scored.reduce((a, c) => a + c.score, 0) / scored.length) : null, criteria },
     ideas,
     specialDays: upcomingSpecialDays().map((d) => ({ ...d, auto: getSetting(autoKey(d.date), '0') === '1' })),
-    platforms: Object.entries(PLATFORMS).map(([id, p]) => ({ id, label: p.label, limit: p.limit, caps: p.caps, needs: p.needs, connected: false })),
+    platforms: Object.entries(PLATFORMS).map(([id, p]) => ({ id, label: p.label, limit: p.limit, caps: p.caps, needs: p.needs, url: p.url, docs: p.docs, connected: false })),
   };
 };
 
