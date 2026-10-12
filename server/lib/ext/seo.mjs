@@ -29,7 +29,8 @@ export const analyzePage = (html, url) => {
   const canonicalHref = canonical ? attr(canonical, 'href') ?? '' : '';
   const h1 = (html.match(/<h1\b/gi) ?? []).length;
   const imgs = html.match(/<img\b[^>]*>/gi) ?? [];
-  const noAlt = imgs.filter((t) => attr(t, 'alt') === undefined).length;
+  // Astro HTML'i küçültür: boş alt (dekoratif görsel) çıplak "alt" olarak yazılır — bu geçerlidir
+  const noAlt = imgs.filter((t) => !/[\s"']alt(?=[\s=>/])/i.test(t)).length;
   const ogImage = meta(html, 'og:image', 'property');
   const jsonld = [...html.matchAll(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)].flatMap((m) => {
     try { const j = JSON.parse(m[1]); return (Array.isArray(j) ? j : [j]).flatMap((x) => x['@graph'] ?? [x]).map((x) => x['@type']).flat(); } catch { return ['(bozuk JSON-LD)']; }

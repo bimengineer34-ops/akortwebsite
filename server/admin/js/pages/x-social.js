@@ -2,6 +2,7 @@
 import { api, session } from '../api.js';
 import { h, icon, chip, toast, spinner, errorBanner, field, modal, confirmBox, fmtDate } from '../ui.js';
 import { pageHead, tabs, stat, infoBox, needConn, empty, fmtLocal } from './x-common.js';
+import { kpiCard, donut, hbars, panel } from '../charts.js';
 
 const ST = { taslak: ['Taslak', ''], onay_bekliyor: ['Onay bekliyor', 'warn'], onaylandi: ['Onaylandı', 'info'], planlandi: ['Planlandı', 'ok'], yayimlandi: ['Yayımlandı', 'ok'], hata: ['Hata', 'danger'], revizyon: ['Revizyon', 'warn'] };
 const stChip = (s) => chip(ST[s]?.[0] ?? s, ST[s]?.[1] ?? '');
@@ -62,7 +63,10 @@ const overview = async () => {
   platforms = d.platforms;
   const capc = (v) => (v ? chip('Destekli', 'ok') : chip('Yok', ''));
   return h('div', { class: 'stack' },
-    h('div', { class: 'grid cols-4' }, stat(d.summary.total, 'Toplam gönderi'), stat(d.summary.byStatus.taslak ?? 0, 'Taslak'), stat(d.summary.byStatus.onay_bekliyor ?? 0, 'Onay bekliyor'), stat((d.summary.byStatus.planlandi ?? 0) + (d.summary.byStatus.onaylandi ?? 0), 'Onaylı / planlı')),
+    h('div', { class: 'kpis' }, kpiCard({ ic: 'share', label: 'Toplam içerik', value: d.summary.total, color: '#8b5cf6' }), kpiCard({ ic: 'edit', label: 'Taslak', value: d.summary.byStatus.taslak ?? 0, color: '#64748b' }), kpiCard({ ic: 'shield', label: 'Onay bekleyen', value: d.summary.byStatus.onay_bekliyor ?? 0, color: '#f59e0b', goodUp: false }), kpiCard({ ic: 'check', label: 'Onaylı / planlı', value: (d.summary.byStatus.planlandi ?? 0) + (d.summary.byStatus.onaylandi ?? 0), color: '#10b981' }), kpiCard({ ic: 'plug', label: 'Bağlı hesap', value: 0, color: '#06b6d4', hint: 'OAuth bağlantısı yok', deltaLabel: 'bağlantı gerekli' })),
+    h('div', { class: 'dash-grid' },
+      h('div', { class: 'span-5' }, panel('İçerik hattı', donut({ items: Object.entries(ST).map(([k, [l]]) => ({ label: l, value: d.summary.byStatus[k] ?? 0 })).filter((x) => x.value), sub: 'içerik', empty: 'Henüz içerik yok — "Yeni içerik" ile başlayın' }), { ic: 'share' })),
+      h('div', { class: 'span-7' }, panel('Platforma göre içerik', hbars(d.summary.byPlatform.filter((p) => p.count).map((p) => ({ label: p.label, value: p.count })), { color: ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'], empty: 'Henüz platform seçilmiş içerik yok' }), { ic: 'radar' }))),
     h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('h3', {}, 'Platform bağlantıları ve yetenek matrisi'), chip('Hiçbiri bağlı değil', 'warn')),
       h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Platform', 'Karakter', 'Yazı', 'Görsel', 'Carousel', 'Zamanlama', 'Analitik', 'Gereken bağlantı'].map((x) => h('th', {}, x)))),
         h('tbody', {}, d.platforms.map((p) => h('tr', {}, h('td', {}, h('b', {}, p.label)), h('td', {}, p.limit), h('td', {}, capc(p.caps.yazi)), h('td', {}, capc(p.caps.gorsel)), h('td', {}, capc(p.caps.carousel)), h('td', {}, capc(p.caps.zamanla)), h('td', {}, capc(p.caps.insights)), h('td', { class: 'small muted' }, p.needs))))))),

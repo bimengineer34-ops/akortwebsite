@@ -2,6 +2,7 @@
 import { api, session } from './api.js';
 import { h, icon, clear, toast, spinner, errorBanner } from './ui.js';
 import { renderDashboard } from './pages/dashboard.js';
+import { buildTopbar } from './topbar.js';
 import { renderDocList, renderDocEditor } from './pages/content.js';
 import { renderEntryList, renderEntryEditor } from './pages/entries.js';
 import { renderPublish } from './pages/publish.js';
@@ -16,7 +17,7 @@ import { renderUsers, renderAudit, renderBackups, renderAccount, renderVerificat
 
 const app = document.getElementById('app');
 const state = { badges: { forms: 0, pending: 0, verify: 0 }, siteUrl: '' };
-let shell, view, topTitle, publishBtn, navLinks;
+let shell, view, topbar, publishBtn, navLinks;
 
 /* ---------------- giriş / kurulum ---------------- */
 const authScreen = (setup) => {
@@ -190,8 +191,8 @@ const buildShell = () => {
       navEl.append(a);
     }
   }
-  topTitle = h('div', { class: 'grow' });
   publishBtn = h('a', { class: 'btn', href: '#/yayin' }, icon('rocket', 16), 'Yayınla');
+  topbar = buildTopbar({ user: session.user, onMenu: () => shell.classList.toggle('nav-open'), publishBtn });
   view = h('main', { class: 'content', id: 'main', tabindex: '-1' });
   shell = h('div', { class: 'shell' },
     h('aside', { class: 'sidebar' },
@@ -202,9 +203,7 @@ const buildShell = () => {
         h('div', { class: 'row', style: undefined }, h('a', { href: '#/hesabim' }, 'Hesabım'), ' · ', h('a', { href: '/', target: '_blank', rel: 'noopener' }, 'Siteyi aç'), ' · ',
           h('a', { href: '#', onclick: async (e) => { e.preventDefault(); await api.logout().catch(() => {}); session.user = null; boot(); } }, 'Çıkış')))),
     h('div', { class: 'main' },
-      h('header', { class: 'topbar' },
-        h('button', { class: 'btn ghost icon menu-btn', 'aria-label': 'Menü', onclick: () => shell.classList.toggle('nav-open') }, icon('menu')),
-        topTitle, publishBtn),
+      topbar.el,
       view));
   app.append(shell);
 };
@@ -228,6 +227,7 @@ const refreshBadges = async () => {
       b.textContent = String(n);
       b.classList.toggle('hidden', !n);
     }
+    topbar?.setBell(state.badges.forms);
     publishBtn?.replaceChildren(icon('rocket', 16), state.badges.pending ? `Yayınla (${state.badges.pending})` : 'Yayınla');
     publishBtn?.classList.toggle('secondary', !state.badges.pending);
   } catch {

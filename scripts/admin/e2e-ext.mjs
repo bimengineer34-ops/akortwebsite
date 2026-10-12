@@ -96,6 +96,19 @@ const bl2 = await call('POST', `${X}/backlink`, { name: 'E2E dizin', url: 'https
 const bid = (await call('GET', `${X}/backlink`)).data.rows.find((r) => r.name === 'E2E dizin')?.id;
 t('backlink fırsatı eklendi', bl2.status === 200 && bid);
 await call('DELETE', `${X}/backlink/${bid}`);
+// KPI panosu (kullanıcı tanımlı)
+const kp = await call('GET', `${X}/kpi`);
+t('KPI panosu varsayılan kartlarla geliyor', kp.status === 200 && kp.data.cards.length >= 3 && kp.data.catalog.length >= 15, JSON.stringify(kp.data).slice(0, 200));
+t('akış KPI\'larında seri uzunluğu = seçili gün', kp.data.cards.filter((c) => c.flow).every((c) => c.series.length === kp.data.range));
+const kset = await call('PUT', `${X}/kpi`, { range: 7, cards: [{ id: 'visits', target: 100 }, { id: 'seo_score' }, { id: 'nope' }] });
+t('KPI tercihi kaydedildi, bilinmeyen KPI atıldı', kset.status === 200 && kset.data.cards.length === 2 && kset.data.cards[0].target === 100, JSON.stringify(kset.data));
+const kp2 = await call('GET', `${X}/kpi`);
+t('kayıtlı tercih geri okunuyor (7 gün, hedefli kart)', kp2.data.range === 7 && kp2.data.cards[0].id === 'visits' && kp2.data.cards[0].target === 100);
+t('geçersiz hedef reddedildi', (await call('PUT', `${X}/kpi`, { cards: [{ id: 'visits', target: -5 }] })).status === 400);
+t('boş KPI listesi reddedildi', (await call('PUT', `${X}/kpi`, { cards: [] })).status === 400);
+await call('PUT', `${X}/kpi`, { range: 30, cards: ['visits', 'forms', 'conversion', 'seo_score', 'social_awaiting'].map((id) => ({ id })) });
+const gr = await call('GET', `${X}/grafik?gun=30`);
+t('grafik verisi (30 günlük seriler + dağılımlar)', gr.status === 200 && gr.data.visits.length === 30 && gr.data.forms.length === 30 && Array.isArray(gr.data.socialStatus), JSON.stringify(gr.data).slice(0, 160));
 // yetkisiz
 const anon = await fetch(`${base}${X}/entegrasyonlar`);
 t('oturumsuz erişim 401', anon.status === 401);

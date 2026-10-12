@@ -21,6 +21,7 @@ Durum anahtarı: ✅ gerçek ve test edilmiş · 🟡 kısmen (neden belirtilir)
 | Rakip izleme | yeni | ✅ | Sayfa değişim izleme (robots uyumlu, SSRF korumalı); SERP/trafik ⛔ |
 | Backlink | yeni | ✅ | Fırsat defteri, elle onaylı taslak, gerçek bağlantı doğrulama; veri servisi ⛔ |
 | CRM / Leads | genişlet | 🟡 | Mevcut form talepleri + fırsat önerisi; aşama/sahip/atıf raporu ❌ |
+| Referans dashboard tasarımı (koyu tema, KPI kartları, grafikler, genel arama) | genişlet | ✅ | Kullanıcı başına KPI seçimi/sırası/hedefi (24 gerçek metrik), SVG grafik kütüphanesi, açık/koyu tema; mockup ekranlarıyla birebir karşılaştırma ❌ |
 | RBAC (7 rol) | genişlet | ❌ | Şimdilik admin/editor. `users.role` CHECK kısıtı nedeniyle tablo yeniden kurulumu gerekir → ayrı, yedekli migrasyon |
 | İş kuyruğu | yeni | ✅ | `jobs` tablosu, idempotent anahtar, üstel geri çekilme, ölü kuyruk; şimdilik yalnızca RSS çekimi |
 | Sır kasası / denetim | yeni | ✅ | AES-256-GCM, değer API'ye/günlüğe çıkmaz |

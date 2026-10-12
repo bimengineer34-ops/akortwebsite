@@ -9,6 +9,8 @@ import { PROVIDERS, providerStatus, setCfg, testProvider, listModels, generate, 
 import { scanSite, speedReport, getFocus, setFocus } from './seo.mjs';
 import * as social from './social.mjs';
 import * as intel from './intel.mjs';
+import { dashboard, setPrefs, computeCard, CATALOG } from './kpi.mjs';
+import { getStats } from '../stats.mjs';
 
 const id = (v) => {
   const n = Number(v);
@@ -40,7 +42,42 @@ const integrations = () => {
   };
 };
 
+const dayList = (n) => Array.from({ length: n }, (_, i) => new Date(Date.now() - (n - 1 - i) * 86_400_000).toLocaleDateString('sv-SE', { timeZone: 'Europe/Istanbul' }));
+
 export const extRoutes = [
+  /* ---------- KPI panosu (kullanıcı tanımlı) ---------- */
+  ['GET', new RegExp(`^${A}/kpi$`), ({ req, res, url }) => sendJson(res, 200, dashboard(requireUser(req), url.searchParams.get('gun')))],
+  ['PUT', new RegExp(`^${A}/kpi$`), async ({ req, res }) => sendJson(res, 200, setPrefs(requireUser(req), await J(req, 8 * 1024)))],
+  ['GET', new RegExp(`^${A}/kpi/([a-z_]+)$`), ({ req, res, m, url }) => {
+    requireUser(req);
+    if (!CATALOG[m[1]]) throw new HttpError(404, 'Bilinmeyen KPI');
+    sendJson(res, 200, computeCard(m[1], [7, 30, 90].includes(Number(url.searchParams.get('gun'))) ? Number(url.searchParams.get('gun')) : 30));
+  }],
+  ['GET', new RegExp(`^${A}/grafik$`), ({ req, res, url }) => {
+    requireUser(req);
+    const n = [7, 30, 90].includes(Number(url.searchParams.get('gun'))) ? Number(url.searchParams.get('gun')) : 30;
+    const since = dayList(n)[0];
+    const ist = (c) => `date(${c}, '+3 hours')`;
+    const byDay = (sql) => { const m = new Map(q.all(sql, since).map((r) => [r.day, r.v])); return dayList(n).map((d) => m.get(d) ?? 0); };
+    const st = getStats(n);
+    sendJson(res, 200, {
+      range: n,
+      labels: dayList(n).map((d) => d.slice(8) + '/' + d.slice(5, 7)),
+      visits: st.daily.map((d) => d.views),
+      forms: byDay(`SELECT ${ist('created_at')} AS day, COUNT(*) AS v FROM forms WHERE kind != 'firsat' AND ${ist('created_at')} >= ? GROUP BY 1`),
+      subscribers: byDay(`SELECT ${ist('created_at')} AS day, COUNT(*) AS v FROM subscribers WHERE ${ist('created_at')} >= ? GROUP BY 1`),
+      aiTokens: byDay(`SELECT ${ist('ts')} AS day, COALESCE(SUM(input_tokens),0)+COALESCE(SUM(output_tokens),0) AS v FROM ai_usage WHERE ok = 1 AND ${ist('ts')} >= ? GROUP BY 1`),
+      news: byDay(`SELECT ${ist('fetched_at')} AS day, COUNT(*) AS v FROM source_items WHERE ${ist('fetched_at')} >= ? GROUP BY 1`),
+      formStatus: q.all(`SELECT status, COUNT(*) AS n FROM forms WHERE kind != 'firsat' GROUP BY status`),
+      socialStatus: q.all('SELECT status, COUNT(*) AS n FROM social_posts GROUP BY status'),
+      socialPlatforms: Object.keys(social.PLATFORMS).map((id) => ({ id, label: social.PLATFORMS[id].label, n: q.all('SELECT platforms FROM social_posts').filter((r) => JSON.parse(r.platforms).includes(id)).length })),
+      topPages: st.topPages.slice(0, 8),
+      referrers: st.referrers.slice(0, 6),
+      upcoming: social.socialSummary().upcoming,
+      backlinkStatus: q.all('SELECT status, COUNT(*) AS n FROM backlink_opps GROUP BY status'),
+    });
+  }],
+
   /* ---------- entegrasyonlar + sır kasası ---------- */
   ['GET', new RegExp(`^${A}/entegrasyonlar$`), ({ req, res }) => {
     requireUser(req);

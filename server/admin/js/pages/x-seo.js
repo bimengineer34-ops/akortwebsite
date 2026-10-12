@@ -2,6 +2,7 @@
 import { api } from '../api.js';
 import { h, icon, chip, debounce, toast, spinner, errorBanner, field, fmtDate } from '../ui.js';
 import { pageHead, tabs, stat, scoreChip, infoBox, needConn, empty } from './x-common.js';
+import { kpiCard, donut, hbars, panel } from '../charts.js';
 
 /* ---------- canlı analiz (yerel, anlık; Google skoru DEĞİL) ---------- */
 const fold = (s) => String(s ?? '').toLocaleLowerCase('tr').replace(/[^\p{L}\p{N}\s-]/gu, ' ');
@@ -50,7 +51,10 @@ const scanTab = async () => {
       if (!d.siteDir) return box.replaceChildren(infoBox('Henüz derlenmiş site yok. "Yayınla" ile siteyi derleyin.', 'warn'));
       const worst = d.pages.filter((p) => p.issues.length).slice(0, 40);
       box.replaceChildren(
-        h('div', { class: 'grid cols-4' }, stat(d.total, 'Taranan sayfa'), stat(d.avgScore, 'Ortalama teknik puan'), stat(d.errors, 'Hata', d.errors ? 'alert' : ''), stat(d.warnings, 'Uyarı')),
+        h('div', { class: 'kpis' }, kpiCard({ ic: 'doc', label: 'Taranan sayfa', value: d.total, color: '#3b82f6' }), kpiCard({ ic: 'search', label: 'Ortalama teknik puan', value: d.avgScore, unit: '/100', color: '#10b981', target: 90 }), kpiCard({ ic: 'alert', label: 'Hata', value: d.errors, color: '#ef4444', goodUp: false }), kpiCard({ ic: 'eye', label: 'Uyarı', value: d.warnings, color: '#f59e0b', goodUp: false })),
+        h('div', { class: 'dash-grid' },
+          h('div', { class: 'span-4' }, panel('Puan dağılımı', donut({ items: [{ label: 'İyi (≥85)', value: d.pages.filter((p) => p.score >= 85).length, color: '#10b981' }, { label: 'Orta (60–84)', value: d.pages.filter((p) => p.score >= 60 && p.score < 85).length, color: '#f59e0b' }, { label: 'Zayıf (<60)', value: d.pages.filter((p) => p.score < 60).length, color: '#ef4444' }], sub: 'sayfa' }), { ic: 'search' })),
+          h('div', { class: 'span-8' }, panel('En sık görülen sorunlar', hbars(Object.entries(d.pages.flatMap((p) => p.issues).reduce((m, [, t]) => { const k = t.replace(/[0-9]+/g, 'N').replace(/https?:\/\/\S+/, 'URL'); m[k] = (m[k] ?? 0) + 1; return m; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 7).map(([label, value]) => ({ label, value })), { color: '#f59e0b', empty: 'Hiç sorun bulunmadı' }), { ic: 'alert' }))),
         infoBox(d.notes.join(' ')),
         h('div', { class: 'grid cols-2' },
           h('div', { class: 'card card-pad stack' }, h('h3', {}, 'Sitemap ve robots'),

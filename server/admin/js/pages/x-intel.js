@@ -2,6 +2,7 @@
 import { api, session } from '../api.js';
 import { h, icon, chip, toast, spinner, errorBanner, field, modal, confirmBox, fmtDate } from '../ui.js';
 import { pageHead, tabs, stat, infoBox, empty } from './x-common.js';
+import { kpiCard, donut, hbars, panel } from '../charts.js';
 
 const run = async (btn, fn) => { btn.disabled = true; try { await fn(); } catch (e) { toast(e.message, 'err'); } btn.disabled = false; };
 const sel = (opts, value) => h('select', { class: 'select' }, opts.map(([v, l]) => h('option', { value: v, selected: v === value }, l)));
@@ -122,7 +123,8 @@ export const renderBacklinks = async (ctx) => {
   const won = d.rows.filter((r) => r.status === 'kazanildi').length;
   return h('div', { class: 'stack' }, pageHead('Backlink Intelligence', 'İzinli, ilgili ve doğal bağlantı fırsatları; kalite kontrolü ve elle onaylı iletişim.', h('button', { class: 'btn', onclick: () => blForm(null, reload) }, icon('plus', 16), 'Fırsat ekle')),
     infoBox('Satın alma, link çiftliği, otomatik spam veya manipülatif kampanya yok. Harici editör karar vermeden "kazanıldı" denmez; bağlantı gerçekten bulunursa doğrulama ile işaretlenir. Lisanslı backlink veri servisi bağlı değil: kendi sitenize gelen bağlantılar otomatik keşfedilmez.'),
-    h('div', { class: 'grid cols-4' }, stat(d.rows.length, 'Toplam fırsat'), stat(won, 'Doğrulanmış bağlantı'), stat(d.rows.filter((r) => r.status === 'onay_bekliyor').length, 'Onay bekliyor'), stat(d.rows.filter((r) => r.status === 'kayip').length, 'Kayıp bağlantı')),
+    h('div', { class: 'kpis' }, kpiCard({ ic: 'link', label: 'Toplam fırsat', value: d.rows.length, color: '#3b82f6' }), kpiCard({ ic: 'check', label: 'Doğrulanmış bağlantı', value: won, color: '#10b981' }), kpiCard({ ic: 'shield', label: 'Onay bekliyor', value: d.rows.filter((r) => r.status === 'onay_bekliyor').length, color: '#f59e0b', goodUp: false }), kpiCard({ ic: 'alert', label: 'Kayıp bağlantı', value: d.rows.filter((r) => r.status === 'kayip').length, color: '#ef4444', goodUp: false })),
+    d.rows.length ? panel('Durum dağılımı', donut({ items: Object.entries(BL).map(([k, [l]], i) => ({ label: l, value: d.rows.filter((r) => r.status === k).length, color: ['#64748b', '#8b5cf6', '#f59e0b', '#3b82f6', '#10b981', '#ef4444', '#ec4899'][i] })).filter((x) => x.value), sub: 'fırsat' }), { ic: 'link' }) : null,
     d.rows.length ? h('div', { class: 'card' }, h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Fırsat', 'Tür', 'İlgililik / risk', 'Durum', ''].map((x) => h('th', {}, x)))),
       h('tbody', {}, d.rows.map((o) => h('tr', {}, h('td', {}, h('b', {}, o.name), h('div', { class: 'small' }, h('a', { href: o.url, target: '_blank', rel: 'noopener noreferrer' }, o.url)), o.reason ? h('div', { class: 'small muted' }, o.reason) : null), h('td', {}, o.kind), h('td', {}, `${o.relevance}/5 · ${o.risk}`),
         h('td', {}, chip(BL[o.status]?.[0] ?? o.status, BL[o.status]?.[1] ?? ''), o.verified_at ? h('div', { class: 'small muted' }, `Doğrulama: ${fmtDate(o.verified_at)}`) : null),
