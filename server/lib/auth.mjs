@@ -76,15 +76,17 @@ export const checkCredentials = (email, password, ip) => {
 
 export const login = (email, password, ip, ua) => createSession(checkCredentials(email, password, ip), ip, ua);
 
-export const createSession = (user, ip, ua) => {
+/** remember=true: "Beni hatırla" — oturum 30 güne kadar sürer (2 adımlı doğrulama açıksa yine kod istenir) */
+export const createSession = (user, ip, ua, remember = false) => {
+  const hours = remember ? 24 * 30 : config.sessionHours;
   const email = user.email;
   const token = crypto.randomBytes(32).toString('base64url');
   const csrf = crypto.randomBytes(24).toString('base64url');
-  q.run(`INSERT INTO sessions (id, user_id, csrf, expires_at, ip, ua) VALUES (?,?,?,datetime('now', ?),?,?)`, sha(token), user.id, csrf, `+${config.sessionHours} hours`, ip, String(ua ?? '').slice(0, 200));
+  q.run(`INSERT INTO sessions (id, user_id, csrf, expires_at, ip, ua) VALUES (?,?,?,datetime('now', ?),?,?)`, sha(token), user.id, csrf, `+${hours} hours`, ip, String(ua ?? '').slice(0, 200));
   q.run(`UPDATE users SET last_login = datetime('now') WHERE id = ?`, user.id);
   q.run(`DELETE FROM sessions WHERE expires_at < datetime('now')`);
   audit(user, 'giris', email, '', ip);
-  return { user, cookie: cookieHeader(SID, token, { maxAgeSec: config.sessionHours * 3600, path: '/' }) };
+  return { user, cookie: cookieHeader(SID, token, { maxAgeSec: hours * 3600, path: '/' }) };
 };
 
 export const logout = (req) => {

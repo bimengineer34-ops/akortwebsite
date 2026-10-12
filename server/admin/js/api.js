@@ -47,13 +47,13 @@ export const api = {
     session.loginHint = d.loginHint ?? '';
     return d;
   },
-  login: async (email, password) => {
-    const d = await request('POST', A + '/giris', { email, password });
+  login: async (email, password, remember = false) => {
+    const d = await request('POST', A + '/giris', { email, password, remember });
     return d;
   },
   forgot: (email) => request('POST', A + '/parola-unuttum', { email }),
   resetPassword: (token, password) => request('POST', A + '/parola-sifirla', { token, password }),
-  login2fa: (ticket, code) => request('POST', A + '/giris/2fa', { ticket, code }),
+  login2fa: (ticket, code, remember = false) => request('POST', A + '/giris/2fa', { ticket, code, remember }),
   setup: (b) => request('POST', A + '/kurulum', b),
   logout: () => request('POST', A + '/cikis', {}),
 };

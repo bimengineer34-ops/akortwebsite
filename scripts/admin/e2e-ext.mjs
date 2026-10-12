@@ -22,6 +22,13 @@ t('giriş', login.status === 200 && login.data.ok, JSON.stringify(login.data));
 const st = await call('GET', '/api/admin/durum'); csrf = st.data.user.csrf;
 const X = '/api/admin/x';
 
+// "Beni hatırla": çerez ömrü
+const maxAge = async (remember) => {
+  const r = await fetch(`${base}/api/admin/giris`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: base }, body: JSON.stringify({ email, password, remember }) });
+  return Number(/max-age=(\d+)/i.exec(r.headers.get('set-cookie') ?? '')?.[1]);
+};
+t('"Beni hatırla" kapalıyken oturum çerezi kısa (saatlik)', (await maxAge(false)) <= 24 * 3600);
+t('"Beni hatırla" açıkken oturum çerezi 30 gün', (await maxAge(true)) === 30 * 24 * 3600);
 // entegrasyonlar
 const ig = await call('GET', `${X}/entegrasyonlar`);
 t('entegrasyon durumu: hiçbir sosyal platform "bağlı" değil', ig.status === 200 && ig.data.other.every((o) => o.connected === false));

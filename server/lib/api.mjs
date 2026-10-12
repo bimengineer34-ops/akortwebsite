@@ -101,7 +101,7 @@ export const routes = [
       const ip = clientIp(req);
       const user = checkCredentials(b.email, b.password, ip);
       if (user.totp_enabled) return sendJson(res, 200, { ok: true, need2fa: true, ticket: issueTicket(user.id, ip) });
-      const s = createSession(user, ip, req.headers['user-agent']);
+      const s = createSession(user, ip, req.headers['user-agent'], b.remember === true);
       sendJson(res, 200, { ok: true, user: publicUser(s.user) }, { 'Set-Cookie': s.cookie });
     },
   ],
@@ -112,7 +112,7 @@ export const routes = [
       const b = await readJson(req, 4 * 1024);
       const ip = clientIp(req);
       const user = redeemTicket(String(b.ticket ?? ''), b.code, ip);
-      const s = createSession(user, ip, req.headers['user-agent']);
+      const s = createSession(user, ip, req.headers['user-agent'], b.remember === true);
       sendJson(res, 200, { ok: true, user: publicUser(s.user) }, { 'Set-Cookie': s.cookie });
     },
   ],

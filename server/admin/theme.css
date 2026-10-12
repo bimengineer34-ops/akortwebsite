@@ -146,3 +146,5 @@ a.kpi:hover { border-color: var(--accent); transform: translateY(-1px); text-dec
 .dash-grid > div { display: flex; flex-direction: column; min-width: 0; }
 .dash-grid > div > .panel, .dash-grid > div > .stack { flex: 1; }
 .kpis { grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); }
+
+.auth .logo { background: #fff; padding: 5px; border-radius: 12px; }

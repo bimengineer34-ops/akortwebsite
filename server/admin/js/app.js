@@ -22,9 +22,13 @@ let shell, view, topbar, publishBtn, navLinks;
 /* ---------------- giriş / kurulum ---------------- */
 const authScreen = (setup) => {
   clear(app);
-  const email = h('input', { class: 'input', type: 'email', required: true, autocomplete: 'username', placeholder: 'ornek@firma.com' });
+  const email = h('input', { class: 'input', type: 'email', id: 'akort-email', name: 'username', required: true, autocomplete: 'username', placeholder: 'ornek@firma.com' });
   const name = h('input', { class: 'input', type: 'text', autocomplete: 'name', placeholder: 'Ad Soyad' });
-  const pass = h('input', { class: 'input', type: 'password', required: true, autocomplete: setup ? 'new-password' : 'current-password', minlength: setup ? 10 : undefined });
+  const pass = h('input', { class: 'input', type: 'password', id: 'akort-pass', name: 'password', required: true, autocomplete: setup ? 'new-password' : 'current-password', minlength: setup ? 10 : undefined });
+  let saved = null;
+  try { saved = localStorage.getItem('akort-remember-email'); } catch { /* özel pencere */ }
+  const remember = h('input', { type: 'checkbox', id: 'akort-remember', checked: saved !== null });
+  const rememberRow = h('label', { class: 'switch' }, remember, h('i'), h('span', {}, 'Beni hatırla (bu cihazda 30 gün açık kal)'));
   const msg = h('div', { role: 'alert' });
   const form = h('form', { onsubmit: async (e) => {
     e.preventDefault();
@@ -34,8 +38,9 @@ const authScreen = (setup) => {
     try {
       if (setup) await api.setup({ email: email.value, name: name.value, password: pass.value });
       else {
-        const r = await api.login(email.value, pass.value);
-        if (r.need2fa) return twoFactorScreen(r.ticket);
+        const r = await api.login(email.value, pass.value, remember.checked);
+        try { if (remember.checked) localStorage.setItem('akort-remember-email', email.value); else localStorage.removeItem('akort-remember-email'); } catch { /* özel pencere */ }
+        if (r.need2fa) return twoFactorScreen(r.ticket, remember.checked);
       }
       await boot();
     } catch (err) {
@@ -44,6 +49,7 @@ const authScreen = (setup) => {
       pass.select();
     }
   } },
+    setup ? null : rememberRow,
     setup ? h('label', { class: 'field' }, h('span', { class: 'lbl' }, 'Ad Soyad'), name) : null,
     h('label', { class: 'field' }, h('span', { class: 'lbl' }, 'E-posta'), email),
     h('label', { class: 'field' }, h('span', { class: 'lbl' }, 'Parola'), pass, setup ? h('span', { class: 'hint' }, 'En az 10 karakter; en az bir harf ve bir rakam içermeli.') : null),
@@ -55,7 +61,7 @@ const authScreen = (setup) => {
     h('h1', {}, setup ? 'İlk kurulum' : 'AKORT Yönetim Paneli'),
     h('p', { class: 'muted' }, setup ? 'Henüz hiç kullanıcı yok. Sitenin ilk yönetici hesabını oluşturun.' : 'Devam etmek için giriş yapın.'),
     form)));
-  if (!setup && session.loginHint) email.value = session.loginHint;
+  if (!setup && (saved || session.loginHint)) email.value = saved || session.loginHint;
   (setup ? name : email.value ? pass : email).focus();
 };
 
@@ -111,7 +117,7 @@ const resetScreen = (token) => {
 };
 
 /** Parola doğrulandıktan sonra 2 adımlı doğrulama kodu ekranı */
-const twoFactorScreen = (ticket) => {
+const twoFactorScreen = (ticket, remember = false) => {
   clear(app);
   const code = h('input', { class: 'input', type: 'text', inputmode: 'text', autocomplete: 'one-time-code', required: true, placeholder: '123456', maxlength: 13 });
   const msg = h('div', { role: 'alert' });
@@ -121,7 +127,7 @@ const twoFactorScreen = (ticket) => {
     const btn = form.querySelector('button[type=submit]');
     btn.disabled = true;
     try {
-      await api.login2fa(ticket, code.value);
+      await api.login2fa(ticket, code.value, remember);
       await boot();
     } catch (err) {
       msg.replaceChildren(errorBanner(err));
