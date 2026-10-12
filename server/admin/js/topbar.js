@@ -55,7 +55,7 @@ export const buildTopbar = ({ user, onMenu, publishBtn }) => {
   const themeBtn = h('button', { class: 'tb-btn', 'aria-label': 'Tema değiştir', title: 'Koyu / açık tema', onclick: () => {
     const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', next);
-    try { localStorage.setItem('akort-theme', next); } catch { /* özel pencere */ }
+    try { localStorage.setItem('akort-theme-v2', next); } catch { /* özel pencere */ }
   } }, icon('eye', 18));
   const dot = h('span', { class: 'dot hidden' });
   const bell = h('a', { class: 'tb-btn', href: '#/formlar', 'aria-label': 'Yeni form talepleri', title: 'Yeni form talepleri' }, icon('mail', 18), dot);

@@ -10,7 +10,7 @@ const s = (tag, attrs = {}, ...kids) => {
   return el;
 };
 
-export const PALETTE = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#64748b'];
+export const PALETTE = ['#7367f0', '#9f87ff', '#28c76f', '#ff9f43', '#ea5455', '#00cfe8', '#ff6bb5', '#a8aaae'];
 export const fmtNum = (n) => {
   if (n === null || n === undefined || Number.isNaN(n)) return '—';
   const a = Math.abs(n);

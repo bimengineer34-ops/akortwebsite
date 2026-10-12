@@ -54,7 +54,7 @@ export const extRoutes = [
     sendJson(res, 200, computeCard(m[1], [7, 30, 90].includes(Number(url.searchParams.get('gun'))) ? Number(url.searchParams.get('gun')) : 30));
   }],
   ['GET', new RegExp(`^${A}/grafik$`), ({ req, res, url }) => {
-    requireUser(req);
+    const me = requireUser(req);
     const n = [7, 30, 90].includes(Number(url.searchParams.get('gun'))) ? Number(url.searchParams.get('gun')) : 30;
     const since = dayList(n)[0];
     const ist = (c) => `date(${c}, '+3 hours')`;
@@ -74,6 +74,9 @@ export const extRoutes = [
       topPages: st.topPages.slice(0, 8),
       referrers: st.referrers.slice(0, 6),
       upcoming: social.socialSummary().upcoming,
+      mine: q.all('SELECT ts, action, target FROM audit WHERE user_email = ? ORDER BY id DESC LIMIT 6', me.email),
+      awaitingApproval: q.get(`SELECT COUNT(*) AS n FROM social_posts WHERE status = 'onay_bekliyor'`).n,
+      aiConnected: q.get(`SELECT COUNT(*) AS n FROM secrets WHERE name LIKE 'ai.%'`).n,
       backlinkStatus: q.all('SELECT status, COUNT(*) AS n FROM backlink_opps GROUP BY status'),
     });
   }],

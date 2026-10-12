@@ -3,8 +3,8 @@ import { api, session } from '../api.js';
 import { h, icon, chip, fmtDate, modal, toast, spinner, errorBanner } from '../ui.js';
 import { kpiCard, areaChart, barChart, donut, hbars, panel, PALETTE, fmtNum } from '../charts.js';
 
-const FORM_ST = { yeni: ['Yeni', '#3b82f6'], islemde: ['İşlemde', '#f59e0b'], yanitlandi: ['Yanıtlandı', '#10b981'], kapali: ['Kapalı', '#64748b'], spam: ['Spam', '#ef4444'] };
-const SOC_ST = { taslak: ['Taslak', '#64748b'], onay_bekliyor: ['Onay bekliyor', '#f59e0b'], revizyon: ['Revizyon', '#ec4899'], onaylandi: ['Onaylandı', '#3b82f6'], planlandi: ['Planlandı', '#06b6d4'], yayimlandi: ['Yayımlandı', '#10b981'], hata: ['Hata', '#ef4444'] };
+const FORM_ST = { yeni: ['Yeni', '#7367f0'], islemde: ['İşlemde', '#ff9f43'], yanitlandi: ['Yanıtlandı', '#28c76f'], kapali: ['Kapalı', '#a8aaae'], spam: ['Spam', '#ea5455'] };
+const SOC_ST = { taslak: ['Taslak', '#a8aaae'], onay_bekliyor: ['Onay bekliyor', '#ff9f43'], revizyon: ['Revizyon', '#ff6bb5'], onaylandi: ['Onaylandı', '#7367f0'], planlandi: ['Planlandı', '#00cfe8'], yayimlandi: ['Yayımlandı', '#28c76f'], hata: ['Hata', '#ea5455'] };
 const statusChip = (s) => ({ yeni: chip('Yeni', 'info'), islemde: chip('İşlemde', 'warn'), yanitlandi: chip('Yanıtlandı', 'ok'), kapali: chip('Kapalı'), spam: chip('Spam', 'danger') }[s] ?? chip(s));
 
 /** KPI düzenleyici: hangi kartlar, hangi sırada, hangi hedefle */
@@ -42,11 +42,33 @@ export const renderDashboard = async (ctx) => {
       const pending = d.drafts.length + (d.entriesDirty ? 1 : 0);
 
       const rangeSel = h('div', { class: 'range', role: 'group', 'aria-label': 'Zaman aralığı' }, [7, 30, 90].map((n) => h('button', { 'aria-pressed': String(n === range), onclick: () => { range = n; sessionStorage.setItem('akort-kpi-range', String(n)); load(); } }, `Son ${n} gün`)));
-      const head = h('div', { class: 'hello' },
-        h('div', { class: 'grow' }, h('h1', {}, `Merhaba, ${session.user.name.split(' ')[0]}`), h('p', { class: 'muted' }, 'Sitenizin performansı, talepleriniz ve yayın akışınız tek bakışta.')),
-        rangeSel,
-        h('button', { class: 'btn secondary', onclick: () => editKpis(k, load) }, icon('gear', 16), 'KPI\'larımı düzenle'),
-        h('a', { class: 'btn secondary', href: '/', target: '_blank', rel: 'noopener' }, icon('external', 16), 'Siteyi aç'));
+      const hour = new Date().getHours();
+      const greet = hour < 6 ? 'İyi geceler' : hour < 12 ? 'Günaydın' : hour < 18 ? 'İyi günler' : 'İyi akşamlar';
+      const first = session.user.name.split(' ')[0];
+      const open = d.forms.fresh;
+      const head = h('div', { class: 'hero' },
+        h('div', { class: 'hero-top' },
+          h('div', { class: 'grow' }, h('h1', {}, `${greet}, ${first}! 👋`),
+            h('p', {}, open ? `Yanıt bekleyen ${open} talebiniz var.` : 'Bekleyen talebiniz yok, harika gidiyorsunuz.'), h('p', {}, pending ? `${pending} değişiklik yayına hazır.` : 'Tüm içerikler yayında.')),
+          h('div', { class: 'row wrap' }, rangeSel, h('button', { class: 'btn secondary', onclick: () => editKpis(k, load) }, icon('gear', 16), 'KPI\'larımı düzenle'), h('a', { class: 'btn', href: '/', target: '_blank', rel: 'noopener' }, icon('external', 16), 'Siteyi aç'))),
+        h('div', { class: 'hero-stats' },
+          h('div', { class: 'hero-stat' }, h('b', {}, String(open)), h('span', {}, 'Yeni talep')),
+          h('div', { class: 'hero-stat' }, h('b', {}, String(pending)), h('span', {}, 'Yayın bekleyen')),
+          h('div', { class: 'hero-stat' }, h('b', {}, String(g.awaitingApproval)), h('span', {}, 'Onay bekleyen içerik')),
+          h('div', { class: 'hero-stat' }, h('b', {}, fmtNum(d.views7)), h('span', {}, 'Son 7 gün ziyaret'))));
+
+      // Kişiye özel yapılacaklar: gerçek duruma göre üretilir
+      const todos = [];
+      if (open) todos.push(['#ff9f43', 'mail', `${open} yeni form talebini yanıtlayın`, 'Müşteriler yanıt bekliyor', '/formlar', 'Aç']);
+      if (pending) todos.push(['#7367f0', 'rocket', `${pending} değişikliği yayınlayın`, 'Kaydedilen içerikler siteye henüz yansımadı', '/yayin', 'Yayına git']);
+      if (g.awaitingApproval && session.user.role === 'admin') todos.push(['#ff6bb5', 'share', `${g.awaitingApproval} sosyal içerik onayınızı bekliyor`, 'Onaylanmadan hiçbir içerik yayımlanmaz', '/sosyal', 'İncele']);
+      if (d.unverifiedCount) todos.push(['#00cfe8', 'shield', `${d.unverifiedCount} alanı doğrulayın`, 'Doğrulanmamış bilgiler canlı sitede gizli', '/dogrulama', 'Listele']);
+      if (!g.aiConnected && session.user.role === 'admin') todos.push(['#9f87ff', 'spark', 'Bir yapay zekâ sağlayıcısı bağlayın', 'AI İçerik Stüdyosu için API anahtarı gerekli', '/entegrasyonlar', 'Bağla']);
+      if (session.user.role === 'admin' && !d.myTwoFactor) todos.push(['#ea5455', 'shield', '2 adımlı doğrulamayı açın', 'Yönetici hesabınızı koruyun', '/hesabim', 'Aç']);
+      const todo = panel('Yapılacaklarım', todos.length
+        ? h('ul', { class: 'todo' }, todos.map(([c, ic, t, s, to, label]) => h('li', { style: `--kc:${c}` }, h('span', { class: 'tic' }, icon(ic, 18)), h('div', { class: 'grow' }, h('b', {}, t), h('span', {}, s)), h('a', { class: 'btn secondary sm', href: `#${to}` }, label))))
+        : h('div', { class: 'empty' }, '🎉 Yapılacak bir şey kalmadı.'), { ic: 'check', sub: `${first} için kişiselleştirildi` });
+      const mine = panel('Son işlemlerim', g.mine.length ? h('ul', { class: 'hbars' }, g.mine.map((a) => h('li', {}, h('div', { class: 'hb-top' }, h('span', { class: 'hb-l' }, a.action), h('span', { class: 'small muted' }, fmtDate(a.ts))), a.target ? h('div', { class: 'small muted' }, a.target) : null))) : h('div', { class: 'muted small', style: 'padding:8px 0' }, 'Henüz işleminiz yok.'), { ic: 'history' });
 
       const banners = [];
       banners.push(pending
@@ -56,13 +78,13 @@ export const renderDashboard = async (ctx) => {
       if (session.user.role === 'admin' && !d.myTwoFactor) banners.push(h('div', { class: 'banner warn' }, icon('shield'), h('div', {}, h('b', {}, '2 adımlı doğrulama kapalı.'), ' Yönetici hesabınızı korumak için ', h('a', { href: '#/hesabim' }, 'Hesabım'), ' sayfasından açın.')));
 
       const dest = { visits: '/istatistik', forms: '/formlar', forms_open: '/formlar', conversion: '/formlar', subscribers: '/aboneler', subscribers_total: '/aboneler', blog: '/blog', projects: '/projeler', drafts: '/blog', media: '/medya', seo_score: '/seo', seo_errors: '/seo', social_total: '/sosyal', social_awaiting: '/sosyal', social_planned: '/sosyal', social_published: '/sosyal', ai_tokens: '/ai', ai_calls: '/ai', news: '/pazar', competitor_changes: '/rakipler', backlinks_won: '/backlink', pending: '/yayin' };
-      const kpis = h('div', { class: 'kpis' }, k.cards.map((c) => kpiCard({ ic: c.icon, label: c.label, value: c.value, unit: c.unit, delta: c.flow || c.prev !== null ? c.delta : null, deltaLabel: c.flow ? `önceki ${range} güne göre` : '', series: c.series, color: c.color, to: dest[c.id], hint: c.hint, target: c.target, goodUp: c.goodUp })));
+      const kpis = h('div', { class: 'kpis' }, k.cards.map((c) => kpiCard({ ic: c.icon, label: c.label, value: c.value, unit: c.unit, delta: c.flow || c.prev !== null ? c.delta : null, deltaLabel: c.flow ? `önceki ${range} gün` : '', series: c.series, color: c.color, to: dest[c.id], hint: c.hint, target: c.target, goodUp: c.goodUp })));
 
-      const trend = panel('Ziyaret ve talep trendi', areaChart({ labels: g.labels, series: [{ name: 'Ziyaret', color: '#3b82f6', values: g.visits }, { name: 'Form talebi (×10)', color: '#10b981', values: g.forms.map((v) => v * 10) }], height: 250 }), { ic: 'eye', sub: `Son ${range} gün · form talebi okunabilirlik için ×10 ölçeklidir` });
+      const trend = panel('Ziyaret ve talep trendi', areaChart({ labels: g.labels, series: [{ name: 'Ziyaret', color: '#7367f0', values: g.visits }, { name: 'Form talebi (×10)', color: '#28c76f', values: g.forms.map((v) => v * 10) }], height: 250 }), { ic: 'eye', sub: `Son ${range} gün · form talebi okunabilirlik için ×10 ölçeklidir` });
       const formDonut = panel('Form durumları', donut({ items: g.formStatus.map((s) => ({ label: FORM_ST[s.status]?.[0] ?? s.status, value: s.n, color: FORM_ST[s.status]?.[1] })), sub: 'talep', empty: 'Henüz form talebi yok' }), { ic: 'mail', action: h('a', { class: 'small', href: '#/formlar' }, 'Tümü') });
-      const topPages = panel('En çok görüntülenen sayfalar', hbars(g.topPages.map((p) => ({ label: p.path, value: p.views })), { color: '#3b82f6', empty: 'Henüz ziyaret verisi yok (çerezsiz sayaç siteyi gezdikçe dolar)' }), { ic: 'doc', action: h('a', { class: 'small', href: '#/istatistik' }, 'Ayrıntı') });
+      const topPages = panel('En çok görüntülenen sayfalar', hbars(g.topPages.map((p) => ({ label: p.path, value: p.views })), { color: '#7367f0', empty: 'Henüz ziyaret verisi yok (çerezsiz sayaç siteyi gezdikçe dolar)' }), { ic: 'doc', action: h('a', { class: 'small', href: '#/istatistik' }, 'Ayrıntı') });
       const socDonut = panel('Sosyal içerik hattı', donut({ items: Object.keys(SOC_ST).map((k2) => ({ label: SOC_ST[k2][0], value: g.socialStatus.find((s) => s.status === k2)?.n ?? 0, color: SOC_ST[k2][1] })).filter((x) => x.value), sub: 'içerik', empty: 'Henüz sosyal içerik yok' }), { ic: 'share', action: h('a', { class: 'small', href: '#/sosyal' }, 'Social Studio') });
-      const content = panel('Haber ve AI kullanımı', barChart({ labels: g.labels, series: [{ name: 'Yeni sektör haberi', color: '#06b6d4', values: g.news }], height: 170 }), { ic: 'radar', sub: 'Haber akışı (günlük)' });
+      const content = panel('Haber ve AI kullanımı', barChart({ labels: g.labels, series: [{ name: 'Yeni sektör haberi', color: '#00cfe8', values: g.news }], height: 170 }), { ic: 'radar', sub: 'Haber akışı (günlük)' });
       const recent = panel('Son form talepleri', d.recentForms.length ? h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('tbody', {}, d.recentForms.map((f) => h('tr', { class: `clickable${f.status === 'yeni' ? ' fresh' : ''}`, onclick: () => ctx.nav(`/formlar/${f.id}`) }, h('td', {}, h('b', {}, f.name), h('div', { class: 'muted small' }, f.subject || f.email)), h('td', {}, statusChip(f.status)), h('td', { class: 'muted small' }, fmtDate(f.created_at))))))) : h('div', { class: 'empty' }, 'Henüz form talebi yok.'), { ic: 'mail' });
       const upcoming = panel('Yaklaşan paylaşımlar', g.upcoming.length ? h('ul', { class: 'hbars' }, g.upcoming.map((u) => h('li', {}, h('div', { class: 'hb-top' }, h('span', { class: 'hb-l' }, u.title), chip(u.status === 'planlandi' ? 'Planlandı' : 'Onaylandı', 'ok')), h('div', { class: 'small muted' }, `${String(u.scheduled_at).replace('T', ' ').slice(0, 16)} · ${u.platforms.join(', ')}`)))) : h('div', { class: 'muted small', style: 'padding:8px 0' }, 'Onaylı/planlı paylaşım yok.'), { ic: 'share' });
       const audit = panel('Son etkinlik', h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('tbody', {}, d.recentAudit.map((a) => h('tr', {}, h('td', {}, h('b', {}, a.action), h('div', { class: 'muted small' }, `${a.user_email}${a.target ? ' · ' + a.target : ''}`)), h('td', { class: 'muted small' }, fmtDate(a.ts))))))), { ic: 'log', action: session.user.role === 'admin' ? h('a', { class: 'small', href: '#/gunluk' }, 'Tümü') : null });
@@ -76,12 +98,14 @@ export const renderDashboard = async (ctx) => {
         h('div', {}, `İçerik belgesi: ${d.docs} · Medya: ${d.media} dosya · Blog: ${d.blog.total} · Proje: ${d.projects.total}`),
         h('div', { class: 'muted' }, `Node ${d.node} · çalışma süresi ${Math.floor(d.uptime / 3600)} sa ${Math.floor((d.uptime % 3600) / 60)} dk`)), { ic: 'gear' });
 
-      root.replaceChildren(head, ...banners, kpis,
+      void banners;
+      root.replaceChildren(head, kpis,
         h('div', { class: 'dash-grid' },
-          h('div', { class: 'span-8' }, trend), h('div', { class: 'span-4' }, formDonut),
-          h('div', { class: 'span-4' }, topPages), h('div', { class: 'span-4' }, socDonut), h('div', { class: 'span-4' }, upcoming),
+          h('div', { class: 'span-8' }, trend), h('div', { class: 'span-4' }, todo),
+          h('div', { class: 'span-4' }, formDonut), h('div', { class: 'span-4' }, topPages), h('div', { class: 'span-4' }, socDonut),
           h('div', { class: 'span-6' }, recent), h('div', { class: 'span-6' }, content),
-          h('div', { class: 'span-6' }, audit), h('div', { class: 'span-6' }, h('div', { class: 'stack' }, quick, sys))));
+          h('div', { class: 'span-4' }, upcoming), h('div', { class: 'span-4' }, mine), h('div', { class: 'span-4' }, h('div', { class: 'stack' }, quick, sys)),
+          h('div', { class: 'span-12' }, audit)));
     } catch (e) { root.replaceChildren(errorBanner(e)); }
   };
   load();
