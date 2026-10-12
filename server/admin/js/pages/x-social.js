@@ -145,7 +145,7 @@ export const renderSocialApproval = async (ctx) => {
     setPlatforms(ov.platforms);
     const cols = [['taslak', 'Taslak', 'Henüz düzenlenmemiş içerikler', '#a8aaae'], ['revizyon', 'Düzenleniyor', 'Revizyon istenen içerikler', '#ec4899'], ['onay_bekliyor', 'Onay Bekliyor', 'Yönetici onayı bekleyen içerikler', '#f79009'], ['onaylandi', 'Onaylandı', 'Planlanmayı bekleyen', '#0b7bd6'], ['planlandi', 'Planlandı', 'Yayın tarihi belirlenmiş', '#06b6d4'], ['yayimlandi', 'Yayınlandı', 'Yayımlandı olarak işaretlenen', '#12b76a']];
     const strip = h('div', { class: 'kpis', style: 'grid-template-columns:repeat(auto-fit,minmax(280px,1fr))' },
-      kpiCard({ ic: 'shield', label: `Onay bekleyen ${ov.kpi.awaiting} içerik`, value: ov.kpi.awaiting, deltaLabel: 'ekibinizin onayını bekliyor', color: '#f79009', to: '/sosyal/onay' }),
+      kpiCard({ ic: 'shield', label: `Onay bekleyen ${ov.kpi.awaiting} içerik`, value: ov.kpi.awaiting, deltaLabel: 'ekibinizin onayını bekliyor', color: '#f79009' }),
       kpiCard({ ic: 'share', label: 'Planlı / onaylı içerik', value: ov.kpi.planned, deltaLabel: 'yayın bekliyor', color: '#0b7bd6', to: '/sosyal/takvim' }),
       kpiCard({ ic: 'check', label: 'Yayımlanan içerik', to: '/sosyal/arsiv', value: ov.kpi.published, deltaLabel: 'elle işaretlenenler dahil', color: '#12b76a' }));
     root.replaceChildren(pageHead('Onay Merkezi', 'İçeriklerinizin onay sürecini yönetin; onaylanan metin+medya+platform+zaman SHA-256 ile mühürlenir.', { crumbs: 'Social Studio › Onay Merkezi', range: false }),

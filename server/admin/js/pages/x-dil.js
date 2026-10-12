@@ -27,10 +27,10 @@ export const renderDil = async (ctx) => {
       const last = d.last;
       const published = last?.published ?? 0, total = last?.total ?? 0;
       const kpis = h('div', { class: 'kpis' },
-        kpiCard({ ic: 'share', label: 'İngilizce Yayın', value: on ? 'Açık' : 'Kapalı', deltaLabel: on ? 'yayınlananlar otomatik çevrilir' : 'etkinleştirilmedi', color: on ? '#12b76a' : '#a8aaae' }),
-        kpiCard({ ic: 'doc', label: 'İngilizce Sayfa Yayında', value: published, deltaLabel: total ? `${total} Türkçe sayfadan` : 'henüz üretilmedi', color: '#0b7bd6', target: total || null }),
-        kpiCard({ ic: 'archive', label: 'Çeviri Hafızası', value: d.tm.toplam, deltaLabel: `${d.tm.otomatik} otomatik · ${d.tm.onayli + d.tm.elle} insan onaylı`, color: '#8b5cf6' }),
-        kpiCard({ ic: 'alert', label: 'Bekleyen / Hatalı Metin', value: (last?.missingCount ?? 0), deltaLabel: d.tm.hata ? `${d.tm.hata} metin çevrilemedi` : 'çevrilmeyi bekleyen metin', color: '#f79009', goodUp: false }));
+        kpiCard({ ic: 'share', label: 'İngilizce Yayın', scroll: 'İngilizce Yayın Modu', value: on ? 'Açık' : 'Kapalı', deltaLabel: on ? 'yayınlananlar otomatik çevrilir' : 'etkinleştirilmedi', color: on ? '#12b76a' : '#a8aaae' }),
+        kpiCard({ ic: 'doc', label: 'İngilizce Sayfa Yayında', scroll: 'Sayfa Durumu', value: published, deltaLabel: total ? `${total} Türkçe sayfadan` : 'henüz üretilmedi', color: '#0b7bd6', target: total || null }),
+        kpiCard({ ic: 'archive', label: 'Çeviri Hafızası', scroll: 'Çeviri Hafızası', value: d.tm.toplam, deltaLabel: `${d.tm.otomatik} otomatik · ${d.tm.onayli + d.tm.elle} insan onaylı`, color: '#8b5cf6' }),
+        kpiCard({ ic: 'alert', label: 'Bekleyen / Hatalı Metin', scroll: 'Çeviri İşi', value: (last?.missingCount ?? 0), deltaLabel: d.tm.hata ? `${d.tm.hata} metin çevrilemedi` : 'çevrilmeyi bekleyen metin', color: '#f79009', goodUp: false }));
 
       // mod paneli
       const provSel = h('select', { class: 'select' }, d.connected.length ? d.connected.map((p) => h('option', { value: p.id, selected: p.id === d.provider }, `${p.label} · ${p.model}`)) : [h('option', { value: '' }, 'Bağlı sağlayıcı yok')]);
