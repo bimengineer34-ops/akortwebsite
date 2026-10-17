@@ -1,0 +1,12 @@
+# Vercel'e YÜKLENMEYECEK (gizli veya gereksiz): yönetici parolası, veritabanı, yedekler, derleme çıktıları
+.env
+.env.*
+data/
+dist/
+dist-staging/
+dist-previous/
+node_modules/
+.astro/
+.claude/
+scripts/admin/
+*.log

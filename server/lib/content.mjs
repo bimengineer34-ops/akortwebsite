@@ -44,7 +44,7 @@ const META = {
   'servicesPage.servicesCta': [G.services, 'Alt çağrı bandı (tüm hizmet sayfalarında)'],
   'services.services': [G.services, 'Hizmet kartları (ana sayfa ve hizmetler)'],
   'services.servicePillars': [G.services, 'Hizmet grupları (başlık + madde listesi)'],
-  'serviceContent.muhendislik.muhendislikServices': [G.svcRecords, 'Mühendislik Danışmanlığı (15 sayfa)'],
+  'serviceContent.muhendislik.muhendislikServices': [G.svcRecords, 'Mühendislik Danışmanlığı (18 sayfa)'],
   'serviceContent.bim.bimServices': [G.svcRecords, 'BIM ve Dijital Mühendislik (24 sayfa)'],
   'serviceContent.enerji.enerjiServices': [G.svcRecords, 'Enerji ve Bina Performansı (13 sayfa)'],
   'serviceContent.maliyet.maliyetServices': [G.svcRecords, 'Maliyet ve Teknik Danışmanlık (11 sayfa)'],

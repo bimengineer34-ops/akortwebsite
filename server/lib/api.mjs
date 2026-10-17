@@ -20,6 +20,7 @@ import { listRedirects, saveRedirect, deleteRedirect } from './redirects.mjs';
 import { createBackup, listBackups, backupPath } from './backup.mjs';
 import { listEntries, getEntry, saveEntry, deleteEntry, ENTRY_KINDS, isDirty } from './entries.mjs';
 import { extRoutes } from './ext/routes.mjs';
+import { ROLE_IDS, ROLES, denyReason, writableAreas } from './rbac.mjs';
 
 const num = (v) => {
   const n = Number(v);
@@ -47,7 +48,7 @@ const devLoginHint = (req) => {
   return local && !config.secureCookies && !config.trustProxy ? config.bootstrapEmail : '';
 };
 
-const publicUser = (u) => ({ id: u.id, email: u.email, name: u.name, role: u.role });
+const publicUser = (u) => ({ id: u.id, email: u.email, name: u.name, role: u.role, roleLabel: ROLES[u.role]?.label ?? u.role, areas: writableAreas(u.role), readCrm: !denyReason(u.role, 'GET', '/api/admin/formlar') });
 const me = (req) => {
   const u = authenticate(req);
   return u ? { ...publicUser(u), csrf: u.csrf } : null;
@@ -417,7 +418,7 @@ export const routes = [
       if (target.role === 'admin' && adminsLeft === 0 && (b.active === false || (b.role && b.role !== 'admin'))) throw new HttpError(400, 'Son yöneticiyi değiştiremezsiniz');
       if (b.name !== undefined) q.run('UPDATE users SET name = ? WHERE id = ?', String(b.name).trim().slice(0, 80), id);
       if (b.role !== undefined) {
-        if (!['admin', 'editor'].includes(b.role)) throw new HttpError(400, 'Geçersiz rol');
+        if (!ROLE_IDS.includes(b.role)) throw new HttpError(400, 'Geçersiz rol');
         q.run('UPDATE users SET role = ? WHERE id = ?', b.role, id);
       }
       if (b.active !== undefined) {
@@ -510,6 +511,7 @@ export const routes = [
       sendJson(res, 200, { total, rows });
     },
   ],
+  ['GET', /^\/api\/admin\/roller$/, ({ req, res }) => (requireUser(req), sendJson(res, 200, { roles: Object.entries(ROLES).map(([id, r]) => ({ id, ...r })) }))],
   ['GET', /^\/api\/admin\/yedekler$/, ({ req, res }) => (requireAdmin(req), sendJson(res, 200, { backups: listBackups() }))],
   ['POST', /^\/api\/admin\/yedekler$/, ({ req, res }) => sendJson(res, 200, { name: createBackup(requireAdmin(req)) })],
   [
@@ -530,6 +532,12 @@ export const dispatch = async (req, res, url) => {
     if (req.method !== method && !(method === 'GET' && req.method === 'HEAD')) continue;
     const m = re.exec(url.pathname);
     if (!m) continue;
+    // Merkezi rol denetimi (geçerli oturum varsa; yoksa ilgili işleyici 401 verir)
+    if (url.pathname.startsWith('/api/admin/')) {
+      const who = authenticate(req, { requireCsrf: false });
+      const why = who && denyReason(who.role, req.method, url.pathname);
+      if (why) throw new HttpError(403, why);
+    }
     return handler({ req, res, url, m });
   }
   throw new HttpError(404, 'Uç nokta bulunamadı');

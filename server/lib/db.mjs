@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('admin','editor')),
+  role TEXT NOT NULL CHECK (role IN ('admin','editor','seo','icerik','sosyal','satis','izleyici')),
   pass_hash TEXT NOT NULL,
   active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -104,6 +104,23 @@ CREATE TABLE IF NOT EXISTS audit (
 CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit (id DESC);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `);
+
+// Eski veritabanı: rol CHECK kısıtı yalnızca admin/editör ise tabloyu yeni kısıtla yeniden kur (veri korunur)
+{
+  const def = db.prepare("SELECT sql FROM sqlite_master WHERE name = 'users'").get()?.sql ?? '';
+  if (def && !def.includes("'izleyici'")) {
+    db.exec('PRAGMA foreign_keys = OFF');
+    try {
+      db.exec('BEGIN IMMEDIATE');
+      const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+      const newDef = def.replace(/CREATE TABLE (IF NOT EXISTS )?"?users"?/i, 'CREATE TABLE users_new').replace("CHECK (role IN ('admin','editor'))", "CHECK (role IN ('admin','editor','seo','icerik','sosyal','satis','izleyici'))");
+      db.exec(newDef);
+      db.exec(`INSERT INTO users_new (${cols.join(',')}) SELECT ${cols.join(',')} FROM users`);
+      db.exec('DROP TABLE users; ALTER TABLE users_new RENAME TO users');
+      db.exec('COMMIT');
+    } catch (e) { db.exec('ROLLBACK'); throw e; } finally { db.exec('PRAGMA foreign_keys = ON'); }
+  }
+}
 
 export const q = {
   get: (sql, ...p) => db.prepare(sql).get(...p),

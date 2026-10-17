@@ -2,6 +2,7 @@
 import { api, session } from '../api.js';
 import { h, icon, chip, toast, spinner, errorBanner, field, confirmBox } from '../ui.js';
 import { pageHead, infoBox, needConn } from './x-common.js';
+import { accountsGrid, announceReturn } from './x-accounts.js';
 
 const providerCard = (p, reload) => {
   const admin = session.user.role === 'admin';
@@ -39,6 +40,7 @@ const otherCard = (o, reload) => {
 
 export const renderIntegrations = async (ctx) => {
   ctx.setTitle('Entegrasyonlar');
+  announceReturn();
   const root = h('div', { class: 'stack' });
   const load = async () => {
     root.replaceChildren(spinner());
@@ -50,7 +52,10 @@ export const renderIntegrations = async (ctx) => {
         h('div', { class: 'grid cols-2' }, d.providers.map((p) => providerCard(p, load))),
         h('h2', {}, 'Diğer entegrasyonlar'),
         h('p', { class: 'muted' }, 'Aşağıdaki hizmetler için resmî API yetkisi/anahtarı gerekir. Bağlanmayanlar gerçek durumlarıyla "Bağlantı gerekli" görünür; sahte veri üretilmez.'),
-        h('div', { class: 'grid cols-2' }, d.other.map((o) => otherCard(o, load))),
+        h('div', { class: 'grid cols-2' }, d.other.filter((o) => !o.social).map((o) => otherCard(o, load))),
+        h('h2', {}, 'Sosyal medya hesapları'),
+        h('p', { class: 'muted' }, 'Hesabı bağlamak için önce platformun geliştirici konsolunda bir uygulama oluşturup Client ID/Secret girin, sonra "Bağlan"a basın. Belirteçler şifreli saklanır.'),
+        accountsGrid(),
         h('h2', {}, 'Modül anahtarları (özellik bayrakları)'),
         h('div', { class: 'card card-pad row wrap' }, d.flags.map((f) => h('label', { class: 'switch' }, h('input', { type: 'checkbox', checked: f.enabled, disabled: session.user.role !== 'admin', onchange: async (e) => { try { await api.put(`/x/bayrak/${f.key}`, { enabled: e.target.checked }); toast('Güncellendi', 'ok'); } catch (er) { toast(er.message, 'err'); e.target.checked = !e.target.checked; } } }), h('i'), h('span', {}, { seo: 'SEO', ai: 'AI Stüdyo', social: 'Social Studio', intel: 'Pazar/Rakip/Backlink' }[f.key])))));
     } catch (e) { root.replaceChildren(errorBanner(e)); }

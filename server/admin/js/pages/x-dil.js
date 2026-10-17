@@ -57,16 +57,26 @@ export const renderDil = async (ctx) => {
           h('button', { class: 'btn', disabled: !admin || !on || j.running, onclick: async () => { try { const r = await api.post('/x/dil/cevir'); toast(r.started ? 'Çeviri başladı' : `Başlatılamadı: ${r.reason}`, r.started ? 'ok' : 'err'); load(); } catch (e) { toast(e.message, 'err'); } } }, icon('history', 16), 'Eksikleri Şimdi Çevir'),
           h('button', { class: 'btn secondary', disabled: !on, onclick: async (e) => { e.target.disabled = true; try { const r = await api.post('/x/dil/uret'); toast(`${r.published}/${r.total} sayfa İngilizce yayında`, 'ok'); load(); } catch (er) { toast(er.message, 'err'); e.target.disabled = false; } } }, 'EN Sayfaları Yeniden Üret'))), { ic: 'bolt', sub: 'Yayından sonra eksik metinler otomatik çevrilir' });
 
+      const slugMap = d.slugs ?? {};
+      const enHref = (u) => (u === '/' ? '/en' : `/en/${u.replace(/^\//, '').split('/').map((x) => slugMap[x] ?? x).join('/')}`);
       // sayfa listesi
       const pages = (last?.pages ?? []).map(([url, tot, miss, st]) => ({ url, tot, miss, st })).sort((a, b) => b.miss - a.miss || a.url.localeCompare(b.url));
       const pagesP = panel('Sayfa Durumu', pages.length ? h('div', { class: 'tbl-wrap', style: 'max-height:380px;overflow:auto' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Sayfa', 'Metin', 'Eksik', 'Durum'].map((x) => h('th', {}, x)))),
-        h('tbody', {}, pages.map((p) => h('tr', {}, h('td', { class: 'mono' }, p.url), h('td', {}, p.tot), h('td', {}, p.miss || '—'), h('td', {}, p.st === 1 ? h('a', { href: p.url === '/' ? '/en' : `/en${p.url}`, target: '_blank', rel: 'noopener' }, chip('Yayında', 'ok')) : p.st === 2 ? chip('Eski sürüm (güncelleniyor)', 'warn') : chip('Çeviri bekliyor', 'warn'))))))) : empty(on ? 'Henüz üretim yapılmadı — "Eksikleri Şimdi Çevir" veya bir yayın yapın.' : 'İngilizce yayın kapalı.'), { ic: 'doc', sub: last?.at ? `Son üretim: ${fmtDate(last.at)}` : '' });
+        h('tbody', {}, pages.map((p) => h('tr', {}, h('td', { class: 'mono' }, p.url), h('td', {}, p.tot), h('td', {}, p.miss || '—'), h('td', {}, p.st === 1 ? h('a', { href: enHref(p.url), target: '_blank', rel: 'noopener' }, chip('Yayında', 'ok')) : p.st === 2 ? chip('Eski sürüm (güncelleniyor)', 'warn') : chip('Çeviri bekliyor', 'warn'))))))) : empty(on ? 'Henüz üretim yapılmadı — "Eksikleri Şimdi Çevir" veya bir yayın yapın.' : 'İngilizce yayın kapalı.'), { ic: 'doc', sub: last?.at ? `Son üretim: ${fmtDate(last.at)}` : '' });
 
       // sözlük
       const keep = h('textarea', { class: 'textarea', rows: 6 }); keep.value = d.glossary.keep.join('\n');
       const map = h('textarea', { class: 'textarea', rows: 6, placeholder: 'Mühendislik Danışmanlığı = Engineering Consulting' }); map.value = Object.entries(d.glossary.map).map(([k, v]) => `${k} = ${v}`).join('\n');
       const gl = panel('Sözlük', h('div', { class: 'stack' }, field('Çevrilmeyecek terimler (her satıra bir tane)', keep, 'Marka adı, BIM, MEP gibi terimler olduğu gibi kalır.'), field('Sabit çeviriler (TÜRKÇE = İNGİLİZCE)', map, 'Değişiklik yalnızca yeni çevrilecek metinleri etkiler; mevcutları hafızadan düzeltin.'),
         h('button', { class: 'btn secondary', style: 'justify-self:start', disabled: !admin, onclick: async () => { const m = {}; for (const ln of map.value.split('\n')) { const i = ln.indexOf('='); if (i > 0) m[ln.slice(0, i).trim()] = ln.slice(i + 1).trim(); } try { await api.put('/x/dil/ayar', { glossary: { keep: keep.value.split('\n'), map: m } }); toast('Sözlük kaydedildi', 'ok'); } catch (e) { toast(e.message, 'err'); } } }, 'Sözlüğü Kaydet')), { ic: 'edit' });
+
+      // adres (slug) eşlemesi
+      const segs = [...new Set((last?.pages ?? []).flatMap(([u]) => (u === '/' ? [] : u.replace(/^\//, '').split('/'))))].sort();
+      const slugInputs = segs.map((sg) => { const i = h('input', { class: 'input', value: slugMap[sg] ?? sg, disabled: !admin, 'aria-label': `${sg} için İngilizce adres` }); return [sg, i]; });
+      const slugP = panel('İngilizce Adresler (URL)', slugInputs.length ? h('div', { class: 'stack' },
+        h('p', { class: 'small muted' }, 'Türkçe adresin İngilizce karşılığı. Değişiklik bir sonraki üretimde (yayın veya "Şimdi Üret") uygulanır; eski İngilizce adres kaldırılır. Yalnızca küçük harf, rakam ve tire.'),
+        h('div', { class: 'tbl-wrap', style: 'max-height:300px;overflow:auto' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Türkçe', 'İngilizce'].map((x) => h('th', {}, x)))), h('tbody', {}, slugInputs.map(([sg, i]) => h('tr', {}, h('td', { class: 'mono' }, sg), h('td', {}, i)))))),
+        h('button', { class: 'btn secondary', style: 'justify-self:start', disabled: !admin, onclick: async () => { const m = {}; for (const [sg, i] of slugInputs) m[sg] = i.value.trim(); try { await api.put('/x/dil/ayar', { slugs: m }); toast('Adresler kaydedildi — yeniden üretin', 'ok'); } catch (e) { toast(e.data?.error ?? e.message, 'err'); } } }, 'Adresleri Kaydet')) : empty('Henüz üretilmiş sayfa yok.'), { ic: 'link' });
 
       // çeviri hafızası
       const tmBody = h('div'); let status = '', search = '', offset = 0;
@@ -87,7 +97,7 @@ export const renderDil = async (ctx) => {
       const tm = panel('Çeviri Hafızası', h('div', { class: 'stack' }, h('div', { class: 'grid cols-2' }, sInp, sSel), tmBody), { ic: 'archive', sub: 'Her Türkçe metnin İngilizcesi burada saklanır; düzenlenen/onaylanan çeviriler korunur' });
 
       root.replaceChildren(pageHead('İngilizce Yayın (EN)', 'Yayınladığınız sayfaların İngilizce sürümü otomatik oluşturulur ve /en altında yayınlanır.', { crumbs: 'Settings › İngilizce Yayın' }), kpis,
-        h('div', { class: 'dash-grid' }, h('div', { class: 'span-6' }, modeP), h('div', { class: 'span-6' }, jobP), h('div', { class: 'span-7' }, pagesP), h('div', { class: 'span-5' }, gl), h('div', { class: 'span-12' }, tm)),
+        h('div', { class: 'dash-grid' }, h('div', { class: 'span-6' }, modeP), h('div', { class: 'span-6' }, jobP), h('div', { class: 'span-7' }, pagesP), h('div', { class: 'span-5' }, gl), h('div', { class: 'span-12' }, slugP), h('div', { class: 'span-12' }, tm)),
         infoBox('Çeviriler yapay zekâ ile üretilir; teknik/mevzuat içeren metinleri yayımlamadan önce gözden geçirip onaylamanız önerilir. Tüm metni çevrilmemiş bir sayfa İngilizce olarak yayınlanmaz (karışık dilli sayfa oluşmaz). Sayfa adresleri (slug) Türkçe kalır: /en/hizmetler/bim.'));
       drawTm();
       stopPoll();

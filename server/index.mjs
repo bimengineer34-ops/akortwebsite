@@ -9,12 +9,14 @@ import { HttpError, sendJson, baseHeaders, clientIp, rateLimit } from './lib/htt
 import { dispatch } from './lib/api.mjs';
 import { resolveFile, serveFile } from './lib/static.mjs';
 import { mediaFilePath, MIME_BY_EXT } from './lib/media.mjs';
+import { legacyEnRedirect } from './lib/ext/i18n.mjs';
 import { bootstrapAdmin } from './lib/auth.mjs';
 import { startScheduler } from './lib/ext/intel.mjs';
 import { ensureInitialBuild } from './lib/build.mjs';
 import { audit } from './lib/db.mjs';
 import { matchRedirect } from './lib/redirects.mjs';
 import { recordView, pruneStats } from './lib/stats.mjs';
+import { createBackup, listBackups } from './lib/backup.mjs';
 
 const ADMIN_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 
@@ -58,6 +60,12 @@ const serveSite = (req, res, pathname) => {
     const isHtml = hit.file.endsWith('.html');
     if (isHtml && !hit.file.endsWith('404.html')) recordView(req, pathname, req.headers.host);
     return serveFile(req, res, hit, { cache: immutable ? 'public, max-age=31536000, immutable' : 'public, max-age=3600', extra: isHtml ? siteCsp() : {} });
+  }
+  // Eski/Türkçe biçimli İngilizce adres → güncel adrese kalıcı yönlendirme
+  const moved = pathname.startsWith('/en/') ? legacyEnRedirect(pathname) : null;
+  if (moved && resolveFile(config.siteDir, moved)) {
+    res.writeHead(301, baseHeaders({ Location: moved + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''), 'Cache-Control': 'public, max-age=3600' }));
+    return res.end();
   }
   const nf = resolveFile(config.siteDir, '404.html', { clean: false });
   if (nf) {
@@ -135,6 +143,20 @@ bootstrapAdmin();
 startScheduler();
 pruneStats();
 setInterval(pruneStats, 24 * 3_600_000).unref();
+
+// Otomatik yedek: son yedek 24 saatten eskiyse (veya hiç yoksa) alınır; açılışta ve her saat kontrol edilir. Son 15 yedek tutulur.
+// Kapatmak için AUTO_BACKUP=false. Yedekler sunucuda kalır — sunucu dışına kopyalamak da gerekir (docs/DEPLOY.md).
+const autoBackup = () => {
+  if (process.env.AUTO_BACKUP === 'false') return;
+  try {
+    const last = listBackups()[0];
+    if (!last || Date.now() - new Date(last.at).getTime() > 24 * 3_600_000) createBackup({ email: 'sistem' });
+  } catch (e) {
+    console.error('[yedek] otomatik yedek alınamadı:', e.message);
+  }
+};
+setTimeout(autoBackup, 30_000).unref();
+setInterval(autoBackup, 3_600_000).unref();
 server.listen(config.port, config.host, () => {
   console.log(`AKORT sunucusu http://${config.host === '0.0.0.0' ? 'localhost' : config.host}:${config.port}  (panel: /yonetim)`);
   ensureInitialBuild().catch((e) => console.error('[yayın] başlangıç derlemesi hatası', e));

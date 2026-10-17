@@ -1,5 +1,6 @@
 // Kimlik doğrulama: scrypt parola, oturum, CSRF, giriş kısıtlama
 import crypto from 'node:crypto';
+import { ROLE_IDS } from './rbac.mjs';
 import { q, audit } from './db.mjs';
 import { config } from './config.mjs';
 import { HttpError, parseCookies, cookieHeader } from './http.mjs';
@@ -36,7 +37,7 @@ export const createUser = ({ email, name, role, password }) => {
   const err = validatePassword(password);
   if (err) throw new HttpError(400, err);
   if (!validateEmail(email)) throw new HttpError(400, 'Geçerli bir e-posta girin');
-  if (!['admin', 'editor'].includes(role)) throw new HttpError(400, 'Geçersiz rol');
+  if (!ROLE_IDS.includes(role)) throw new HttpError(400, 'Geçersiz rol');
   try {
     const r = q.run('INSERT INTO users (email, name, role, pass_hash) VALUES (?,?,?,?)', email.toLowerCase().trim(), String(name).trim().slice(0, 80) || email, role, hashPassword(password));
     return Number(r.lastInsertRowid);

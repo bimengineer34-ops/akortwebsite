@@ -77,6 +77,27 @@ const wrap = (text, maxChars) => {
 };
 const FONT = "'Segoe UI', 'Helvetica Neue', Arial, 'DejaVu Sans', sans-serif";
 
+/** Tek görselli (JPEG) PDF — harici bağımlılık yok. Sayfa boyutu piksel×0,75 pt (96 dpi karşılığı). */
+export const jpegToPdf = (jpeg, w, h) => {
+  const pw = (w * 0.75).toFixed(2), ph = (h * 0.75).toFixed(2);
+  const content = Buffer.from('q ' + pw + ' 0 0 ' + ph + ' 0 0 cm /Im0 Do Q');
+  const parts = [];
+  const offs = [];
+  let len = 0;
+  const push = (b) => { const buf = Buffer.isBuffer(b) ? b : Buffer.from(b, 'latin1'); parts.push(buf); len += buf.length; };
+  const obj = (n, body) => { offs[n] = len; push(n + ' 0 obj\n'); push(body); push('\nendobj\n'); };
+  push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  obj(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + pw + ' ' + ph + '] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>');
+  offs[4] = len; push('4 0 obj\n'); push('<< /Type /XObject /Subtype /Image /Width ' + w + ' /Height ' + h + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpeg.length + ' >>\nstream\n'); push(jpeg); push('\nendstream\nendobj\n');
+  offs[5] = len; push('5 0 obj\n'); push('<< /Length ' + content.length + ' >>\nstream\n'); push(content); push('\nendstream\nendobj\n');
+  const xref = len;
+  push('xref\n0 6\n0000000000 65535 f \n' + [1, 2, 3, 4, 5].map((n) => String(offs[n]).padStart(10, '0') + ' 00000 n \n').join(''));
+  push('trailer\n<< /Size 6 /Root 1 0 R /Info << /Title (AKORT sablon) /Producer (AKORT Yonetim) >> >>\nstartxref\n' + xref + '\n%%EOF\n');
+  return Buffer.concat(parts);
+};
+
 export const renderBrand = async (o) => {
   const f = FORMATS[o.format] ?? FORMATS['ig-kare'];
   const th = THEMES[o.theme] ?? THEMES.marka;
@@ -142,13 +163,25 @@ export const renderBrand = async (o) => {
     layers.push({ input: logo, top: Math.round(H * 0.045), left: lx });
     void lm;
   }
+  const fmt = ['png', 'jpg', 'webp', 'svg', 'pdf'].includes(o.out) ? o.out : 'png';
+  if (fmt === 'svg') {
+    // Düzenlenebilir SVG: metinler canlı <text> (yazı tipi: sistemde yüklü olana düşer), görsel/logo gömülü
+    const parts = [];
+    if (hasBg) parts.push(`<image x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice" href="data:image/jpeg;base64,${(await base.clone().jpeg({ quality: 88 }).toBuffer()).toString('base64')}"/>`);
+    const bgNode = parts.join('');
+    let doc = svg.replace('</defs>', () => `</defs>${bgNode}`);
+    const logoLayer = layers.find((l) => l.input !== layers[0].input);
+    if (logoLayer) doc = doc.replace(/<\/svg>\s*$/,() => `<image x="${logoLayer.left}" y="${logoLayer.top}" width="${Math.round(W * 0.34)}" href="data:image/png;base64,${logoLayer.input.toString('base64')}"/></svg>`);
+    return { buf: Buffer.from(doc, 'utf8'), mime: 'image/svg+xml', ext: 'svg', w: W, h: H };
+  }
   const out = base.composite(layers);
-  const fmt = ['png', 'jpg', 'webp'].includes(o.out) ? o.out : 'png';
+  if (fmt === 'pdf') return { buf: jpegToPdf(await out.flatten({ background: '#ffffff' }).jpeg({ quality: 92 }).toBuffer(), W, H), mime: 'application/pdf', ext: 'pdf', w: W, h: H };
   const buf = fmt === 'jpg' ? await out.jpeg({ quality: 90 }).toBuffer() : fmt === 'webp' ? await out.webp({ quality: 90 }).toBuffer() : await out.png().toBuffer();
   return { buf, mime: fmt === 'jpg' ? 'image/jpeg' : `image/${fmt}`, ext: fmt, w: W, h: H };
 };
 
 export const saveRender = async (o, user) => {
+  if (o.out === 'svg') throw new HttpError(400, 'SVG medya kitaplığına kaydedilmez (güvenlik); "SVG" düğmesiyle indirin');
   const r = await renderBrand(o);
   const name = `sosyal-${String(o.template ?? 'sablon').replace(/[^a-z0-9-]/g, '')}-${Date.now().toString(36)}.${r.ext}`;
   const rec = await uploadMedia(r.buf, name, user);

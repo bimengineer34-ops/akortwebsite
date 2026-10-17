@@ -31,9 +31,9 @@ const decrypt = (enc) => {
 
 const mask = (s) => (s.length > 8 ? `${s.slice(0, 3)}…${s.slice(-4)}` : '••••');
 
-export const setSecret = (name, value, user) => {
+export const setSecret = (name, value, user, { max = 600, min = 8 } = {}) => {
   const v = String(value ?? '').trim();
-  if (v.length < 8 || v.length > 600 || /\s/.test(v)) throw Object.assign(new Error('Geçersiz anahtar biçimi'), { status: 400 });
+  if (v.length < min || v.length > max || /\s/.test(v)) throw Object.assign(new Error('Geçersiz anahtar biçimi'), { status: 400 });
   q.run(
     `INSERT INTO secrets (name, enc, hint, updated_by) VALUES (?,?,?,?)
      ON CONFLICT(name) DO UPDATE SET enc = excluded.enc, hint = excluded.hint, updated_at = datetime('now'), updated_by = excluded.updated_by`,

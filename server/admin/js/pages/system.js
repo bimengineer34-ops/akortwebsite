@@ -3,8 +3,10 @@ import { api, session } from '../api.js';
 import { h, icon, chip, fmtDate, fmtSize, debounce, toast, confirmBox, errorBanner, modal, field, spinner } from '../ui.js';
 
 /* ---------------- kullanıcılar ---------------- */
+let ROLE_LIST = [];
 export const renderUsers = async (ctx) => {
   ctx.setTitle('Kullanıcılar');
+  try { ROLE_LIST = (await api.get('/roller')).roles; } catch { ROLE_LIST = [{ id: 'editor', label: 'Editör', desc: '' }, { id: 'admin', label: 'Yönetici', desc: '' }]; }
   const body = h('div');
   const load = async () => {
     const { users } = await api.get('/kullanicilar');
@@ -12,7 +14,7 @@ export const renderUsers = async (ctx) => {
       h('thead', {}, h('tr', {}, ['Kullanıcı', 'Rol', 'Durum', 'Son giriş', ''].map((t) => h('th', {}, t)))),
       h('tbody', {}, users.map((u) => h('tr', {},
         h('td', {}, h('b', {}, u.name), u.id === session.user.id ? chip('Siz', 'info') : null, h('div', { class: 'muted small' }, u.email)),
-        h('td', {}, u.role === 'admin' ? chip('Yönetici', 'info') : chip('Editör'), ' ', u.totp_enabled ? chip('2FA açık', 'ok') : chip('2FA yok', 'warn')),
+        h('td', {}, u.role === 'admin' ? chip('Yönetici', 'info') : chip((ROLE_LIST.find((r) => r.id === u.role)?.label) ?? u.role), ' ', u.totp_enabled ? chip('2FA açık', 'ok') : chip('2FA yok', 'warn')),
         h('td', {}, u.active ? chip('Aktif', 'ok') : chip('Pasif', 'danger')),
         h('td', { class: 'small muted' }, fmtDate(u.last_login)),
         h('td', {}, h('div', { class: 'row' },
@@ -26,7 +28,7 @@ export const renderUsers = async (ctx) => {
     const isNew = !u;
     const name = h('input', { class: 'input', value: u?.name ?? '' });
     const email = h('input', { class: 'input', type: 'email', value: u?.email ?? '', disabled: !isNew });
-    const role = h('select', { class: 'select' }, [['editor', 'Editör — içerik düzenler, yayınlar'], ['admin', 'Yönetici — her şey (kullanıcı, günlük, yedek)']].map(([v, l]) => h('option', { value: v, selected: v === (u?.role ?? 'editor') }, l)));
+    const role = h('select', { class: 'select' }, ROLE_LIST.map((r) => h('option', { value: r.id, selected: r.id === (u?.role ?? 'editor') }, `${r.label} — ${r.desc}`)));
     const active = h('input', { type: 'checkbox', checked: u ? !!u.active : true });
     const pass = h('input', { class: 'input', type: 'password', autocomplete: 'new-password', placeholder: isNew ? 'En az 10 karakter, harf + rakam' : 'Değiştirmek için doldurun' });
     const err = h('div');

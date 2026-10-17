@@ -3,7 +3,7 @@ import { api, session } from './api.js';
 import { h, icon, clear, toast, spinner, errorBanner } from './ui.js';
 import { renderDashboard } from './pages/dashboard.js';
 import { buildTopbar } from './topbar.js';
-import { buildNav } from './nav.js';
+import { buildNav, canWrite, areaOfPath } from './nav.js';
 import { renderDocList, renderDocEditor } from './pages/content.js';
 import { renderEntryList, renderEntryEditor } from './pages/entries.js';
 import { renderPublish } from './pages/publish.js';
@@ -248,7 +248,8 @@ const route = async () => {
     if (!m) continue;
     try {
       const el = await fn(m);
-      view.replaceChildren(el);
+      const area = areaOfPath(path);
+      view.replaceChildren(...(area && !canWrite(session.user, area) && session.user.role !== 'admin' ? [h('div', { class: 'banner info ro-banner', role: 'note' }, h('b', {}, 'Salt okunur: '), `${session.user.roleLabel ?? session.user.role} rolüyle bu alanda değişiklik yapamazsınız.`)] : []), el);
       window.scrollTo(0, 0);
     } catch (err) {
       view.replaceChildren(errorBanner(err));

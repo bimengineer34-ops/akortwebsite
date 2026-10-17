@@ -3,7 +3,7 @@
     "type": "module",
     "version": "0.1.0",
     "private": true,
-    "description": "AKORT Mühendislik kurumsal web sitesi — özel tema (Astro + Tailwind CSS + TypeScript)",
+    "description": "AKORT MÃ¼hendislik kurumsal web sitesi â€” Ã¶zel tema (Astro + Tailwind CSS + TypeScript)",
     "engines": {
         "node": ">=22.12.0"
     },
@@ -13,6 +13,7 @@
         "preview": "node scripts/copy-bim-assets.mjs && astro preview",
         "check": "astro check",
         "audit:seo": "node scripts/seo-audit.mjs",
+        "audit:launch": "node scripts/launch-audit.mjs",
         "astro": "astro",
         "start": "node server/index.mjs",
         "start:dev": "node --watch server/index.mjs",

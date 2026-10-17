@@ -1,7 +1,7 @@
 // Genişletme paketi yol tablosu — mevcut api.mjs içindeki routes dizisine eklenir (mevcut uç noktalar değişmez)
 import { q, audit, getSetting } from '../db.mjs';
 import { config } from '../config.mjs';
-import { HttpError, readJson, sendJson } from '../http.mjs';
+import { HttpError, readJson, sendJson, baseHeaders } from '../http.mjs';
 import { requireUser, requireAdmin } from '../auth.mjs';
 import { getEntry, saveEntry, listEntries } from '../entries.mjs';
 import { setSecret, deleteSecret, hasSecret, secretMeta } from './vault.mjs';
@@ -13,6 +13,7 @@ import * as intel from './intel.mjs';
 import { runPsi, speedOverview, clearCache, pruneDb } from './speed.mjs';
 import { brandData, renderBrand, saveRender } from './brand.mjs';
 import * as i18n from './i18n.mjs';
+import * as oauth from './oauth.mjs';
 import { dashboard, setPrefs, computeCard, CATALOG } from './kpi.mjs';
 import { getStats } from '../stats.mjs';
 
@@ -24,6 +25,8 @@ const id = (v) => {
 const flag = (key) => {
   if (!featureOn(key)) throw new HttpError(503, `"${key}" modülü özellik bayrağı ile kapatılmış`);
 };
+const baseOf = (req) => { const e = process.env.OAUTH_REDIRECT_BASE; if (e) return e.replace(/\/$/, ''); const h = String(req.headers.host ?? 'localhost'); return `${/^(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(h) ? 'http' : 'https'}://${h}`; };
+const PID = '(linkedin|x|facebook|instagram|threads|youtube|pinterest|tiktok)';
 const A = '/api/admin/x';
 const J = (req, max = 64 * 1024) => readJson(req, max);
 
@@ -41,7 +44,7 @@ const integrations = () => {
       need('SERP / sıralama veri sağlayıcısı', 'Lisanslı üçüncü taraf API (isteğe bağlı). Olmadan sıralama verisi gösterilmez.', 'https://dataforseo.com/apis/serp-api', [['Alternatif: SerpApi', 'https://serpapi.com/']]),
       need('Backlink veri sağlayıcısı', 'Lisanslı üçüncü taraf API (isteğe bağlı). Olmadan yalnızca elle/doğrulama taraması vardır.', 'https://ahrefs.com/api', [['Alternatif: Semrush API', 'https://www.semrush.com/api-analytics/']]),
       need('CDN / proxy', 'Veridyen planı veya Cloudflare gibi proxy gerekir.', 'https://dash.cloudflare.com/', [['Cloudflare belgeleri', 'https://developers.cloudflare.com/fundamentals/']]),
-      ...Object.entries(social.PLATFORMS).map(([k, p]) => need(p.label, p.needs, p.url, p.docs ? [['API belgeleri', p.docs]] : [])),
+      ...Object.entries(social.PLATFORMS).map(([k, p]) => ({ ...need(p.label, p.needs, p.url, p.docs ? [['API belgeleri', p.docs]] : []), social: true, connected: oauth.listAccounts('x').find((a) => a.id === k)?.connected ?? false })),
     ],
   };
 };
@@ -166,8 +169,29 @@ export const extRoutes = [
     sendJson(res, 200, { ok: true });
   }],
 
+  /* ---------- Sosyal hesap bağlantıları (OAuth) ---------- */
+  ['GET', new RegExp(`^${A}/sosyal/hesaplar$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, { accounts: oauth.listAccounts(baseOf(req)) }))],
+  ['PUT', new RegExp(`^${A}/sosyal/hesaplar/${PID}/uygulama$`), async ({ req, res, m }) => { const u = requireAdmin(req); const b = await J(req, 4096); oauth.saveApp(m[1], b.clientId, b.clientSecret, u); sendJson(res, 200, { ok: true }); }],
+  ['DELETE', new RegExp(`^${A}/sosyal/hesaplar/${PID}/uygulama$`), ({ req, res, m }) => (oauth.removeApp(m[1], requireAdmin(req)), sendJson(res, 200, { ok: true }))],
+  ['POST', new RegExp(`^${A}/sosyal/hesaplar/${PID}/baglan$`), ({ req, res, m }) => sendJson(res, 200, { url: oauth.startAuth(m[1], requireAdmin(req), baseOf(req)) })],
+  ['POST', new RegExp(`^${A}/sosyal/hesaplar/${PID}/kes$`), ({ req, res, m }) => (oauth.disconnect(m[1], requireAdmin(req)), sendJson(res, 200, { ok: true }))],
+  ['POST', new RegExp(`^${A}/sosyal/hesaplar/${PID}/secim$`), async ({ req, res, m }) => { const u = requireAdmin(req); const b = await J(req, 2048); await oauth.selectAccount(m[1], String(b.id ?? ''), u); sendJson(res, 200, { ok: true }); }],
+  // Geri çağrı: oturum çerezi (SameSite=Strict) sağlayıcıdan dönüşte gönderilmez; doğrulama tek kullanımlık "state" ile yapılır
+  ['GET', new RegExp(`^${A}/oauth/cb/${PID}$`), async ({ res, url, m }) => {
+    let loc;
+    try { const r = await oauth.handleCallback(m[1], Object.fromEntries(url.searchParams)); loc = `/yonetim/#/sosyal?baglandi=${m[1]}`; void r; }
+    catch (e) { loc = `/yonetim/#/sosyal?baglanti_hata=${encodeURIComponent(String(e.message).slice(0, 200))}`; }
+    res.writeHead(302, baseHeaders({ Location: loc, 'Cache-Control': 'no-store' }));
+    res.end();
+  }],
+  ['POST', new RegExp(`^${A}/sosyal/gonderiler/(\\d+)/paylas$`), async ({ req, res, m }) => {
+    const u = requireUser(req);
+    const b = await J(req, 2048);
+    sendJson(res, 200, await oauth.publishNow(id(m[1]), String(b.platform ?? ''), u));
+  }],
+
   /* ---------- Social Studio ---------- */
-  ['GET', new RegExp(`^${A}/sosyal$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, { summary: social.socialSummary(), platforms: Object.entries(social.PLATFORMS).map(([k, p]) => ({ id: k, label: p.label, limit: p.limit, caps: p.caps, needs: p.needs, url: p.url, docs: p.docs, connected: false })), specialDays: social.upcomingSpecialDays(), statuses: social.STATUSES }))],
+  ['GET', new RegExp(`^${A}/sosyal$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, { summary: social.socialSummary(), platforms: Object.entries(social.PLATFORMS).map(([k, p]) => ({ id: k, label: p.label, limit: p.limit, caps: p.caps, needs: p.needs, url: p.url, docs: p.docs, connected: oauth.listAccounts('x').find((a) => a.id === k)?.connected ?? false })), specialDays: social.upcomingSpecialDays(), statuses: social.STATUSES }))],
   ['GET', new RegExp(`^${A}/sosyal/gonderiler$`), ({ req, res, url }) => {
     requireUser(req);
     const p = url.searchParams;
@@ -219,13 +243,14 @@ export const extRoutes = [
   ['GET', new RegExp(`^${A}/dil$`), ({ req, res }) => {
     requireUser(req);
     const connected = providerStatus().filter((p) => p.connected).map((p) => ({ id: p.id, label: p.label, model: p.cfg.model }));
-    sendJson(res, 200, { mode: i18n.getMode(), provider: getSetting('i18n.provider', ''), connected, glossary: i18n.getGlossary(), ...i18n.stats(), job: i18n.jobState(), fake: process.env.I18N_FAKE === '1' && process.env.NODE_ENV !== 'production' });
+    sendJson(res, 200, { mode: i18n.getMode(), provider: getSetting('i18n.provider', ''), connected, glossary: i18n.getGlossary(), slugs: i18n.getSlugs(), ...i18n.stats(), job: i18n.jobState(), fake: process.env.I18N_FAKE === '1' && process.env.NODE_ENV !== 'production' });
   }],
   ['GET', new RegExp(`^${A}/dil/tahmin$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, i18n.estimate()))],
   ['PUT', new RegExp(`^${A}/dil/ayar$`), async ({ req, res }) => {
     const u = requireAdmin(req);
     const b = await J(req, 32 * 1024);
     if (b.glossary) i18n.setGlossary(b.glossary, u);
+    if (b.slugs) { try { i18n.setSlugs(b.slugs, u); } catch (e) { throw new HttpError(e.status ?? 400, e.message); } }
     if (b.mode !== undefined || b.provider !== undefined) i18n.setMode(b.mode ?? i18n.getMode(), b.provider, u);
     const started = i18n.getMode() === 'otomatik' && b.mode === 'otomatik' ? i18n.startBackground() : { started: false };
     sendJson(res, 200, { ok: true, mode: i18n.getMode(), started: started.started });

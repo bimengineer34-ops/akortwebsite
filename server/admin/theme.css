@@ -235,3 +235,8 @@ h1, h2, h3, h4, .kpi-val, .stat b { color: var(--heading); }
 .kpi-top { align-items: flex-start; }
 .kpi-bot .spark { width: 72px; height: 32px; }
 .kpis { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+
+/* Rol: salt okunur işaretleri */
+.ro-tag { margin-left: auto; font-size: 10px; font-weight: 600; letter-spacing: .02em; padding: 1px 6px; border-radius: 999px; background: rgba(100, 116, 139, .15); color: #64748b; white-space: nowrap; }
+.nav-item .ro-tag + .chev { margin-left: 6px; }
+.ro-banner { margin-bottom: 14px; }

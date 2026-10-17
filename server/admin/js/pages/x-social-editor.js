@@ -1,6 +1,6 @@
 // Social Studio gönderi düzenleyici (modal) + durum sabitleri — takvim, onay merkezi ve genel bakış sayfalarında ortak
 import { api, session } from '../api.js';
-import { h, chip, toast, field, modal, confirmBox, fmtDate } from '../ui.js';
+import { h, icon, chip, toast, field, modal, confirmBox, fmtDate } from '../ui.js';
 import { infoBox, needConn } from './x-common.js';
 
 export const ST = { taslak: ['Taslak', ''], onay_bekliyor: ['Onay bekliyor', 'warn'], onaylandi: ['Onaylandı', 'info'], planlandi: ['Planlandı', 'ok'], yayimlandi: ['Yayımlandı', 'ok'], hata: ['Hata', 'danger'], revizyon: ['Revizyon', 'warn'] };
@@ -49,7 +49,20 @@ export const editor = (post, onDone, preset = {}) => {
         if (!(await confirmBox({ title: 'Yayımlandı olarak işaretle?', message: `${x} platformunda bu gönderiyi kendiniz yayımladığınızı onaylıyorsunuz. Bu işlem geri alınamaz.`, confirmLabel: 'İşaretle' }))) return;
         try { await api.post(`/x/sosyal/gonderiler/${post.id}/elle-yayimlandi`, { platform: x, ref: 'elle' }); toast('İşaretlendi', 'ok'); m.close(); onDone(); } catch (e) { toast(e.message, 'err'); }
       } }, `${x} yayımlandı`))) : null,
-      needConn('Platform hesapları (OAuth) bağlı olmadığından otomatik yayın kapalıdır. Onaylı içeriği platformda kendiniz yayımlayıp işaretleyebilirsiniz.')),
+      post && (p.status === 'planlandi' || p.status === 'onaylandi') ? (() => {
+        const slot = h('div', { class: 'row wrap' });
+        api.get('/x/sosyal/hesaplar').then(({ accounts }) => {
+          const ready = accounts.filter((a) => a.publish && a.connected && !(a.options && !a.selected) && p.platforms.includes(a.id) && !p.platform_post_ids[a.id]);
+          if (ready.length) slot.append(h('b', {}, 'Bağlı hesaba paylaş:'), ...ready.map((a) => h('button', { class: 'btn sm', onclick: async (e) => {
+            const btn = e.currentTarget;
+            if (!(await confirmBox({ title: 'Şimdi paylaşılsın mı?', message: `Onaylı metin ${a.label} hesabında (${a.selected?.label ?? a.account?.label}) herkese açık yayımlanır. Bu işlem geri alınamaz.`, confirmLabel: 'Paylaş' }))) return;
+            btn.disabled = true;
+            try { await api.post(`/x/sosyal/gonderiler/${post.id}/paylas`, { platform: a.id }); toast(`${a.label}: yayımlandı`, 'ok'); m.close(); onDone(); } catch (er) { toast(er.message, 'err'); btn.disabled = false; }
+          } }, icon('share', 14), `${a.label}'a paylaş`)));
+        }).catch(() => {});
+        return slot;
+      })() : null,
+      needConn('Otomatik yayın yalnızca Entegrasyonlar sayfasından bağlanmış ve yayın desteği olan hesaplarda (metin gönderiler) açılır; diğerlerinde onaylı içeriği platformda kendiniz yayımlayıp işaretleyin.')),
     actions: readOnly ? [{ label: 'Kapat', class: 'secondary' }] : [
       post ? { label: 'Sil', class: 'danger secondary', onClick: async () => { if (!(await confirmBox({ title: 'Gönderi silinsin mi?', message: 'Kayıt kalıcı olarak silinir.', confirmLabel: 'Sil', danger: true }))) return false; await api.del(`/x/sosyal/gonderiler/${post.id}`); onDone(); } } : { label: 'Vazgeç', class: 'secondary' },
       { label: 'Kaydet', onClick: async () => { try { await api[post ? 'put' : 'post'](post ? `/x/sosyal/gonderiler/${post.id}` : '/x/sosyal/gonderiler', payload()); toast('Kaydedildi', 'ok'); onDone(); } catch (e) { toast(e.message, 'err'); return false; } } },

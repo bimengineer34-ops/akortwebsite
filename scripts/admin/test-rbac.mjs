@@ -1,0 +1,34 @@
+// Rol yetkileri: node scripts/admin/test-rbac.mjs (birim: rbac.mjs + eski DB göçü)
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'akort-rbac-'));
+process.env.DATA_DIR = path.join(tmp, 'data');
+fs.mkdirSync(process.env.DATA_DIR, { recursive: true });
+// ESKİ şemayla veritabanı (yalnızca admin/editor CHECK) oluştur
+const old = new DatabaseSync(path.join(process.env.DATA_DIR, 'akort.db'));
+old.exec(`PRAGMA foreign_keys=ON; CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL, role TEXT NOT NULL CHECK (role IN ('admin','editor')), pass_hash TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), last_login TEXT);
+CREATE TABLE sessions (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, csrf TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), expires_at TEXT NOT NULL DEFAULT (datetime('now','+1 day')), ip TEXT, ua TEXT);
+INSERT INTO users (email,name,role,pass_hash) VALUES ('a@x.test','A','admin','h'),('e@x.test','E','editor','h');`);
+old.close();
+const { db } = await import('../../server/lib/db.mjs');
+const { createUser } = await import('../../server/lib/auth.mjs');
+const { denyReason, ROLE_IDS } = await import('../../server/lib/rbac.mjs');
+let pass = 0, fail = 0;
+const t = (n, ok, x = '') => { ok ? pass++ : fail++; console.log(`${ok ? '✓' : '✗'} ${n}${ok ? '' : ' — ' + x}`); };
+t('eski veri göçte korundu', db.prepare('SELECT COUNT(*) n FROM users').get().n === 2);
+t('göç sonrası yeni roller eklenebilir', (() => { try { for (const r of ROLE_IDS) createUser({ email: `${r}@y.test`, name: r, role: r, password: 'Parola.12345' }); return true; } catch (e) { console.log(e.message); return false; } })());
+t('geçersiz rol reddedilir', (() => { try { createUser({ email: 'z@y.test', name: 'z', role: 'root', password: 'Parola.12345' }); return false; } catch { return true; } })());
+const D = (role, m, p) => denyReason(role, m, `/api/admin/${p}`);
+t('yönetici/editör her şeyi yazar', !D('admin', 'POST', 'kullanicilar') && !D('editor', 'PUT', 'icerik/home.homeHero') && !D('editor', 'POST', 'x/sosyal/gonderiler'));
+t('izleyici hiçbir şey yazamaz', ['icerik/x', 'x/sosyal/gonderiler', 'formlar/1', 'ayarlar', 'yayin'].every((p) => D('izleyici', 'POST', p) && D('izleyici', 'PUT', p) && D('izleyici', 'DELETE', p)));
+t('izleyici okur (CRM hariç)', !D('izleyici', 'GET', 'x/seo/ozet') && !D('izleyici', 'GET', 'icerik') && !!D('izleyici', 'GET', 'formlar'));
+t('SEO uzmanı SEO + AI yazar, içerik/sosyal/yayın yazamaz', !D('seo', 'POST', 'x/seo/girdi') && !D('seo', 'POST', 'x/ai/uret') && !!D('seo', 'PUT', 'icerik/a') && !!D('seo', 'POST', 'x/sosyal/gonderiler') && !!D('seo', 'POST', 'yayin'));
+t('içerik yazarı içerik + medya yazar, yayın yapamaz', !D('icerik', 'PUT', 'icerik/a') && !D('icerik', 'POST', 'medya') && !!D('icerik', 'POST', 'yayin') && !!D('icerik', 'POST', 'yeniden-derle') && !!D('icerik', 'POST', 'yayin-geri-al'));
+t('sosyal medya uzmanı sosyal + marka yazar; seo/içerik/crm yazamaz', !D('sosyal', 'POST', 'x/sosyal/gonderiler') && !D('sosyal', 'POST', 'x/marka/kaydet') && !!D('sosyal', 'PUT', 'icerik/a') && !!D('sosyal', 'POST', 'x/seo/girdi') && !!D('sosyal', 'DELETE', 'formlar/1'));
+t('satış yalnızca CRM yazar ve okur', !D('satis', 'DELETE', 'formlar/1') && !D('satis', 'GET', 'formlar') && !!D('satis', 'PUT', 'icerik/a') && !!D('satis', 'POST', 'x/sosyal/gonderiler'));
+t('kullanıcı/ayar/yedek gibi sistem yazmaları yalnızca admin/editör', ['seo', 'icerik', 'sosyal', 'satis', 'izleyici'].every((r) => D(r, 'POST', 'kullanicilar') && D(r, 'PUT', 'ayarlar') && D(r, 'POST', 'yedekler')));
+t('herkes kendi parola/2FA/çıkış işlemini yapabilir', ['izleyici', 'satis', 'seo'].every((r) => !D(r, 'POST', 'cikis') && !D(r, 'POST', 'parola') && !D(r, 'POST', '2fa/baslat')));
+console.log(`\n${pass} geçti, ${fail} başarısız`);
+process.exit(fail ? 1 : 0);

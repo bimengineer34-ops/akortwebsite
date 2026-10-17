@@ -5,6 +5,7 @@ import { h, icon, chip, toast, spinner, errorBanner, field, modal, fmtDate, debo
 import { kpiCard, areaChart, donut, hbars, panel, ring, PALETTE } from '../charts.js';
 import { pageHead, tabs, infoBox, empty, fmtLocal, connectBox, getRange } from './x-common.js';
 import { editor, ST, stChip, setPlatforms } from './x-social-editor.js';
+import { accountsGrid, announceReturn } from './x-accounts.js';
 
 const PCOL = { linkedin: '#0a66c2', instagram: '#e1306c', facebook: '#1877f2', youtube: '#ff0000', x: '#111827', tiktok: '#111827', threads: '#222222', pinterest: '#e60023' };
 const PSHORT = { linkedin: 'in', instagram: 'Ig', facebook: 'f', youtube: '▶', x: 'X', tiktok: 'Tk', threads: '@', pinterest: 'P' };
@@ -16,6 +17,7 @@ const todayKey = () => new Date().toLocaleDateString('sv-SE');
 /* ====================== GENEL BAKIŞ ====================== */
 export const renderSocialOverview = async (ctx) => {
   ctx.setTitle('Social Studio');
+  announceReturn();
   const root = h('div');
   const load = async () => {
     root.replaceChildren(spinner());
@@ -29,10 +31,7 @@ export const renderSocialOverview = async (ctx) => {
         kpiCard({ ic: 'share', label: 'Planlanan Paylaşımlar', value: k.planned, deltaLabel: `${k.awaiting} onay bekliyor`, series: o.perfPlanned, color: '#12b76a', to: '/sosyal/takvim' }),
         kpiCard({ ic: 'chart', label: 'Takipçi Artışı', to: '/entegrasyonlar', connect: true, color: '#8b5cf6' }));
 
-      const accounts = panel('Bağlı Sosyal Medya Hesapları', h('div', { class: 'acc-grid' }, o.platforms.slice(0, 6).map((p) => h('div', { class: 'acc' }, h('div', { class: 'row' }, pbadge(p.id, 34), h('div', {}, h('b', {}, p.label), h('div', { class: 'small muted' }, 'hesap bağlı değil'))),
-        h('a', { class: 'btn secondary sm', style: 'width:100%;margin-top:10px', href: p.url, target: '_blank', rel: 'noopener noreferrer', title: p.needs }, icon('external', 14), 'Bağlan (geliştirici konsolu)'),
-        h('div', { class: 'small', style: 'margin-top:6px' }, h('a', { href: p.docs, target: '_blank', rel: 'noopener noreferrer' }, 'API belgeleri'), ' · ', h('a', { href: '#/entegrasyonlar' }, 'Durum'))))),
-        { ic: 'users', action: h('a', { class: 'btn secondary sm', href: '#/entegrasyonlar' }, 'Hesap Yönetimi') });
+      const accounts = panel('Bağlı Sosyal Medya Hesapları', accountsGrid(8), { ic: 'users', action: h('a', { class: 'btn secondary sm', href: '#/entegrasyonlar' }, 'Hesap Yönetimi') });
 
       const cons = o.consistency;
       const brand = panel('İçerik Kalite Skoru', cons.score === null ? connectBox('Henüz içerik yok', 'İlk içeriğinizi oluşturunca görsel, hashtag, karakter sınırı ve onay disiplini kriterleri burada puanlanır.', '/sosyal/takvim')
@@ -222,7 +221,7 @@ export const renderBrandKit = async (ctx) => {
     const editorP = panel('Şablon Düzenleyici', h('div', { class: 'tpl-ed' }, h('div', { class: 'stack' },
       field('Başlık Metni', titleI), field('Alt Başlık', subI), field('Arka Plan Görseli (medya kütüphanesinden)', bgSel, imgs.length ? '' : 'Medya kütüphanesine görsel yükleyin.'), field('Format', fmtSel),
       h('div', {}, h('div', { class: 'lbl' }, 'Renk Teması'), radio('theme', b.themes.map((t) => [t.key, t.label]), 'theme')), h('div', {}, h('div', { class: 'lbl' }, 'Logo Konumu'), radio('lp', [['left', 'Sol'], ['center', 'Orta'], ['right', 'Sağ']], 'logoPos')), h('div', {}, h('div', { class: 'lbl' }, 'Metin Hizalaması'), radio('al', [['left', 'Sol'], ['center', 'Orta'], ['right', 'Sağ']], 'align'))),
-      h('div', { class: 'stack' }, preview, h('div', { class: 'lbl' }, 'Dışa Aktar'), h('div', { class: 'row wrap' }, h('button', { class: 'btn secondary', onclick: () => download('png') }, icon('download', 16), 'PNG'), h('button', { class: 'btn secondary', onclick: () => download('jpg') }, icon('download', 16), 'JPG'), h('button', { class: 'btn secondary', onclick: () => download('webp') }, icon('download', 16), 'WebP'), h('button', { class: 'btn secondary', disabled: true, title: 'Vektör/PDF çıktısı henüz yok' }, 'SVG / PDF'),
+      h('div', { class: 'stack' }, preview, h('div', { class: 'lbl' }, 'Dışa Aktar'), h('div', { class: 'row wrap' }, h('button', { class: 'btn secondary', onclick: () => download('png') }, icon('download', 16), 'PNG'), h('button', { class: 'btn secondary', onclick: () => download('jpg') }, icon('download', 16), 'JPG'), h('button', { class: 'btn secondary', onclick: () => download('webp') }, icon('download', 16), 'WebP'), h('button', { class: 'btn secondary', title: 'Düzenlenebilir vektör: metinler canlı, görsel/logo gömülü. Yazı tipi, açan bilgisayarda yüklü olana düşer.', onclick: () => download('svg') }, icon('download', 16), 'SVG'), h('button', { class: 'btn secondary', title: 'Tek sayfalık PDF (görsel tabanlı, metin seçilemez)', onclick: () => download('pdf') }, icon('download', 16), 'PDF'),
         h('button', { class: 'btn', onclick: async (e) => { e.target.disabled = true; try { const r = await api.post('/x/marka/kaydet', { ...st, title: titleI.value, subtitle: subI.value, format: fmtSel.value, template: st.template }); toast(`Medya kütüphanesine kaydedildi: ${r.filename}`, 'ok'); } catch (er) { toast(er.message, 'err'); } e.target.disabled = false; } }, icon('upload', 16), 'Medya Kütüphanesine Kaydet')))), { ic: 'edit', sub: 'Logo ve marka metni her zaman şablon katmanı olarak bindirilir; yapay zekâ logo/tipografi üretmez' });
 
     root.replaceChildren(pageHead('Brand Kit & Tasarım Sistemi', 'Logo, renk, tipografi, ikon stili ve onaylı tasarım şablonlarını yönetin.', { crumbs: 'Social Studio › Brand Kit' }),

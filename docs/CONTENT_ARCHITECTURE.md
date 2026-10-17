@@ -18,7 +18,7 @@ Toplam **63 hizmet + 8 sektör = 71 yeni/yeniden yapılandırılmış içerik sa
 ```
 src/data/serviceContent/
   types.ts          alan şeması (ServiceEntry / SectorEntry)
-  muhendislik.ts    15 sayfa     bim.ts   24 sayfa
+  muhendislik.ts    18 sayfa     bim.ts   24 sayfa
   enerji.ts         13 sayfa     maliyet.ts 11 sayfa
   sectors.ts        8 sektör
 src/data/serviceCatalog.ts   birleştirir; build sırasında bağlantı tutarlılığını denetler

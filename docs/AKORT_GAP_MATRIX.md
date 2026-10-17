@@ -14,7 +14,7 @@ Durum anahtarı: ✅ gerçek ve test edilmiş · 🟡 kısmen (neden belirtilir)
 | AI İçerik Stüdyosu | yeni | ✅ kod / ⛔ anahtar | OpenAI, Anthropic, Gemini adaptörleri, kasa, bütçe, devre kesici, kabul/red; gerçek üretim anahtar girilince (sahte anahtarla hata yolu test edildi) |
 | Seçili metin üzerinde editör içi AI + track changes | yeni | ❌ | Şimdilik Stüdyo sayfasından kopyala-kabul; editör entegrasyonu sonraki faz |
 | Social Studio takvim + onay + mühür | yeni | ✅ | Durum makinesi, SHA-256 mühür, idempotency anahtarı, platform karakter doğrulaması, blogdan türetme |
-| Social OAuth + otomatik yayın + analitik | yeni | ⛔ | 8 platform yetenek matrisi gösterilir; hiçbiri bağlı değil, "yayımlandı" yalnızca elle işaretlenir |
+| Social OAuth + otomatik yayın + analitik | yeni | 🟡 | Hesap bağlama (OAuth2 kod akışı, PKCE, belirteç yenileme, sayfa/hesap seçimi, bağlantıyı kes) 8 platform için kodlandı; otomatik yayın (metin + tek görsel) LinkedIn, X, Facebook Sayfası, Instagram (JPEG), Threads, Pinterest (pano seçimli) için (onaylı+mühürlü, tek seferlik). Yalnızca yerel sahte sağlayıcıyla test edildi; gerçek platformda kullanıcının geliştirici uygulaması + platform onayı gerekir. YouTube/TikTok yayını (video yükleme + TikTok denetimi), carousel, zamanlanmış otomatik yayın ve analitik YOK |
 | Brand Kit / şablon editörü (Fabric.js) | yeni | ❌ | Sonraki faz |
 | Özel gün motoru | yeni | 🟡 | Yalnızca sabit tarihli günler; hareketli bayramlar yok |
 | Market & Media | yeni | ✅ | Kaynak defteri, robots'a uyumlu RSS, ETag/If-Modified-Since, dedupe, ilgililik skoru, CRM fırsat önerisi; çeviri/AI özet ❌ |
@@ -23,12 +23,15 @@ Durum anahtarı: ✅ gerçek ve test edilmiş · 🟡 kısmen (neden belirtilir)
 | CRM / Leads | genişlet | 🟡 | Mevcut form talepleri + fırsat önerisi; aşama/sahip/atıf raporu ❌ |
 | Referans dashboard tasarımı (koyu tema, KPI kartları, grafikler, genel arama) | genişlet | ✅ | Kullanıcı başına KPI seçimi/sırası/hedefi (24 gerçek metrik), SVG grafik kütüphanesi, açık/koyu tema; mockup ekranlarıyla birebir karşılaştırma ❌ |
 | 10 referans ekran düzeni (SEO, Market, Takvim, Brand Kit, Social, AI Studio, Speed, Backlink, Competitor, Canlı SEO Editörü) | yeni | 🟡 | Düzen/bileşenler referansa göre, AÇIK temada; veri gerçek. GSC/GA4/sıralama/backlink sağlayıcı/OAuth olmayan kartlar "Bağlantı gerekli" gösterir. Piksel-doğru kopya değildir |
-| Brand Kit şablon oluşturucu (logo + marka metni katmanı, PNG/JPG/WebP) | yeni | ✅ | sharp ile deterministik; SVG/PDF çıktısı ❌ |
+| Brand Kit şablon oluşturucu (logo + marka metni katmanı, PNG/JPG/WebP/SVG/PDF) | yeni | ✅ | sharp ile deterministik; SVG düzenlenebilir (metin canlı, görsel/logo gömülü; yazı tipi açan bilgisayara bağlı), PDF görsel tabanlı tek sayfa. SVG medya kitaplığına kaydedilmez (güvenlik) |
 | PageSpeed Insights entegrasyonu | yeni | ✅ kod / ⛔ herkese açık adres | Yerel adresler test edilemez; canlıya çıkınca çalışır |
-| RBAC (7 rol) | genişlet | ❌ | Şimdilik admin/editor. `users.role` CHECK kısıtı nedeniyle tablo yeniden kurulumu gerekir → ayrı, yedekli migrasyon |
+| RBAC (7 rol) | genişlet | ✅ | admin, editör, SEO uzmanı, içerik yazarı, sosyal medya uzmanı, satış/CRM, izleyici. Merkezi denetim dispatch() içinde (alan bazlı yazma izni; CRM kişisel verisi yalnızca admin/editör/satış okur); eski DB otomatik göç eder. Menüde yazamadığı alanlar "salt okunur" etiketli, CRM menüsü yetkisizlerden gizli, sayfa üstünde uyarı çıkar; yasak işlem yine 403 verir |
 | İş kuyruğu | yeni | ✅ | `jobs` tablosu, idempotent anahtar, üstel geri çekilme, ölü kuyruk; şimdilik yalnızca RSS çekimi |
 | Sır kasası / denetim | yeni | ✅ | AES-256-GCM, değer API'ye/günlüğe çıkmaz |
 | Bütçe merkezi | yeni | ✅ | Aylık token bütçesi, fiyat girilirse maliyet tahmini |
 | Özellik bayrakları | yeni | ✅ | seo/ai/social/intel modülleri panelden kapatılabilir |
 | İzleme/alarm (SSL, uptime) | — | ❌ | |
 | İngilizce site (/en) — otomatik çeviri, çeviri hafızası, dil anahtarı, hreflang/sitemap | yeni | ✅ kod / ⛔ AI anahtarı ile çeviri | Yayınlanan her sayfa HTML düzeyinde çevrilir; tam çevrilmemiş sayfa yayınlanmaz; elle onaylı çeviriler korunur. Slug'lar Türkçe kalır; sayfa içi istemci JS metinlerinin çoğu (arama/form/bülten dışında) Türkçe kalır |
+
+
+| İngilizce adresler (slug) | yeni | ✅ | Üst düzey adresler varsayılan çevrilir (hizmetler→services…), diğerleri panelden eşlenir; canonical/hreflang/sitemap/iç bağlantı/arama indeksi eşlenmiş adresi kullanır. Eski EN adresleri (Türkçe biçimli veya değiştirilmiş) 301 ile güncel adrese yönlendirilir |

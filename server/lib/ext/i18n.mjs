@@ -28,6 +28,55 @@ export const setGlossary = (g, user) => {
 };
 const siteOrigin = () => config.siteUrl.replace(/\/$/, '');
 
+/* ------------------------------ İngilizce adres (slug) eşlemesi ------------------------------ */
+const DEFAULT_SLUGS = {
+  hizmetler: 'services', hakkimizda: 'about', iletisim: 'contact', projeler: 'projects', 'uzmanlik-alanlari': 'expertise',
+  'calisma-modeli': 'work-model', 'gizlilik-politikasi': 'privacy-policy', 'cerez-tercihleri': 'cookie-preferences', arama: 'search',
+};
+const RESERVED_SEG = new Set(['en', 'api', 'yonetim', '_astro', 'medya', 'documents', 'bim-samples', 'favicon']);
+export const getSlugs = () => {
+  let custom = {};
+  try { const c = JSON.parse(getSetting('i18n.slugs', '{}')); if (c && typeof c === 'object') custom = c; } catch { /* varsayılan */ }
+  return { ...DEFAULT_SLUGS, ...custom };
+};
+/** m: { trSlug: enSlug } — yalnızca varsayılandan FARKLI/ek eşlemeler saklanır; boş değer = varsayılana dön */
+export const setSlugs = (m, user) => {
+  const out = {}, seen = new Map();
+  for (const [k, v] of Object.entries(m ?? {})) {
+    const tr = String(k).trim().toLowerCase(), en = String(v ?? '').trim().toLowerCase();
+    if (!en || en === tr) { if (DEFAULT_SLUGS[tr]) out[tr] = tr; continue; }
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(tr) || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(en)) throw Object.assign(new Error(`Adresler yalnızca küçük harf, rakam ve tire içerebilir: ${tr} → ${en}`), { status: 400 });
+    if (RESERVED_SEG.has(en)) throw Object.assign(new Error(`"${en}" ayrılmış bir adrestir`), { status: 400 });
+    if (seen.has(en)) throw Object.assign(new Error(`"${en}" iki farklı adres için kullanılamaz (${seen.get(en)}, ${tr})`), { status: 400 });
+    seen.set(en, tr); out[tr] = en;
+  }
+  // adresi değişen sayfaların ESKİ İngilizce adresini sakla → 301 yönlendirmesi için
+  const before = getSlugs(), after = { ...DEFAULT_SLUGS, ...out }, prev = getPrevSlugs();
+  for (const tr of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    const was = before[tr] ?? tr, now = after[tr] ?? tr;
+    if (was !== now) prev[was] = tr;
+  }
+  const current = new Set(Object.values(after));
+  for (const k of Object.keys(prev)) if (current.has(k)) delete prev[k];
+  setSetting('i18n.slugs.prev', JSON.stringify(prev));
+  setSetting('i18n.slugs', JSON.stringify(out));
+  audit(user, 'i18n.slug', `${Object.keys(out).length} adres eşlemesi`);
+};
+const getPrevSlugs = () => { try { const p = JSON.parse(getSetting('i18n.slugs.prev', '{}')); return p && typeof p === 'object' ? p : {}; } catch { return {}; } };
+/** Eski/Türkçe biçimli bir /en/... adresi için güncel adresi verir (yoksa null) — 301 için */
+export const legacyEnRedirect = (pathname) => {
+  if (!pathname.startsWith('/en/')) return null;
+  const m = getSlugs(), prev = getPrevSlugs(), current = new Set(Object.values(m));
+  const segs = pathname.split('/').slice(2).map((x) => (current.has(x) ? x : prev[x] ? (m[prev[x]] ?? prev[x]) : (m[x] ?? x)));
+  const out = '/en/' + segs.join('/');
+  return out === pathname ? null : out;
+};
+const segMap = () => { const m = getSlugs(); return (seg) => m[seg] ?? seg; };
+/** '/hizmetler/bim' → '/en/services/bim'; '/' → '/en' */
+export const enPath = (p, map = segMap()) => (p === '/' ? '/en' : `/en/${p.replace(/^\//, '').split('/').map((x) => map(x)).join('/')}`);
+/** dosya yolu (hizmetler/bim.html) → EN dosya yolu (en/services/bim.html) */
+const enRelOf = (rel, map = segMap()) => path.posix.join('en', ...rel.split('/').map((x, i, a) => (i === a.length - 1 ? (x.endsWith('.html') ? `${map(x.slice(0, -5))}.html` : map(x)) : map(x))));
+
 /* ------------------------------ HTML ağacı yardımcıları ------------------------------ */
 const SKIP = new Set(['script', 'style', 'noscript', 'svg', 'math', 'code', 'pre', 'kbd', 'samp', 'textarea', 'iframe', 'template', 'object', 'embed', 'canvas', 'video', 'audio']);
 const INLINE = new Set(['a', 'abbr', 'b', 'bdi', 'bdo', 'cite', 'data', 'dfn', 'em', 'i', 'mark', 'q', 's', 'small', 'span', 'strong', 'sub', 'sup', 'time', 'u', 'var', 'font']);
@@ -156,7 +205,7 @@ export const toEnUrl = (u) => {
   if (!rest.startsWith('/')) return u;
   const [p, ...tail] = rest.split(/(?=[?#])/);
   if (NO_REWRITE.test(p) || /\.[a-z0-9]{2,5}$/i.test(p.replace(/\.html$/, '')) && !p.endsWith('.html')) return u;
-  const en = p === '/' ? '/en' : `/en${p}`;
+  const en = enPath(p.replace(/\/$/, '') || '/');
   return abs + en + tail.join('');
 };
 const rewriteJsonUrls = (v) => {
@@ -260,8 +309,8 @@ const decorateTr = (html, url, hasEn) => {
   let out = html.replace(ALT_RE, '');
   if (hasEn) {
     const o = siteOrigin();
-    const tr = o + (url === '/' ? '/' : url), en = o + (url === '/' ? '/en' : `/en${url}`);
-    out = out.replace(SW_RE, () => LANG_SW(url === '/' ? '/en' : `/en${url}`, 'EN', 'View this page in English', 'en'));
+    const tr = o + (url === '/' ? '/' : url), en = o + enPath(url);
+    out = out.replace(SW_RE, () => LANG_SW(enPath(url), 'EN', 'View this page in English', 'en'));
     out = out.replace('</head>', () => `<link rel="alternate" hreflang="tr" href="${tr}"><link rel="alternate" hreflang="en" href="${en}"><link rel="alternate" hreflang="x-default" href="${tr}"></head>`);
   } else out = out.replace(SW_RE, () => EMPTY_SW);
   return out;
@@ -342,7 +391,7 @@ export const generate = async (distDir, { fallbackDir = null, log = () => {} } =
     let published = 0;
     for (const p of plan) {
       const url = pageUrlOf(p.rel);
-      const enRel = path.posix.join('en', p.rel);
+      const enRel = enRelOf(p.rel);
       let hasEn = false;
       if (p.miss === 0) {
         const doc = parse(p.html);
@@ -353,7 +402,7 @@ export const generate = async (distDir, { fallbackDir = null, log = () => {} } =
         if (htmlEl) setAttr(htmlEl, 'lang', 'en');
         let out = serialize(doc);
         const o = siteOrigin();
-        const trUrl = o + (url === '/' ? '/' : url), enUrl = o + (url === '/' ? '/en' : `/en${url}`);
+        const trUrl = o + (url === '/' ? '/' : url), enUrl = o + enPath(url);
         out = out.replace(ALT_RE, '').replace(SW_RE, () => LANG_SW(url === '/' ? '/' : url, 'TR', 'Bu sayfayı Türkçe görüntüle', 'tr'));
         out = out.replace('</head>', () => `<link rel="alternate" hreflang="tr" href="${trUrl}"><link rel="alternate" hreflang="en" href="${enUrl}"><link rel="alternate" hreflang="x-default" href="${trUrl}"></head>`);
         atomicWrite(path.join(distDir, enRel), out);
@@ -388,7 +437,7 @@ export const generate = async (distDir, { fallbackDir = null, log = () => {} } =
       const body = entries.map((e) => {
         const pth = new URL(e.loc).pathname.replace(/\/$/, '') || '/';
         if (!have.has(pth)) return e.raw;
-        const enLoc = o + (pth === '/' ? '/en' : `/en${pth}`);
+        const enLoc = o + enPath(pth);
         const alt = `<xhtml:link rel="alternate" hreflang="tr" href="${e.loc}"/><xhtml:link rel="alternate" hreflang="en" href="${enLoc}"/>`;
         return `<url><loc>${e.loc}</loc>${alt}</url><url><loc>${enLoc}</loc>${alt}</url>`;
       }).join('');
