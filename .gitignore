@@ -23,9 +23,9 @@ Thumbs.db
 public/bim/
 
 # panel / sunucu çalışma verisi (veritabanı, yedekler, yüklemeler, varsayılan içerik çıktıları)
-data/
-dist-staging/
-dist-previous/
+/data/
+/dist-staging/
+/dist-previous/
 src/assets/images/uploads/
 *.db
 *.db-shm
