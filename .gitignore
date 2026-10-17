@@ -22,11 +22,10 @@ Thumbs.db
 # BIM Viewer çalışma dosyaları (scripts/copy-bim-assets.mjs üretir)
 public/bim/
 
-# panel / sunucu çalışma verisi (veritabanı, yedekler, yüklemeler, varsayılan içerik çıktıları)
+# panel / sunucu çalışma verisi (NOT: src/assets/images/uploads/ içerikte kullanılan görseller içindir — git'te TUTULUR) (veritabanı, yedekler, yüklemeler, varsayılan içerik çıktıları)
 /data/
 /dist-staging/
 /dist-previous/
-src/assets/images/uploads/
 *.db
 *.db-shm
 *.db-wal
