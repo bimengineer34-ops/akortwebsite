@@ -15,7 +15,7 @@ export const ROLE_IDS = Object.keys(ROLES);
 /** Yol → alan. Eşleşmeyen yazma istekleri "sistem" alanıdır (yalnızca admin/editör). */
 const AREAS = [
   ['orkestra', /^x\/orkestra(\/|$)/],
-  ['crm', /^(formlar|aboneler)(\/|$)/],
+  ['crm', /^(formlar|aboneler)(\/|\.|$)/], // ".csv" dışa aktarmaları dahil (kişisel veri)
   ['medya', /^medya(\/|$)/],
   ['yayin', /^(yayin|yayin-geri-al|yayinlar|yeniden-derle)(\/|$)/],
   ['icerik', /^(icerik|girdi|yonlendirmeler|surum)(\/|$)/],
