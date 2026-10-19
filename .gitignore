@@ -29,3 +29,7 @@ public/bim/
 *.db
 *.db-shm
 *.db-wal
+
+# yerel test ortamı (scripts/local-test.mjs): test verisi ve giriş bilgisi
+.local-test/
+.local-test.*
