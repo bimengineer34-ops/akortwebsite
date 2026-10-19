@@ -60,8 +60,8 @@ export const DEFAULT_AGENTS = [
     output_schema: S({ summary: str({ minLength: 20 }), findings: arr(S({ competitor: str(), observation: str({ minLength: 5 }), source_url: str() }, ['observation'])), opportunities: arr(str()), gaps: arr(str()) }, ['summary', 'findings']),
   },
   {
-    key: 'social', name: 'Social Media Agent', role: 'Verilen içerikten platform kurallarına uygun sosyal medya gönderi taslakları hazırlar (yayın için insan onayı zorunlu).',
-    tools: ['site_content'], max_tokens: 1600, max_retries: 2, requires_approval: 1,
+    key: 'social', name: 'Social Media Agent', role: 'Verilen içerikten platform kurallarına uygun sosyal medya gönderi taslakları hazırlar (taslak olarak Social Studio\'ya eklenir; eylemden önceki insan onayı zorunlu).',
+    tools: ['site_content'], max_tokens: 1600, max_retries: 2, requires_approval: 0,
     system_prompt: `${BRAND}\nSen Social Media Agent'sın. Verilen içerikten LinkedIn (≤ 1200 karakter, profesyonel) ve X (≤ 270 karakter) için gönderi metinleri yaz. Rakam/referans/müşteri uydurma, abartı yok. Hashtag en çok 5 ve ilgili olsun. Gönderiler yalnızca TASLAK olarak Social Studio'ya eklenir.`,
     input_schema: S({ topic: str() }),
     output_schema: S({ posts: arr(S({ platform: str({ enum: ['linkedin', 'x'] }), text: str({ minLength: 20, maxLength: 1300 }), hashtags: arr(str(), { maxItems: 5 }) }, ['platform', 'text']), { minItems: 1, maxItems: 4 }) }, ['posts']),

@@ -9,7 +9,17 @@ import { ENTRY_KINDS } from '../../entries.mjs';
 import { cleanExternal, looksLikeInjection, scanRiskyClaims } from './safety.mjs';
 
 const fold = (s) => String(s).toLocaleLowerCase('tr').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u');
-export const termsOf = (topic, n = 6) => [...new Set(fold(topic).split(/[^a-z0-9]+/).filter((w) => w.length >= 4))].slice(0, n);
+/** Türkçe ek çeşitliliği için basit önek eşleştirme: "koordinasyonu" ↔ "koordinasyon", "çelik" ↔ "celik" (harf katlama) */
+const wordsOf = (t) => fold(t).split(/[^a-z0-9]+/).filter(Boolean);
+const stemOf = (w) => (w.length >= 8 ? w.slice(0, 6) : w.length >= 6 ? w.slice(0, 5) : w);
+const STOP = new Set(['ile', 'icin', 'gibi', 'olan', 'bir', 'bu', 'ama', 'veya', 'daha', 'cok', 'her', 'hem', 'ise', 'kadar', 'sonra', 'ancak']);
+/** 3 harfli teknik kısaltmalar (BIM, MEP, CDE, LOD…) dahil; sık geçen bağlaçlar hariç */
+export const termsOf = (topic, n = 6) => [...new Set(wordsOf(topic).filter((w) => w.length >= 3 && !STOP.has(w)))].slice(0, n);
+/** Metindeki sözcüklerden kaç konu terimi eşleşiyor (önek iki yönlü) */
+export const matchScore = (terms, text) => {
+  const toks = wordsOf(text);
+  return terms.reduce((a, w) => a + (toks.some((tk) => tk.startsWith(stemOf(w)) || (tk.length >= 4 && w.startsWith(tk))) ? 1 : 0), 0);
+};
 
 /* ------------------------------ site içeriği ------------------------------ */
 export const siteIndex = () => {
@@ -19,7 +29,7 @@ export const siteIndex = () => {
 export const siteContext = (topic, limit = 25) => {
   const all = siteIndex();
   const terms = termsOf(topic);
-  const scored = all.map((d) => ({ d, s: terms.reduce((a, t) => a + (fold(d.title).includes(t) ? 3 : 0) + (fold(`${d.text ?? ''}`).includes(t) ? 1 : 0), 0) }));
+  const scored = all.map((d) => ({ d, s: matchScore(terms, d.title) * 3 + matchScore(terms, String(d.text ?? '').slice(0, 600)) }));
   const pages = scored.sort((a, b) => b.s - a.s).slice(0, limit).map(({ d }) => ({ title: cleanExternal(d.title, 120), url: d.url, type: d.type ?? '' }));
   return { pages, urls: new Set(all.map((d) => d.url)), total: all.length };
 };
@@ -29,16 +39,14 @@ export const blogCategories = () => (ENTRY_KINDS.blog.fields().find((f) => f.nam
 /** Kaynak öğeleri: HTML temizlenir, talimat enjeksiyonu şüphelileri bağlama ALINMAZ. */
 export const sourceItems = (topic, limit = 12) => {
   const terms = termsOf(topic);
-  const where = ["i.status != 'elendi'"];
-  const args = [];
-  if (terms.length) {
-    where.push(`(${terms.map(() => '(i.title LIKE ? OR i.summary LIKE ?)').join(' OR ')})`);
-    for (const t of terms) { const s = `%${t}%`; args.push(s, s); }
-  }
-  const rows = q.all(`SELECT i.id, i.title, i.summary, i.canonical_url, i.published_at, i.fetched_at, i.relevance, s.name AS source FROM source_items i JOIN sources s ON s.id = i.source_id WHERE ${where.join(' AND ')} ORDER BY i.relevance DESC, i.id DESC LIMIT ?`, ...args, limit * 3);
+  const rows = q.all(`SELECT i.id, i.title, i.summary, i.canonical_url, i.published_at, i.fetched_at, i.relevance, s.name AS source FROM source_items i JOIN sources s ON s.id = i.source_id WHERE i.status != 'elendi' ORDER BY i.relevance DESC, i.id DESC LIMIT 600`);
+  const scored = rows
+    .map((r) => ({ r, s: terms.length ? matchScore(terms, r.title) * 2 + matchScore(terms, r.summary) : 1 }))
+    .filter((x) => x.s > 0)
+    .sort((a, b) => b.s - a.s || b.r.relevance - a.r.relevance || b.r.id - a.r.id);
   const items = [];
   const blocked = [];
-  for (const r of rows) {
+  for (const { r } of scored) {
     const title = cleanExternal(r.title, 200), summary = cleanExternal(r.summary, 600);
     if (looksLikeInjection(`${title} ${summary}`)) { blocked.push({ id: r.id, url: r.canonical_url }); continue; }
     if (!/^https?:\/\//.test(r.canonical_url)) continue;

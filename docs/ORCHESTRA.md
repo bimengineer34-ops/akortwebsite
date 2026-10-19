@@ -39,7 +39,7 @@ Mevcut yığın Node olduğu için **dış çatı (LangGraph/Agent Framework vb.
 | SEO | ✅ | site_content, seo_check |
 | QA & Approval | ✅ | risk_scan |
 | Competitor Intelligence | ✅ (yalnızca bizim tarama kayıtlarımız + kaynaklar) | competitors, source_items |
-| Social Media | ✅ (çıktısı onay ister; eylem: Social Studio **taslağı**) | site_content |
+| Social Media | ✅ (eylem: Social Studio **taslağı**; eylemden önce onay adımı zorunlu) | site_content |
 | MEP Technical Expert | ✅ (doğrulayamayacağını "emin değil" listesine yazar) | site_content |
 | Analytics | ✅ (kişisel veri içermeyen sayaçlar) | stats |
 | Visual Design · Sales · CRM | ⛔ **yapılandırılabilir ama bağlı değil** (panelde "Bağlı değil" + gerekçe; çalıştırılamaz) | — |
