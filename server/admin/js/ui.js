@@ -99,6 +99,20 @@ export const icon = (name, size = 18) => {
 
 /* ---------- toast ---------- */
 let toastBox;
+/** Panoya kopyalar; izin/odak yoksa eski yönteme düşer, olmazsa kullanıcıya bildirir (yakalanmamış hata bırakmaz) */
+export const copyText = async (text, okMessage = 'Kopyalandı') => {
+  try { await navigator.clipboard.writeText(text); toast(okMessage, 'ok'); return true; } catch { /* odak/izin yok: yedek yöntem */ }
+  const ta = h('textarea', { readonly: true, class: 'sr-copy' });
+  ta.value = text;
+  document.body.append(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { /* desteklenmiyor */ }
+  ta.remove();
+  toast(ok ? okMessage : 'Kopyalanamadı — metni elle seçip kopyalayın', ok ? 'ok' : 'err');
+  return ok;
+};
+
 export const toast = (message, kind = '') => {
   toastBox ??= document.body.appendChild(h('div', { class: 'toasts', role: 'status', 'aria-live': 'polite' }));
   const t = h('div', { class: `toast ${kind}` }, message);

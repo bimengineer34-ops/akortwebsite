@@ -1,6 +1,6 @@
 // Sosyal hesap bağlantıları: uygulama bilgisi → "Bağlan" (OAuth) → hesap/sayfa seçimi → bağlantıyı kes
 import { api, session } from '../api.js';
-import { h, icon, chip, toast, spinner, errorBanner, field, modal, confirmBox } from '../ui.js';
+import { h, icon, chip, toast, spinner, errorBanner, field, modal, confirmBox, copyText } from '../ui.js';
 
 const PCOL = { linkedin: '#0a66c2', instagram: '#e1306c', facebook: '#1877f2', youtube: '#ff0000', x: '#111827', tiktok: '#0f172a', threads: '#334155', pinterest: '#e60023' };
 const PSHORT = { linkedin: 'in', instagram: 'Ig', facebook: 'f', youtube: '▶', x: 'X', tiktok: 'Tk', threads: '@', pinterest: 'P' };
@@ -23,7 +23,7 @@ const appModal = (a, done) => {
     title: `${a.label} — uygulama bilgileri`, wide: true,
     body: h('div', { class: 'stack' },
       h('p', { class: 'small muted' }, `1) ${a.label} geliştirici konsolunda bir uygulama oluşturun. 2) Aşağıdaki yönlendirme adresini (Redirect/Callback URL) uygulamaya ekleyin. 3) Client ID ve Secret'ı buraya yapıştırın. Sır şifreli saklanır, geri gösterilmez.`),
-      field('Yönlendirme adresi (Redirect URI) — kopyalayın', h('div', { class: 'row' }, h('div', { class: 'grow' }, redirect), h('button', { class: 'btn secondary sm', onclick: async () => { try { await navigator.clipboard.writeText(a.redirectUri); toast('Kopyalandı', 'ok'); } catch { redirect.select(); } } }, 'Kopyala'))),
+      field('Yönlendirme adresi (Redirect URI) — kopyalayın', h('div', { class: 'row' }, h('div', { class: 'grow' }, redirect), h('button', { class: 'btn secondary sm', onclick: async () => { try { await copyText(a.redirectUri, 'Kopyalandı'); } catch { redirect.select(); } } }, 'Kopyala'))),
       field('Client ID', id), field('Client Secret', secret),
       h('div', { class: 'small' }, h('a', { href: a.url, target: '_blank', rel: 'noopener noreferrer' }, 'Geliştirici konsolu ↗'), ' · ', h('a', { href: a.docs, target: '_blank', rel: 'noopener noreferrer' }, 'API belgeleri ↗')),
       h('div', { class: 'small muted' }, `Gereken: ${a.needs}`)),

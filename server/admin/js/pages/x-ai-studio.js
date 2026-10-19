@@ -1,7 +1,7 @@
 // AI Content Studio — referans düzeni: sağlayıcı kartları, konu/prompt, editör, SEO + marka sesi skoru, öneriler, hashtag, görsel önizleme, prompt iyileştirme.
 // Üretilen metin düz metin olarak gösterilir; siz kabul edene kadar hiçbir içeriğe kaydedilmez. Skorlar kural tabanlıdır (Google/marka onayı değildir).
 import { api } from '../api.js';
-import { h, icon, chip, toast, spinner, errorBanner, debounce } from '../ui.js';
+import { h, icon, chip, toast, spinner, errorBanner, debounce, copyText } from '../ui.js';
 import { ring, panel } from '../charts.js';
 import { pageHead, infoBox, connectBox } from './x-common.js';
 import { analyze } from './x-seo.js';
@@ -83,7 +83,7 @@ export const renderAiStudio = async (ctx) => {
     const live = debounce(recalc, 250);
     text.addEventListener('input', live);
 
-    const loadTags = async () => { try { const r = await api.post('/x/sosyal/hashtag', { text: `${prompt.value}\n${text.value}` }); tagBox.replaceChildren(h('div', { class: 'row wrap' }, r.tags.map((t) => chip(t, 'info'))), h('button', { class: 'btn secondary sm', style: 'margin-top:8px', onclick: async () => { await navigator.clipboard.writeText(r.tags.join(' ')); toast('Hashtag\'ler kopyalandı', 'ok'); } }, icon('copy', 14), 'Tümünü Kopyala')); } catch { /* */ } };
+    const loadTags = async () => { try { const r = await api.post('/x/sosyal/hashtag', { text: `${prompt.value}\n${text.value}` }); tagBox.replaceChildren(h('div', { class: 'row wrap' }, r.tags.map((t) => chip(t, 'info'))), h('button', { class: 'btn secondary sm', style: 'margin-top:8px', onclick: async () => { await copyText(r.tags.join(' '), 'Hashtag\'ler kopyalandı'); } }, icon('copy', 14), 'Tümünü Kopyala')); } catch { /* */ } };
 
     const headline = () => (text.value.split('\n').find((l) => l.trim()) ?? prompt.value ?? 'AKORT Mühendislik').replace(/^#+\s*/, '').slice(0, 80) || 'AKORT Mühendislik';
     const makeImage = async () => {
@@ -144,7 +144,7 @@ export const renderAiStudio = async (ctx) => {
             h('button', { class: 'btn secondary', onclick: (e) => { const sel = text.selectedText() || text.value; write(e.currentTarget, 'yeniden-yaz', sel); } }, icon('edit', 16), 'Metni Geliştir'),
             h('button', { class: 'btn', onclick: makeImage }, icon('image', 16), 'Görsel Oluştur'),
             h('button', { class: 'btn secondary', onclick: async () => { try { await api.post('/x/sosyal/gonderiler', { title: headline(), body: text.value, platforms: [], category: 'AI Taslak' }); toast('Sosyal taslağa aktarıldı (Onay Merkezi)', 'ok'); } catch (e) { toast(e.message, 'err'); } } }, icon('share', 16), 'Sosyal Taslağa Aktar'),
-            h('button', { class: 'btn ghost', onclick: async () => { await navigator.clipboard.writeText(text.value); toast('Metin kopyalandı', 'ok'); } }, icon('copy', 16), 'Kopyala'))), { ic: 'doc', action: h('label', { class: 'switch' }, h('input', { type: 'checkbox', onchange: (e) => { compare = e.target.checked; } }), h('i'), h('span', { class: 'small' }, 'Modelleri Karşılaştır')) }),
+            h('button', { class: 'btn ghost', onclick: async () => { await copyText(text.value, 'Metin kopyalandı'); } }, icon('copy', 16), 'Kopyala'))), { ic: 'doc', action: h('label', { class: 'switch' }, h('input', { type: 'checkbox', onchange: (e) => { compare = e.target.checked; } }), h('i'), h('span', { class: 'small' }, 'Modelleri Karşılaştır')) }),
           panel('Prompt\'u İyileştir', h('div', { class: 'stack' }, h('div', { class: 'row wrap' }, chipAdd('Daha profesyonel', 'Daha profesyonel bir dille.'), chipAdd('Daha kısa', 'Daha kısa ve öz.'), chipAdd('Daha ilham verici', 'Daha ilham verici bir tonla.'), chipAdd('Soru ekle', 'Sonda bir soru sor.'), chipAdd('Hashtag öner', 'Sonda hashtag öner.'), h('span', { class: 'grow' }), h('button', { class: 'btn', onclick: (e) => improve(e.currentTarget) }, icon('spark', 16), 'Prompt\'u İyileştir'))), { ic: 'spark' })),
         h('div', { class: 'stack' },
           panel('SEO Skoru', seoBox, { ic: 'search', sub: 'okunabilirlik + teknik (yerel)' }), panel('Marka Sesi Skoru', voiceBox, { ic: 'shield', sub: 'kural tabanlı' }),

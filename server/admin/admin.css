@@ -305,3 +305,5 @@ body.rt-lock { overflow: hidden; }
 /* Kapak / medya alanı önizlemesi: sabit oran, taşmadan */
 .cover-prev { display: block; width: 100%; max-width: 360px; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2, #f6f5f9); }
 .cover-prev.hidden { display: none; }
+
+.sr-copy { position: fixed; left: -9999px; top: 0; opacity: 0; }

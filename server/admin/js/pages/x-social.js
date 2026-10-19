@@ -1,7 +1,7 @@
 // Social Studio — Genel Bakış, İçerik Takvimi, Onay Merkezi, Brand Kit, İçerik Arşivi (referans düzenleri).
 // Platform OAuth bağlı olmadığı için erişim/etkileşim metrikleri "Bağlantı gerekli" gösterir; sahte rakam ve sahte "yayımlandı" yok.
 import { api, session } from '../api.js';
-import { h, icon, chip, toast, spinner, errorBanner, field, modal, fmtDate, debounce } from '../ui.js';
+import { h, icon, chip, toast, spinner, errorBanner, field, modal, fmtDate, debounce, copyText } from '../ui.js';
 import { kpiCard, areaChart, donut, hbars, panel, ring, PALETTE } from '../charts.js';
 import { pageHead, tabs, infoBox, empty, fmtLocal, connectBox, getRange } from './x-common.js';
 import { editor, ST, stChip, setPlatforms } from './x-social-editor.js';
@@ -186,7 +186,7 @@ export const renderBrandKit = async (ctx) => {
     const [b, media] = await Promise.all([api.get('/x/marka'), api.get('/medya?limit=60').catch(() => ({ rows: [] }))]);
     const imgs = (media.rows ?? []).filter((m) => /^image\//.test(m.mime));
     const logos = panel('Logo Varyasyonları', h('div', { class: 'logo-grid' }, b.logos.map((l, i) => h('div', { class: `logo-card${i === 0 ? ' on' : ''}` }, h('div', { class: `logo-view${l.dark ? ' dark' : ''}` }, h('img', { src: l.src, alt: l.name })), h('b', {}, l.name), h('span', { class: 'small muted' }, l.note)))), { ic: 'image', sub: 'Marka logosunun kullanım biçimleri (resmî dosyalar)' });
-    const pal = panel('Renk Paleti', h('div', { class: 'sw-grid' }, b.palette.map((c) => h('button', { class: 'sw', title: 'Kopyala', onclick: async () => { await navigator.clipboard.writeText(c.hex); toast(`${c.hex} kopyalandı`, 'ok'); } }, h('i', { style: `background:${c.hex}` }), h('b', {}, c.name), h('span', {}, c.hex.toUpperCase())))), { ic: 'palette', sub: 'Sitenin tasarım token\'larından okunur' });
+    const pal = panel('Renk Paleti', h('div', { class: 'sw-grid' }, b.palette.map((c) => h('button', { class: 'sw', title: 'Kopyala', onclick: async () => { await copyText(c.hex, `${c.hex} kopyalandı`); } }, h('i', { style: `background:${c.hex}` }), h('b', {}, c.name), h('span', {}, c.hex.toUpperCase())))), { ic: 'palette', sub: 'Sitenin tasarım token\'larından okunur' });
     const typo = panel('Tipografi Sistemi', h('div', { class: 'row', style: 'gap:18px;align-items:flex-start;flex-wrap:wrap' }, h('div', { class: 'aa' }, h('div', { class: 'aa-big' }, 'Aa'), h('b', {}, b.font.family), chip('Ana Font', 'ok'), h('div', { class: 'small muted' }, b.font.license)),
       h('div', { class: 'grow' }, b.sizes.map((s) => h('div', { class: 'stat-row' }, h('b', { style: 'width:70px' }, s.label), h('span', { class: 'grow muted small' }, s.value))))), { ic: 'edit', sub: 'Site yazı tipi ölçeği' });
     const iconsShown = b.icons.slice(0, 18);
