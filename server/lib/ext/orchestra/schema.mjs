@@ -61,3 +61,5 @@ CREATE TABLE IF NOT EXISTS orch_events (
 );
 CREATE INDEX IF NOT EXISTS idx_orch_events_run ON orch_events (run_id, id);
 `);
+
+try { db.exec('ALTER TABLE orch_agents ADD COLUMN daily_token_limit INTEGER NOT NULL DEFAULT 0'); } catch { /* sütun zaten var */ }

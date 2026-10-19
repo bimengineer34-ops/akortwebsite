@@ -3,7 +3,7 @@
 import { config } from '../../config.mjs';
 import { chatJson } from './llm.mjs';
 import { SAFETY_RULES, untrustedBlock, validateSchema, sanitizeMarkdown, scanRiskyClaims } from './safety.mjs';
-import { sourceItems, siteContext, blogCategories, competitorsInfo, statsInfo, seoCheck } from './tools.mjs';
+import { sourceItems, siteContext, blogCategories, competitorsInfo, statsInfo, seoCheck, siteSeoInfo, formInfo, brandKitInfo } from './tools.mjs';
 
 export const slugify = (t) => String(t).toLocaleLowerCase('tr').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80).replace(/-+$/, '');
 
@@ -11,12 +11,12 @@ const has = (agent, tool) => (agent.tools ?? []).includes(tool);
 const siteOrigin = () => String(config.siteUrl ?? '').replace(/\/$/, '');
 
 /** Ortak çağrı: sistem talimatı + güvenlik kuralları + çıktı şeması; şema ihlali yeniden denenebilir hata verir */
-const runLlm = async ({ agent, task, sections, ctxNote = '' }) => {
-  const system = `${agent.system_prompt}\n\n${SAFETY_RULES}\n\nÇIKTI BİÇİMİ: yalnızca şu JSON şemasına uyan TEK bir JSON nesnesi döndür (başka metin yazma):\n${JSON.stringify(agent.output_schema)}`;
+const runLlm = async ({ agent, task, sections, ctxNote = '', schema = agent.output_schema }) => {
+  const system = `${agent.system_prompt}\n\n${SAFETY_RULES}\n\nÇIKTI BİÇİMİ: yalnızca şu JSON şemasına uyan TEK bir JSON nesnesi döndür (başka metin yazma):\n${JSON.stringify(schema)}`;
   const retryHint = task?.attempts > 1 && task?.error ? `\n\n[Önceki denemede şu hata alındı, düzelt: ${String(task.error).slice(0, 400)}]` : '';
   const prompt = sections.filter((s) => s.text).map((s) => `## ${s.title}\n${s.text}`).join('\n\n') + ctxNote + retryHint;
   const { json, usage } = await chatJson({ agent, key: agent.key, system, prompt, max: agent.max_tokens });
-  const errs = validateSchema(agent.output_schema, json);
+  const errs = validateSchema(schema, json);
   if (errs.length) throw Object.assign(new Error(`Çıktı şemaya uymuyor: ${errs.slice(0, 4).join('; ')}`), { usage });
   return { output: json, usage };
 };
@@ -86,9 +86,41 @@ const content = async ({ agent, task, input, deps, log }) => {
 };
 
 /* ------------------------------ SEO ------------------------------ */
+/** Mevcut sayfaların SEO denetimi: deterministik tarama verisi + model önceliklendirmesi (uydurma sayfa/bağlantı temizlenir) */
+const SITE_SEO_SCHEMA = { type: 'object', required: ['summary', 'priorities'], properties: {
+  summary: { type: 'string', minLength: 20, maxLength: 900 },
+  priorities: { type: 'array', minItems: 1, maxItems: 10, items: { type: 'object', required: ['page', 'issue', 'fix', 'impact'], properties: { page: { type: 'string' }, issue: { type: 'string', minLength: 5 }, fix: { type: 'string', minLength: 5 }, impact: { type: 'string', enum: ['yuksek', 'orta', 'dusuk'] } } } },
+  quick_wins: { type: 'array', maxItems: 8, items: { type: 'string' } },
+  internal_link_opportunities: { type: 'array', maxItems: 8, items: { type: 'object', required: ['from', 'to', 'anchor'], properties: { from: { type: 'string' }, to: { type: 'string' }, anchor: { type: 'string', maxLength: 80 } } } },
+} };
+const seoSite = async ({ agent, task, log }) => {
+  if (!has(agent, 'site_seo')) throw Object.assign(new Error('Bu ajanın site_seo aracı yetkisi yok (Ajanlar › araç yetkileri)'), { fatal: true });
+  const info = siteSeoInfo();
+  const { output, usage } = await runLlm({
+    agent, task, schema: SITE_SEO_SCHEMA,
+    sections: [
+      { title: 'TARAMA ÖZETİ (deterministik, güvenilir)', text: JSON.stringify({ sayfa: info.total, kritik: info.errors, onemli: info.warnings, iyilestirme: info.infos, ortalamaSkor: info.avgScore, yinelenenBasliklar: info.duplicateTitles, sitemapteOlmayan: info.notInSitemap }) },
+      { title: 'EN DÜŞÜK PUANLI SAYFALAR', text: JSON.stringify(info.worstPages) },
+      { title: 'KISA/EKSİK META AÇIKLAMALI İÇERİKLER', text: JSON.stringify(info.shortMeta) },
+      { title: 'İÇ BAĞLANTISI OLMAYAN İÇERİKLER VE ÖNERİLEN HEDEFLER', text: JSON.stringify(info.noInternalLink) },
+    ],
+  });
+  const before = output.priorities.length;
+  output.priorities = output.priorities.filter((p) => info.urls.has(p.page));
+  const links = (output.internal_link_opportunities ?? []).filter((l) => info.urls.has(l.from) && info.urls.has(l.to) && l.from !== l.to);
+  const dropped = before - output.priorities.length + ((output.internal_link_opportunities ?? []).length - links.length);
+  if (dropped) log('warn', 'site_seo_temizlendi', `${dropped} sitede bulunmayan sayfa/bağlantı önerisi çıktıdan atıldı`);
+  if (!output.priorities.length) throw Object.assign(new Error('Model, taramadaki gerçek sayfalara dayanan öncelik üretemedi'), { usage });
+  output.internal_link_opportunities = links;
+  output.scan = { pages: info.total, errors: info.errors, warnings: info.warnings, infos: info.infos, avgScore: info.avgScore };
+  output.mode = 'site';
+  return { output, usage };
+};
+
 const seo = async ({ agent, task, input, deps, log }) => {
   const c = deps.content ?? Object.values(deps).find((d) => d?.body);
-  if (!c) throw Object.assign(new Error('SEO ajanı için içerik (content) çıktısı gerekli'), { fatal: true });
+  if (!c && (input.scope === 'site' || input.mode === 'site')) return seoSite({ agent, task, log });
+  if (!c) throw Object.assign(new Error('SEO ajanı için içerik (content) çıktısı gerekli (veya girdide scope=site)'), { fatal: true });
   const site = has(agent, 'site_content') ? siteContext(input.topic ?? c.title, 25) : { pages: [], urls: new Set() };
   const pre = has(agent, 'seo_check') ? seoCheck({ title: c.title, description: c.description, body: c.body, slug: c.slug, focus: input.focus ?? '' }) : { checks: [], score: null };
   const { output, usage } = await runLlm({
@@ -188,4 +220,70 @@ const social = async ({ agent, task, input, deps }) => {
   return { output, usage };
 };
 
-export const RUNNERS = { research, content, seo, qa, competitor, mep, analytics, social };
+/* ------------------------------ Visual Design (yalnızca kurgu; görsel Brand Kit ile deterministik üretilir) ------------------------------ */
+const design = async ({ agent, task, input, deps, log }) => {
+  if (!has(agent, 'brand_kit')) throw Object.assign(new Error('Bu ajanın brand_kit aracı yetkisi yok'), { fatal: true });
+  const kit = brandKitInfo();
+  const c = deps.seo ?? deps.content ?? deps.social ?? Object.values(deps)[0];
+  const topic = String(input.topic ?? c?.title ?? '').trim();
+  if (!topic) throw Object.assign(new Error('Konu boş'), { fatal: true });
+  const { output, usage } = await runLlm({
+    agent, task,
+    sections: [
+      { title: 'KONU', text: topic },
+      { title: 'İÇERİK ÖZETİ', text: c ? `${c.title ?? ''}\n${(c.description ?? c.body ?? '').toString().slice(0, 500)}` : '(yok)' },
+      { title: 'SEÇENEKLER (yalnızca bunlardan seç)', text: `şablonlar: ${kit.templates.map((t) => `${t.key} (${t.note})`).join(' | ')}\ntemalar: ${kit.themes.map((t) => t.key).join(' | ')}\nbiçimler: ${kit.formats.map((f) => f.key).join(' | ')}` },
+    ],
+  });
+  const fix = (v, list, def, what) => { if (list.includes(v)) return v; log('warn', 'tasarim_duzeltildi', `${what} "${String(v).slice(0, 30)}" geçersiz; "${def}" kullanıldı`); return def; };
+  output.template = fix(output.template, kit.templates.map((t) => t.key), 'blog-paylasimi', 'şablon');
+  output.theme = fix(output.theme, kit.themes.map((t) => t.key), 'marka', 'tema');
+  output.format = fix(output.format, kit.formats.map((f) => f.key), 'link', 'biçim');
+  output.title = output.title.replace(/<[^>]*>/g, '').trim().slice(0, 60);
+  output.subtitle = String(output.subtitle ?? '').replace(/<[^>]*>/g, '').trim().slice(0, 140);
+  output.alt = output.alt.replace(/<[^>]*>/g, '').trim().slice(0, 200);
+  output.risk_flags = scanRiskyClaims(`${output.title} ${output.subtitle}`);
+  return { output, usage };
+};
+
+/* ------------------------------ Sales (müşteri talebi analizi; kişisel veri modele gitmez; hiçbir şey göndermez) ------------------------------ */
+const PRICE_RE = /(?:\d[\d.,]*\s*(?:TL|₺|USD|EUR|€|\$|lira|dolar|euro))|(?:%\s?\d+\s*indirim)|(?:indirim|ücretsiz\s+teklif|garanti(?:li)?|kesin(?:likle)?\s+(?:teslim|sonuç))/i;
+const sales = async ({ agent, task, input, log }) => {
+  if (!has(agent, 'forms')) throw Object.assign(new Error('Bu ajanın forms aracı yetkisi yok'), { fatal: true });
+  const form = formInfo(input.formId);
+  if (!form) throw Object.assign(new Error(`Talep #${input.formId} bulunamadı`), { fatal: true });
+  if (form.kind === 'firsat') throw Object.assign(new Error('Bu kayıt zaten bir fırsat önerisi; müşteri talebi seçin'), { fatal: true });
+  if (form.suspicious) log('warn', 'enjeksiyon_suphesi', `Talep #${form.id} metni talimat kalıbı içeriyor; veri olarak işlendi, çıktıya insan denetimi şart`);
+  const { output, usage } = await runLlm({
+    agent, task,
+    sections: [
+      { title: 'TALEP (kişisel veriler çıkarıldı; yalnızca aşağıdaki alanlar modele iletilir)', text: untrustedBlock(`TALEP-${form.id}`, `TÜR: ${form.kind}\nTARİH: ${form.date}\nKURUMSAL TALEP: ${form.corporate ? "evet" : "hayır"} (kurum adı iletilmez)\nKONU: ${form.subject || '—'}\nEK BİLGİ: ${JSON.stringify(form.details)}\nMESAJ: ${form.message}`) },
+    ],
+  });
+  const flags = [];
+  if (PRICE_RE.test(output.draft_reply)) { flags.push('Yanıt taslağında fiyat/indirim/garanti ifadesi bulundu — gönderilmeden önce temizlenmeli'); log('warn', 'yanit_riskli', 'Yanıt taslağında fiyat/taahhüt ifadesi'); }
+  for (const w of scanRiskyClaims(output.draft_reply)) flags.push(`Yanıt taslağı: ${w}`);
+  if (/https?:\/\//i.test(output.draft_reply)) { output.draft_reply = output.draft_reply.replace(/https?:\/\/\S+/gi, '[bağlantı kaldırıldı]'); flags.push('Yanıt taslağındaki dış bağlantılar kaldırıldı'); }
+  if (form.suspicious) flags.push('Talep metninde talimat/enjeksiyon kalıbı var — içeriğe güvenmeyin');
+  output.risk_flags = flags;
+  output.form_id = form.id;
+  output.sent = false; // bu sürümde hiçbir e-posta/teklif GÖNDERİLMEZ
+  return { output, usage };
+};
+
+/* ------------------------------ CRM (yapılandırılmış fırsat önerisi; yazma yalnızca onaylı eylemle) ------------------------------ */
+const crm = async ({ agent, task, deps }) => {
+  const sl = deps.sales ?? Object.values(deps).find((d) => d?.draft_reply);
+  if (!sl) throw Object.assign(new Error('CRM ajanı için Sales analizi gerekli'), { fatal: true });
+  const { output, usage } = await runLlm({
+    agent, task,
+    sections: [{ title: 'SALES ANALİZİ (güvenilir iç çıktı)', text: JSON.stringify({ summary: sl.summary, category: sl.category, urgency: sl.urgency, missing_info: sl.missing_info, next_steps: sl.next_steps }) }],
+  });
+  output.tags = [...new Set([sl.category, ...(output.tags ?? [])].map((t) => String(t).trim().toLowerCase()).filter(Boolean))].slice(0, 6);
+  output.form_id = sl.form_id;
+  output.stage = 'yeni';
+  output.urgency = sl.urgency;
+  return { output, usage };
+};
+
+export const RUNNERS = { research, content, seo, qa, competitor, mep, analytics, social, design, sales, crm };

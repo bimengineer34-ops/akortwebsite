@@ -30,21 +30,29 @@ Mevcut yığın Node olduğu için **dış çatı (LangGraph/Agent Framework vb.
 ## Veri modeli (migration: `orchestra/schema.mjs`, açılışta `CREATE TABLE IF NOT EXISTS`)
 `orch_agents` (ajan yapılandırması) · `orch_workflows` · `orch_runs` · `orch_tasks` (DAG düğümü: bağımlılık, durum, girdi/çıktı, deneme, onay, token/maliyet) · `orch_events` (denetim kaydı).
 
-## Ajanlar (12) ve durumları
-| Ajan | Durum | Araç yetkileri (varsayılan) |
+## Ajanlar (12) — hepsi çalıştırılabilir
+| Ajan | Ne yapar | Araç yetkileri (varsayılan) |
 |---|---|---|
-| Master Orchestrator | ✅ planlar (Türkçe komut → doğrulanmış görev grafı) | — |
-| Industry Research (Research) | ✅ | source_items, site_content |
-| Content Writer | ✅ | site_content |
-| SEO | ✅ | site_content, seo_check |
-| QA & Approval | ✅ | risk_scan |
-| Competitor Intelligence | ✅ (yalnızca bizim tarama kayıtlarımız + kaynaklar) | competitors, source_items |
-| Social Media | ✅ (eylem: Social Studio **taslağı**; eylemden önce onay adımı zorunlu) | site_content |
-| MEP Technical Expert | ✅ (doğrulayamayacağını "emin değil" listesine yazar) | site_content |
-| Analytics | ✅ (kişisel veri içermeyen sayaçlar) | stats |
-| Visual Design · Sales · CRM | ⛔ **yapılandırılabilir ama bağlı değil** (panelde "Bağlı değil" + gerekçe; çalıştırılamaz) | — |
+| Master Orchestrator | Türkçe komutu doğrulanmış görev grafına böler | — |
+| Industry Research (Research) | Kaynaklı araştırma (Pazar & Medya + site içeriği) | source_items, site_content |
+| Content Writer | Markdown blog taslağı | site_content |
+| SEO | **İki mod:** taslak iyileştirme **ve mevcut sayfaların SEO denetimi** (başlık, meta, iç bağlantı, teknik SEO) | site_content, seo_check, site_seo |
+| QA & Approval | Doğruluk / NO_FAKE_DATA / kaynak denetimi, onay raporu | risk_scan |
+| Competitor Intelligence | İzlenen rakip kayıtları + kaynaklar | competitors, source_items |
+| Social Media | LinkedIn/X metinleri (eylem: Social Studio **taslağı**) | site_content |
+| **Visual Design** | Brand Kit şablon/biçim/tema + başlık kurgusu; görsel **Brand Kit ile deterministik** üretilir (logo/metin katmanı yapay zekâyla çizilmez) | brand_kit |
+| **Sales** | Müşteri talebi analizi + yanıt **taslağı** (kişisel veriler modele gitmez; hiçbir şey göndermez) | forms |
+| **CRM** | Sales analizinden yapılandırılmış iş fırsatı önerisi | — |
+| MEP Technical Expert | Teknik tutarlılık; doğrulayamadığını "emin değil" listesine yazar | site_content |
+| Analytics | Çerezsiz sayaçların yorumu | stats |
 
-Her ajanda: sistem talimatı, görev tanımı, model/sağlayıcı geçersiz kılma, araç yetkisi, girdi/çıktı JSON şeması, yeniden deneme sayısı, zaman aşımı, token sınırı, onay gereksinimi, çalıştırma geçmişi (Kayıtlar) ve token/maliyet takibi vardır.
+Her ajanda: sistem talimatı, görev tanımı, model/sağlayıcı geçersiz kılma, araç yetkisi, girdi/çıktı JSON şeması, yeniden deneme, zaman aşımı, çıktı token sınırı, **günlük token limiti**, onay gereksinimi, **çalıştırma geçmişi (Ajanlar › Yapılandır)** ve token/maliyet takibi vardır.
+
+## Hazır iş akışları
+1. **Blog Taslağı:** Research → Content → SEO → QA → İnsan onayı → blog editöründe taslak
+2. **Site SEO Denetimi:** SEO ajanı (scope=site) mevcut sayfaları tarama verisiyle önceliklendirir — onay gerekmez, hiçbir şeyi değiştirmez; sitede olmayan sayfa/bağlantı önerileri çıktıdan temizlenir
+3. **Müşteri Talebi Analizi:** Sales → CRM → İnsan onayı → CRM'de **fırsat kaydı** (Form talepleri çekmecesinde "AI ile analiz et" düğmesi). E-posta/teklif **gönderilmez**; yanıt taslağı kayıt notunda "GÖNDERİLMEDİ" etiketiyle durur, kaynak talebe iç not düşer
+4. **Sosyal Gönderi:** Social + Visual Design (paralel) → İnsan onayı → Brand Kit görseli (medya kitaplığı) + Social Studio taslağı (görselli, yayınlanmaz)
 
 ## Motor (`engine.mjs`)
 - **DAG**: görevler bağımlılıkları bitince kuyruğa girer; bağımsızlar **paralel** (eşzamanlılık 1–6), bağımlılar **sıralı**; ajanlar arası veri bağımlılık çıktılarıyla (yapılandırılmış JSON) taşınır.
@@ -52,18 +60,20 @@ Her ajanda: sistem talimatı, görev tanımı, model/sağlayıcı geçersiz kıl
 - **Hata yönetimi**: geçici hatada üstel geri çekilmeyle yeniden deneme; 400/401/403/404/409/413/422/429 ve `fatal` hatalar **yeniden denenmez**; şemaya uymayan model çıktısı reddedilir; sınırlı deneme sonrası görev başarısız, bağımlılar "atlandı", çalıştırma "başarısız".
 - **İptal/durdurma**: bekleyen görevler iptal, devam eden görevin sonucu atılır. Başarısız görev elle yeniden başlatılabilir (reddedilen hariç).
 - **Idempotency**: `idempotencyKey` zorunlu, tekrar istek aynı çalıştırmayı döndürür; görev sahiplenme ve onay/red **CAS** ile atomik (aynı görev iki kez yürütülmez); eylemler `orch.action.<görev>` kaydıyla çökme sonrası da **tek sefer** çalışır.
-- **Bütçe**: çalıştırma başına token limiti + sağlayıcı aylık bütçesi + görev başına token sınırı; devre kesici.
+- **Duraklat / devam**: çalıştırma duraklatılır (devam eden görevler tamamlanır, yenisi başlamaz); devam ettirilir; duraklatılmışken iptal edilebilir.
+- **Bütçe**: çalıştırma başına token limiti + **ajan başına ve genel günlük token limiti** (%80'de uyarı olayı, aşılınca görev açık mesajla durur) + sağlayıcı aylık bütçesi + görev başına token sınırı; devre kesici. Günlük kullanım görev bitince yazıldığından eşzamanlı görevlerde küçük aşım olabilir.
 
 ## Güvenlik
 - **Yetki**: Orchestra görevlerini/çıktılarını yalnızca **yönetici/editör** okur ve çalıştırır; ajan/akış/ayar tanımlarını yalnızca **yönetici** değiştirir; dış sistemi değiştiren eylemler yalnızca yönetici onayıyla (şu an dış eylem yok).
 - **İnsan onayı**: her eylemden önce onay adımı zorunlu (iş akışı doğrulaması + Master planında otomatik ekleme + motorda son güvenlik ağı). Blog ve sosyal çıktılar yalnızca **taslak** (yayınlanmaz). QA kritik bulgu bildirirse onay için "uyarıları gördüm" onayı gerekir.
 - **Prompt injection**: dış kaynak metni HTML'den arındırılır, uzunluğu kısıtlanır, talimat kalıpları içerenler ajana **hiç verilmez** (olay kaydı), geri kalanı "GÜVENİLMEZ VERİ" bloklarıyla iletilir; sunucu her çağrıya değiştirilemez güvenlik kuralları ekler; model çıktısı şemaya göre doğrulanır; kaynak atıfları yalnızca sağlanan adreslerle sınırlıdır; iç bağlantılar yalnızca sitede var olan sayfalardır; üretilen Markdown'dan HTML/izinsiz dış bağlantı temizlenir; Master planı sunucuda yeniden doğrulanır (listede olmayan/bağlı olmayan ajan reddedilir).
+- **Müşteri verisi (KVKK):** Sales ajanına ad, e-posta, telefon, kurum adı, IP ve tarayıcı bilgisi **gönderilmez**; form alanı adı ne olursa olsun e-posta/telefon/IBAN/TC no kalıpları değer olarak maskelenir, serbest metindeki e-posta/telefon da `[e-posta]`/`[telefon]` ile değiştirilir. Metne müşterinin kendi yazdığı **ad gibi serbest kimlik bilgileri maskelenemez**; sağlayıcıya iletilen metin yalnızca talep konusu ve mesajdır. Yanıt taslağındaki fiyat/indirim/garanti ifadeleri ve dış bağlantılar işaretlenir/kaldırılır.
 - **Sırlar**: API anahtarları yalnızca kasada; olay/log kayıtları `redact()` ile maskelenir; araçlar salt okunurdur.
 - **NO_FAKE_DATA**: Content/QA deterministik risk taraması (kaynaksız yüzde, deneyim/sertifika/müşteri iddiası, abartı).
 - **Test/canlı ayrımı**: `ORCH_FAKE_LLM=1` yalnızca `NODE_ENV≠production` iken geçerlidir; panelde "TEST MODU" uyarısı çıkar.
 
 ## Entegrasyonlar
-Blog → blog editöründe `draft: true` taslak · SEO → mevcut site indeksi (`arama-index.json`) ve deterministik SEO kontrolü · Pazar & Medya → `source_items` (kaynak URL'leri çıktıda saklanır) · Sosyal → Social Studio'da `taslak` gönderi (yayın için mevcut onay/mühür akışı geçerli) · Müşteri talepleri/CRM → **henüz bağlı değil** (Sales/CRM ajanları kapalı).
+Blog → blog editöründe `draft: true` taslak · SEO → mevcut site taraması (`scanSite`), site indeksi ve deterministik SEO kontrolü · Pazar & Medya → `source_items` (kaynak URL'leri çıktıda saklanır; Türkçe ek/harf katlamalı arama) · Sosyal → Social Studio'da `taslak` gönderi (görselli; yayın için mevcut onay/mühür akışı geçerli) · Görsel → Brand Kit (medya kitaplığı) · Müşteri talepleri → Form talepleri/CRM (`firsat` kaydı, onaylı).
 
 ## Ortam değişkenleri / ayarlar
 Yeni zorunlu değişken yok. Test için `ORCH_FAKE_LLM=1` (üretimde kullanmayın). Panel: Model & API → varsayılan sağlayıcı, eşzamanlılık, çalıştırma başına token limiti. Yapay zekâ anahtarı: Entegrasyonlar.
@@ -83,5 +93,8 @@ Veridyen/VPS (Node ≥ 22.12, kalıcı disk) üzerinde mevcut kurulum adımları
 
 ## Dürüst sınırlar
 - Gerçek bir yapay zekâ sağlayıcısıyla **çalıştırılmadı**; testler deterministik sahte modelle yapıldı. Gerçek içerik kalitesi, token maliyeti ve model uyumu (JSON biçimi) ilk gerçek çalıştırmada gözlenmelidir (hatalarda motor yeniden dener, şema ihlalini reddeder).
-- Visual Design / Sales / CRM ajanları ve harici e-posta/teklif gönderimi bu sürümde **yok**; MEP ajanı mevzuat/değer doğrulamaz.
+- **Harici e-posta/teklif gönderimi yok** (Sales yalnızca taslak üretir; gönderim gelecekte yönetici onaylı ayrı bir eylem olmalıdır). Görsel yalnızca Brand Kit şablonlarıyla üretilir (serbest yapay zekâ görseli yok).
+- Müşteri talebi metnindeki serbest kimlik bilgileri (ör. mesaj içinde yazılmış ad) maskelenemez; kurumunuzun veri sağlayıcılara aktarım politikasına (KVKK m.9) uygunluğunu hukuk danışmanıyla teyit edin.
+- Talep analizi **otomatik tetiklenmez** (maliyet/gizlilik); form çekmecesinden elle başlatılır.
+- QA kritik bulgu bildirirse yazı otomatik yeniden yazılmaz; yalnızca insan onayında uyarı çıkar.
 - Paralellik süreç içidir (tek Node süreci); çok sunuculu dağıtık kuyruk yoktur.

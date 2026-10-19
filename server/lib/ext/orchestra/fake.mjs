@@ -34,6 +34,22 @@ export const fakeRespond = (key, prompt) => {
       + '\n\n<script>alert(1)</script> Ayrıntı için [dış kaynak](https://izinsiz-site.example/x) ve [iç sayfa](/hizmetler).';
     return JSON.stringify({ title: `${t}: Pratik Rehber ve Dikkat Edilecek Noktalar`, description: `${t} konusunda yöntem, kapsam ve uygulama adımlarını mühendislik bakışıyla özetleyen rehber; sık hatalar ve çözümleri.`, excerpt: `${t} için kısa rehber.`, category: cat, tags: ['rehber', 'mühendislik'], body, claims_needing_source: [] });
   }
+  if (key === 'seo' && prompt.includes('## TARAMA ÖZETİ')) {
+    const urls = [...(section(prompt, 'EN DÜŞÜK PUANLI SAYFALAR').matchAll(/"url":"(\/[^"]*)"/g))].map((m) => m[1]);
+    return JSON.stringify({
+      summary: 'Tarama verisine göre öncelikli iyileştirmeler listelendi.',
+      priorities: [...urls.slice(0, 3).map((u, i) => ({ page: u, issue: 'Meta açıklama kısa veya eksik olabilir', fix: 'Açıklamayı 120–160 karaktere tamamlayın', impact: i ? 'orta' : 'yuksek' })), { page: '/uydurma-sayfa-yok', issue: 'Uydurma sayfa sorunu', fix: 'Gerçek olmayan sayfa', impact: 'dusuk' }],
+      quick_wins: ['Kısa meta açıklamaları tamamlayın'],
+      internal_link_opportunities: urls.length > 1 ? [{ from: urls[0], to: urls[1], anchor: 'ilgili sayfa' }, { from: urls[0], to: '/uydurma-hedef', anchor: 'uydurma' }] : [],
+    });
+  }
+  if (key === 'sales') {
+    const risky = /\[FIYAT-TEST\]/.test(prompt);
+    return JSON.stringify({ summary: 'Müşteri, hizmet kapsamı hakkında bilgi ve görüşme talep ediyor.', category: 'BIM Danışmanlığı', urgency: /ACİL/i.test(prompt) ? 'yuksek' : 'orta', missing_info: ['Proje aşaması', 'Tahmini başlangıç tarihi'], next_steps: ['Kısa bir keşif görüşmesi planlayın', 'Eksik bilgileri isteyin'],
+      draft_reply: `Merhaba, talebiniz için teşekkür ederiz. Projenizin aşamasını ve tahmini başlangıç tarihini paylaşırsanız ekibimiz kapsamı birlikte netleştirmek için sizinle iletişime geçecektir.${risky ? ' Toplam bedel 150.000 TL olacaktır ve %20 indirim uygulanır, sonuç garantilidir. Detay: https://kotu.example/teklif' : ''}` });
+  }
+  if (key === 'crm') return JSON.stringify({ title: 'BIM danışmanlığı bilgi talebi', priority: 'orta', note: 'Müşteri kapsam ve görüşme istiyor; eksik bilgiler sorulacak.', tags: ['BIM', 'Bilgi Talebi'] });
+  if (key === 'design') return JSON.stringify({ template: 'blog-paylasimi', format: 'link', theme: 'marka', title: `${topic}`.slice(0, 55), subtitle: 'Mühendislik bakışıyla pratik rehber', alt: `${topic} için marka görseli` });
   if (key === 'seo') {
     const pages = [...section(prompt, 'MEVCUT SİTE SAYFALARI').matchAll(/→ (\/\S*)/g)].map((m) => m[1]);
     const t = JSON.parse(section(prompt, 'TASLAK').split('\n')[0] || '{}');

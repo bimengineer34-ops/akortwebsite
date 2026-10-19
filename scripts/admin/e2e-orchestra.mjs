@@ -18,6 +18,7 @@ const client = () => {
 let pass = 0, fail = 0;
 const t = (n, ok, x = '') => { ok ? pass++ : fail++; console.log(`${ok ? '✓' : '✗'} ${n}${ok ? '' : ` — ${typeof x === 'string' ? x : JSON.stringify(x).slice(0, 160)}`}`); };
 const O = '/api/admin/x/orkestra';
+const RUN = Date.now().toString(36); // her çalıştırmada benzersiz kullanıcı/başlık (kalıcı test veritabanında çakışma olmaz)
 const key = () => `e2e-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}-xxxxxx`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn, ms = 30000) => { const t0 = Date.now(); for (;;) { const v = await fn(); if (v) return v; if (Date.now() - t0 > ms) return null; await sleep(300); } };
@@ -29,7 +30,7 @@ if (!st.d?.fake) { console.log('Sunucu ORCH_FAKE_LLM=1 ile başlatılmamış —
 t('sahte model modu açık (yalnızca test)', st.d.fake === true);
 
 // kullanıcılar
-const users = { editor: 'orch-editor@t.test', izleyici: 'orch-izleyici@t.test', seo: 'orch-seo@t.test', icerik: 'orch-icerik@t.test' };
+const users = { editor: `orch-editor-${RUN}@t.test`, izleyici: `orch-izleyici-${RUN}@t.test`, seo: `orch-seo-${RUN}@t.test`, icerik: `orch-icerik-${RUN}@t.test` };
 for (const [role, em] of Object.entries(users)) await admin.call('POST', '/api/admin/kullanicilar', { name: role, email: em, role, password: 'Parola.Test1234' });
 const cl = {};
 for (const [role, em] of Object.entries(users)) { cl[role] = client(); await cl[role].login(em, 'Parola.Test1234'); }
@@ -42,7 +43,7 @@ t('oturumsuz istek 401', (await client().call('GET', `${O}/ozet`)).s === 401);
 
 /* ---- yapılandırma yetkisi ---- */
 const ag = (await admin.call('GET', `${O}/ajanlar`)).d;
-t('12 ajan listelenir, çalıştırılabilir olanlar işaretli', ag.agents.length === 12 && ag.agents.find((a) => a.key === 'research').executable && !ag.agents.find((a) => a.key === 'sales').executable);
+t('12 ajan listelenir, hepsi çalıştırılabilir', ag.agents.length === 12 && ag.agents.every((a) => a.executable) && ag.agents.find((a) => a.key === 'seo').tools.includes('site_seo'));
 t('editör ajan ayarını DEĞİŞTİREMEZ (yalnızca yönetici)', (await cl.editor.call('PUT', `${O}/ajanlar/qa`, { enabled: false })).s === 403 && (await cl.editor.call('PUT', `${O}/ayarlar`, { concurrency: 3 })).s === 403);
 t('geçersiz ajan ayarı reddedilir', (await admin.call('PUT', `${O}/ajanlar/qa`, { tools: ['sistem_komutu'] })).s === 400);
 t('CSRF belirteci olmadan yazma reddedilir', (await admin.call('POST', `${O}/plan`, { command: 'blog yazısı hazırla lütfen' }, { noCsrf: true })).s === 403);
@@ -50,9 +51,9 @@ t('CSRF belirteci olmadan yazma reddedilir', (await admin.call('POST', `${O}/pla
 /* ---- çalıştırma ve onay ---- */
 const wf = (await admin.call('GET', `${O}/akislar`)).d.workflows.find((w) => w.builtin);
 const k = key();
-const body = { workflowId: wf.id, title: 'E2E blog', params: { topic: 'Çelik yapı koordinasyonu', focus: '' }, idempotencyKey: k };
+const body = { workflowId: wf.id, title: `E2E blog ${RUN}`, params: { topic: 'Çelik yapı koordinasyonu', focus: '' }, idempotencyKey: k };
 const [r1, r2] = await Promise.all([admin.call('POST', `${O}/calistir`, body), admin.call('POST', `${O}/calistir`, body)]);
-t('Aynı idempotencyKey ile eşzamanlı iki istek tek çalıştırma üretir', r1.d.id === r2.d.id && [r1.d.duplicate, r2.d.duplicate].filter(Boolean).length <= 1 && (await admin.call('GET', `${O}/calistirmalar`)).d.runs.filter((x) => x.title === 'E2E blog').length === 1, { a: r1.d, b: r2.d });
+t('Aynı idempotencyKey ile eşzamanlı iki istek tek çalıştırma üretir', r1.d.id === r2.d.id && [r1.d.duplicate, r2.d.duplicate].filter(Boolean).length <= 1 && (await admin.call('GET', `${O}/calistirmalar`)).d.runs.filter((x) => x.title === `E2E blog ${RUN}`).length === 1, { a: r1.d, b: r2.d });
 const runId = r1.d.id;
 const waiting = await until(async () => { const d = (await admin.call('GET', `${O}/calistirmalar/${runId}`)).d; return d.run.status === 'awaiting_approval' ? d : null; });
 t('Akış insan onayında bekler; blog taslağı henüz yok', !!waiting && waiting.tasks.find((x) => x.ref === 'draft').status === 'pending');
@@ -92,6 +93,48 @@ const bad = await admin.call('POST', `${O}/calistir`, { title: 'hack', idempoten
 t('Onay adımı olmayan eylem içeren plan sunucuda reddedilir (422)', bad.s === 422 && /onay/.test(JSON.stringify(bad.d)), bad);
 const bad2 = await admin.call('POST', `${O}/calistir`, { title: 'x', idempotencyKey: 'kisa', steps: wf.steps });
 t('Geçersiz idempotencyKey reddedilir', bad2.s === 400);
+
+/* ---- duraklat / devam ---- */
+const rp = await admin.call('POST', `${O}/calistir`, { workflowId: wf.id, params: { topic: 'duraklat', focus: '' }, idempotencyKey: key() });
+const ps = await admin.call('POST', `${O}/calistirmalar/${rp.d.id}/duraklat`);
+t('Çalıştırma duraklatılır', ps.s === 200 && (await admin.call('GET', `${O}/calistirmalar/${rp.d.id}`)).d.run.status === 'paused', ps);
+t('Yetkisiz rol duraklatamaz (403); tekrar duraklatma 409', (await cl.izleyici.call('POST', `${O}/calistirmalar/${rp.d.id}/duraklat`)).s === 403 && (await admin.call('POST', `${O}/calistirmalar/${rp.d.id}/duraklat`)).s === 409);
+await sleep(3500);
+t('Duraklatılmışken ilerlemez (devam eden görev bitmiş, yenisi başlamaz)', (await admin.call('GET', `${O}/calistirmalar/${rp.d.id}`)).d.tasks.filter((x) => x.status === 'running').length === 0 && (await admin.call('GET', `${O}/calistirmalar/${rp.d.id}`)).d.run.status === 'paused');
+t('Devam ettirilir ve onay noktasına ilerler', (await admin.call('POST', `${O}/calistirmalar/${rp.d.id}/devam`)).s === 200 && !!(await until(async () => (await admin.call('GET', `${O}/calistirmalar/${rp.d.id}`)).d.run.status === 'awaiting_approval')));
+await admin.call('POST', `${O}/calistirmalar/${rp.d.id}/iptal`);
+
+/* ---- müşteri talebi → analiz (form detayındaki "AI ile analiz et") ---- */
+const sub = await fetch(base + '/api/iletisim', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: base }, body: JSON.stringify({ ad_soyad: 'E2E Test Kişi', eposta: 'e2e.kisi@ornek.test', telefon: '+90 555 000 11 22', hizmet_alani: 'bim', mesaj: 'BIM danışmanlığı hakkında kısa bilgi almak istiyorum, bana e2e.kisi@ornek.test adresinden dönebilirsiniz.', kvkk: true, website: '' }) });
+t('(Hazırlık) iletişim talebi gönderildi', sub.status === 200, sub.status);
+const formsList = (await admin.call('GET', '/api/admin/formlar')).d;
+const fid = (formsList.rows ?? formsList.forms ?? []).find((x) => /E2E Test/.test(x.name))?.id;
+t('Talep listede', !!fid);
+const kf = key();
+const fa = await admin.call('POST', `${O}/talep-analizi`, { formId: fid, idempotencyKey: kf });
+t('Talep analizi başlatılır; aynı anahtarla ikinci istek aynı çalıştırmayı döndürür', fa.s === 200 && (await admin.call('POST', `${O}/talep-analizi`, { formId: fid, idempotencyKey: kf })).d.id === fa.d.id);
+t('Yetkisiz roller talep analizi başlatamaz (403)', (await cl.seo.call('POST', `${O}/talep-analizi`, { formId: fid, idempotencyKey: key() })).s === 403 && (await cl.izleyici.call('POST', `${O}/talep-analizi`, { formId: fid, idempotencyKey: key() })).s === 403);
+t('Olmayan talep 404', (await admin.call('POST', `${O}/talep-analizi`, { formId: 99999999, idempotencyKey: key() })).s === 404);
+const fw = await until(async () => { const d = (await admin.call('GET', `${O}/calistirmalar/${fa.d.id}`)).d; return d.run.status === 'awaiting_approval' ? d : null; });
+const so = fw?.tasks.find((x) => x.ref === 'sales')?.output;
+t('Sales analizi üretildi; yanıt GÖNDERİLMEDİ', !!so && so.sent === false && so.draft_reply.length > 30, so);
+const beforeOpp = (await admin.call('GET', '/api/admin/formlar?durum=')).d;
+await admin.call('POST', `${O}/gorevler/${fw.tasks.find((x) => x.ref === 'approval').id}/onayla`, { note: 'e2e' });
+const fdone = await until(async () => { const d = (await admin.call('GET', `${O}/calistirmalar/${fa.d.id}`)).d; return ['succeeded', 'failed'].includes(d.run.status) ? d : null; });
+t('Onaydan sonra CRM fırsatı oluştu', fdone?.run.status === 'succeeded' && fdone.tasks.find((x) => x.ref === 'record').output.opportunityId > 0, fdone?.run.error);
+const orig = (await admin.call('GET', `/api/admin/formlar/${fid}`)).d;
+t('Kaynak talebe iç not düştü', /\[Orkestra #/.test(orig.note ?? ''));
+void beforeOpp;
+
+/* ---- site SEO denetimi + ajan geçmişi + günlük limit API ---- */
+const ssw = (await admin.call('GET', `${O}/akislar`)).d.workflows.find((w) => /Site SEO/.test(w.name));
+const sr = await admin.call('POST', `${O}/calistir`, { workflowId: ssw.id, params: {}, idempotencyKey: key() });
+const sd = await until(async () => { const d = (await admin.call('GET', `${O}/calistirmalar/${sr.d.id}`)).d; return ['succeeded', 'failed'].includes(d.run.status) ? d : null; });
+t('Site SEO denetimi onaysız tamamlanır ve mevcut sayfaları raporlar', sd?.run.status === 'succeeded' && sd.tasks[0].output.mode === 'site' && sd.tasks[0].output.scan.pages > 0, sd?.run.error);
+t('Ajan geçmişi uç noktası', (await admin.call('GET', `${O}/ajanlar/seo/gecmis`)).d.history.length >= 1 && (await cl.izleyici.call('GET', `${O}/ajanlar/seo/gecmis`)).s === 403);
+t('Günlük limit ayarları yalnızca yönetici', (await cl.editor.call('PUT', `${O}/ayarlar`, { dailyTokenLimit: 5 })).s === 403 && (await admin.call('PUT', `${O}/ayarlar`, { dailyTokenLimit: -1 })).s === 400 && (await admin.call('PUT', `${O}/ayarlar`, { dailyTokenLimit: 0 })).s === 200);
+t('Ajan günlük limiti kaydedilir ve doğrulanır', (await admin.call('PUT', `${O}/ajanlar/qa`, { daily_token_limit: 12345 })).d.daily_token_limit === 12345 && (await admin.call('PUT', `${O}/ajanlar/qa`, { daily_token_limit: -3 })).s === 400);
+await admin.call('PUT', `${O}/ajanlar/qa`, { daily_token_limit: 0 });
 
 // temizlik
 await admin.call('DELETE', `/api/admin/girdi/blog/${slug}`);

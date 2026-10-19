@@ -38,7 +38,10 @@
 - [ ] **Master ile planla**: örnek komutu seç → plan tablosu ve çizge → "Planı onayla ve çalıştır"
 - [ ] **Ajanlar**: bir ajanın talimatını/aracını düzenle (yönetici), Bağlı olmayanlar (Design/Sales/CRM) uyarıyla görünüyor
 - [ ] **Kayıtlar & Analitik**: token ve olay kayıtları doluyor
-- [ ] İptal: uzun çalıştırmayı başlatıp **İptal et**
+- [ ] İptal ve **Duraklat / Devam ettir**: çalıştırma sayfasındaki düğmeler
+- [ ] **Hazır iş akışları** (Komut Merkezi): *Site SEO Denetimi* (onaysız çalışır, mevcut sayfaları raporlar), *Sosyal Gönderi* (konu yaz → onay → Brand Kit görseli + sosyal taslak)
+- [ ] **Müşteri talebi:** Form talepleri → bir talep → **AI ile analiz et** → Onay Merkezi'nde Sales analizi ve yanıt TASLAĞI (gönderilmedi) → Onayla → listede "Fırsat: …" kaydı ve kaynak talepte iç not
+- [ ] **Ajanlar → Yapılandır:** günlük token limiti, araç yetkileri, "Son çalıştırmalar"; **Model & API:** günlük genel limit
 
 > Test sırasında oluşan blog taslakları depodaki `src/content/blog/` klasörüne yazılır (panel içeriği ise test klasörüne). Bitince **Blog** listesinden silin (çöp klasörüne taşınır) ve `git status` ile kontrol edin.
 

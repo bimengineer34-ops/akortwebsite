@@ -11,7 +11,7 @@ const usd = (n) => (n == null ? '—' : `$${Number(n).toFixed(n < 0.1 ? 4 : 2)}`
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`);
 
 const ST = {
-  queued: ['Sırada', ''], running: ['Çalışıyor', 'info'], awaiting_approval: ['Onay bekliyor', 'warn'], succeeded: ['Tamamlandı', 'ok'],
+  paused: ['Duraklatıldı', 'warn'], queued: ['Sırada', ''], running: ['Çalışıyor', 'info'], awaiting_approval: ['Onay bekliyor', 'warn'], succeeded: ['Tamamlandı', 'ok'],
   failed: ['Başarısız', 'danger'], cancelled: ['İptal', ''], pending: ['Bekliyor', ''], skipped: ['Atlandı', ''],
 };
 const stChip = (s) => chip(ST[s]?.[0] ?? s, ST[s]?.[1] ?? '');
@@ -100,11 +100,20 @@ export const outputView = (agent, out) => {
     out.meta ? h('div', { class: 'small muted' }, `${out.meta.sourceCount} kaynak kullanıldı · ${out.meta.blockedSources} şüpheli kaynak dışlandı · ${out.meta.strippedCitations} doğrulanamayan atıf temizlendi`) : null);
   if (agent === 'content') return h('div', { class: 'ov' }, kv('Başlık', out.title), kv('Meta açıklama', out.description), kv('Kategori', out.category), kv('Etiketler', (out.tags ?? []).join(', ') || '—'),
     out.risk_flags?.length ? kv('Otomatik risk', list(out.risk_flags)) : null, kv('Kaynak isteyen iddialar', list(out.claims_needing_source)), body(out.body));
+  if (out.priorities) return h('div', { class: 'ov' }, kv('Özet', out.summary), kv('Tarama', `${out.scan?.pages ?? '—'} sayfa · ${out.scan?.errors ?? 0} kritik · ${out.scan?.warnings ?? 0} önemli · ${out.scan?.infos ?? 0} iyileştirme · ortalama skor ${out.scan?.avgScore ?? '—'}`),
+    kv('Öncelikler', list(out.priorities, (p) => h('span', {}, chip(p.impact, p.impact === 'yuksek' ? 'danger' : p.impact === 'orta' ? 'warn' : ''), ' ', link(p.page, p.page), ` — ${p.issue} → `, h('b', {}, p.fix)))), kv('Hızlı kazanımlar', list(out.quick_wins)),
+    kv('İç bağlantı fırsatları', list(out.internal_link_opportunities, (l) => h('span', {}, `${l.from} → `, link(l.to, l.to), ` (“${l.anchor}”)`))), h('div', { class: 'small muted' }, 'Bu analiz yalnızca öneridir; hiçbir sayfa değiştirilmedi.'));
   if (agent === 'seo') return h('div', { class: 'ov' }, kv('SEO başlığı', out.title), kv('Meta açıklama', out.description), kv('Adres', `/blog/${out.slug}`), kv('Skor', chip(`${out.score ?? '—'}`, out.score >= 85 ? 'ok' : out.score >= 60 ? 'warn' : 'danger')),
     kv('İç bağlantılar', list(out.internal_links, (l) => h('span', {}, link(l.url, l.anchor), ` → ${l.url}`))), kv('Kontroller', list(out.checks, (c) => h('span', {}, chip(c.ok ? 'OK' : 'Eksik', c.ok ? 'ok' : 'warn'), ' ', c.note ?? c.id))));
   if (agent === 'qa') return h('div', { class: 'ov' }, kv('Sonuç', chip(out.passed ? 'Geçti' : 'Kritik bulgu var', out.passed ? 'ok' : 'danger')), kv('Özet', out.summary),
     kv('Bulgular', list(out.issues, (i) => h('span', {}, chip(i.severity, i.severity === 'kritik' ? 'danger' : i.severity === 'uyari' ? 'warn' : ''), ` ${i.text}`))));
-  if (agent === 'social') return h('div', { class: 'ov' }, ...(out.posts ?? []).map((p) => kv(p.platform === 'x' ? 'X' : 'LinkedIn', h('div', {}, body(p.text), h('div', { class: 'small muted' }, (p.hashtags ?? []).join(' '))))));
+  if (agent === 'sales' || out.draft_reply) return h('div', { class: 'ov' }, kv('Özet', out.summary), kv('Hizmet alanı', out.category), kv('Aciliyet', chip(out.urgency, out.urgency === 'yuksek' ? 'danger' : out.urgency === 'orta' ? 'warn' : '')), kv('Eksik bilgiler', list(out.missing_info)), kv('Önerilen adımlar', list(out.next_steps)),
+    out.risk_flags?.length ? kv('Uyarılar', list(out.risk_flags, (x) => h('span', { class: 'ov-warn' }, x))) : null, kv('Yanıt TASLAĞI (gönderilmedi)', body(out.draft_reply)), h('div', { class: 'small muted' }, 'Kişisel veriler (ad, e-posta, telefon, kurum adı) modele gönderilmedi; yanıtı göndermeden önce siz gözden geçirin.'));
+  if (agent === 'crm' || (out.stage && out.priority && out.title)) return h('div', { class: 'ov' }, kv('Fırsat başlığı', out.title), kv('Öncelik', chip(out.priority, out.priority === 'yuksek' ? 'danger' : out.priority === 'orta' ? 'warn' : '')), kv('Not', out.note), kv('Etiketler', (out.tags ?? []).join(', ') || '—'), kv('Kaynak talep', out.form_id ? `#${out.form_id}` : '—'));
+  if (agent === 'design' || (out.template && out.theme && out.format)) return h('div', { class: 'ov' }, kv('Şablon', out.template), kv('Biçim', out.format), kv('Tema', out.theme), kv('Başlık', out.title), kv('Alt başlık', out.subtitle || '—'), kv('Alt metin', out.alt), out.risk_flags?.length ? kv('Uyarılar', list(out.risk_flags)) : null);
+  if (out.media && out.filename) return h('div', { class: 'ov' }, kv('Üretilen görsel', h('div', {}, h('img', { class: 'ov-img', src: out.media, alt: out.alt ?? '' }), h('div', { class: 'small muted' }, `${out.width}×${out.height} · medya kitaplığına kaydedildi, yayınlanmadı`))));
+  if (out.opportunityId) return h('div', { class: 'ov' }, kv('CRM fırsat kaydı', h('a', { href: out.href }, `Fırsat #${out.opportunityId} → Form talepleri`)), h('div', { class: 'small muted' }, 'E-posta veya teklif gönderilmedi; yanıt taslağı kayıt notunda duruyor.'));
+  if (agent === 'social' || Array.isArray(out.posts)) return h('div', { class: 'ov' }, ...(out.posts ?? []).map((p) => kv(p.platform === 'x' ? 'X' : 'LinkedIn', h('div', {}, body(p.text), h('div', { class: 'small muted' }, (p.hashtags ?? []).join(' '))))));
   if (out.title && out.qa_passed !== undefined) return h('div', { class: 'ov' }, kv('Taslak', out.title), kv('QA', out.qa_passed === null ? '—' : chip(out.qa_passed ? 'Geçti' : `${out.qa_blocking} kritik bulgu`, out.qa_passed ? 'ok' : 'danger')), kv('SEO skoru', out.seo_score ?? '—'), kv('Sözcük', out.words ?? '—'));
   if (out.slug && out.draft) return h('div', { class: 'ov' }, kv('Oluşturulan taslak', h('a', { href: out.href }, `${out.title ?? out.slug} → blog editörü`)), h('div', { class: 'small muted' }, 'Taslak yayınlanmadı; blog editöründe inceleyip kendiniz yayınlayın.'));
   if (out.postIds) return h('div', { class: 'ov' }, kv('Social Studio taslakları', h('a', { href: out.href }, `${out.postIds.length} gönderi taslağı → İçerik Arşivi`)));
@@ -176,9 +185,32 @@ export const renderCommandCenter = async (ctx) => {
       e.currentTarget.disabled = true;
       try { const wfs = (await api.get('/x/orkestra/akislar')).workflows; const w = wfs.find((x) => x.builtin); const r = await api.post('/x/orkestra/calistir', { workflowId: w.id, title: `Blog: ${topic.value.trim()}`, params: { topic: topic.value.trim(), focus: focus.value.trim() }, idempotencyKey: uuid() }); toast('Çalıştırma başlatıldı', 'ok'); location.hash = `#/orkestra/izleme/${r.id}`; } catch (er) { toast(er.data?.errors?.join(' · ') || er.message, 'err'); e.currentTarget.disabled = false; }
     } }, icon('rocket', 16), 'İş akışını başlat')), { ic: 'blog' });
+  const wfBox = h('div', { class: 'stack' }, spinner());
+  (async () => {
+    try {
+      const { workflows } = await api.get('/x/orkestra/akislar');
+      const LABEL = { topic: 'Konu', formId: "Talep numarası (Form talepleri › #sayı)", focus: 'Odak ifade' };
+      wfBox.replaceChildren(...workflows.filter((w) => w.builtin && !/^Blog Taslağı/.test(w.name)).map((w) => {
+        const ps = paramsOf(w.steps);
+        const inputs = Object.fromEntries(ps.map((p) => [p, h('input', { class: 'input', placeholder: LABEL[p] ?? p, inputmode: p === 'formId' ? 'numeric' : undefined })]));
+        return h('div', { class: 'card card-pad stack' }, h('b', {}, w.name), h('p', { class: 'small muted' }, w.description), dag(w.steps),
+          ps.length ? h('div', { class: 'grid cols-2' }, ps.map((p) => field(LABEL[p] ?? p, inputs[p]))) : null,
+          h('button', { class: 'btn', style: 'justify-self:start', onclick: async (e) => {
+            const btn = e.currentTarget; btn.disabled = true;
+            try {
+              const params = Object.fromEntries(ps.map((p) => [p, inputs[p].value.trim()]));
+              if (ps.some((p) => !params[p])) throw new Error('Gerekli alanları doldurun');
+              const r = params.formId ? await api.post('/x/orkestra/talep-analizi', { formId: Number(params.formId), idempotencyKey: uuid() }) : await api.post('/x/orkestra/calistir', { workflowId: w.id, params, idempotencyKey: uuid() });
+              toast('Çalıştırma başlatıldı', 'ok'); location.hash = `#/orkestra/izleme/${r.id}`;
+            } catch (er) { toast(er.data?.errors?.join(' · ') || er.message, 'err'); btn.disabled = false; }
+          } }, icon('rocket', 14), 'Başlat'));
+      }));
+    } catch (e) { wfBox.replaceChildren(errorBanner(e)); }
+  })();
   root.append(
     h('div', { class: 'dash-grid' }, h('div', { class: 'span-7' }, panel('Türkçe komut', h('div', { class: 'stack' }, cmd,
       h('div', { class: 'row wrap' }, EXAMPLES.map((x, i) => h('button', { class: 'btn ghost sm', onclick: () => { cmd.value = x; } }, `Örnek ${i + 1}`))), h('div', {}, planBtn)), { ic: 'edit' })), h('div', { class: 'span-5' }, quick)),
+    panel('Hazır iş akışları', wfBox, { ic: 'rocket', sub: 'Site SEO denetimi · Müşteri talebi analizi · Sosyal gönderi + görsel' }),
     infoBox('Master Orchestrator komutu yalnızca etkin ve bağlı ajanlarla çalışan bir görev planına ayırır; planı siz onaylamadan hiçbir ajan çalışmaz. Plan model çıktısıdır ve sunucuda yeniden doğrulanır.'),
     planBox);
   return h('div', {}, pageHead('AI Command Center', 'Türkçe komutu Master Orchestrator alt görevlere ayırsın; planı onaylayın, ajanlar çalışsın.', { crumbs: 'AI Orchestra' }), subnav(), root);
@@ -191,11 +223,13 @@ const editAgent = (a, providers, done) => {
     name: h('input', { class: 'input', value: a.name }), role: h('textarea', { class: 'textarea', rows: 2 }), prompt: h('textarea', { class: 'textarea', rows: 9 }),
     provider: h('select', { class: 'select' }, [['', 'Orchestra varsayılanı'], ...providers.map((p) => [p.id, `${p.label}${p.connected ? '' : ' (bağlı değil)'}`])].map(([v, l]) => h('option', { value: v, selected: v === a.provider }, l))),
     model: h('input', { class: 'input', value: a.model, placeholder: 'boş = sağlayıcı varsayılanı' }),
-    retries: h('input', { class: 'input', type: 'number', min: 0, max: 5, value: a.max_retries }), timeout: h('input', { class: 'input', type: 'number', min: 10, max: 600, value: a.timeout_s }), maxTok: h('input', { class: 'input', type: 'number', min: 200, max: 8000, value: a.max_tokens }),
+    retries: h('input', { class: 'input', type: 'number', min: 0, max: 5, value: a.max_retries }), timeout: h('input', { class: 'input', type: 'number', min: 10, max: 600, value: a.timeout_s }), maxTok: h('input', { class: 'input', type: 'number', min: 200, max: 8000, value: a.max_tokens }), daily: h('input', { class: 'input', type: 'number', min: 0, value: a.daily_token_limit ?? 0, disabled: !isAdmin() }),
     appr: h('input', { type: 'checkbox', checked: a.requires_approval }), en: h('input', { type: 'checkbox', checked: a.enabled }),
     inS: jsonArea(a.input_schema), outS: jsonArea(a.output_schema),
   };
   f.role.value = a.role; f.prompt.value = a.system_prompt;
+  const history = h('div', { class: 'stack' }, h('b', {}, 'Son çalıştırmalar'), h('div', { class: 'small muted' }, 'Yükleniyor…'));
+  api.get(`/x/orkestra/ajanlar/${a.key}/gecmis`).then(({ history: hs }) => history.replaceChildren(h('b', {}, 'Son çalıştırmalar'), hs.length ? h('div', { class: 'tbl-wrap', style: 'max-height:200px;overflow:auto' }, h('table', { class: 'tbl' }, h('tbody', {}, hs.map((x) => h('tr', {}, h('td', { class: 'small muted' }, fmtLocal(x.started_at ?? '')), h('td', {}, h('a', { href: `#/orkestra/izleme/${x.run_id}`, onclick: () => document.querySelector('.overlay')?.remove() }, x.run_title)), h('td', {}, stChip(x.status)), h('td', { class: 'small' }, `${fmtN(x.tokens)} token${x.attempts > 1 ? ` · ${x.attempts} deneme` : ''}`), h('td', { class: 'small', style: 'color:var(--danger)' }, x.error ? String(x.error).slice(0, 60) : ''))))) ) : h('div', { class: 'small muted' }, 'Henüz çalışmadı.'))).catch(() => {});
   const toolBoxes = agentCache.tools.map(([k, label]) => [k, h('input', { type: 'checkbox', checked: a.tools.includes(k) }), label]);
   const m = modal({
     title: `${a.name} — yapılandırma`, wide: true,
@@ -205,16 +239,17 @@ const editAgent = (a, providers, done) => {
       field('Sistem talimatı', f.prompt, 'Güvenlik kuralları (güvenilmez kaynaklara uyma, sır ifşa etme, uydurma yapma) sunucuda her çağrıya EK olarak eklenir; buradan kaldırılamaz.'),
       h('div', { class: 'grid cols-2' }, field('Sağlayıcı', f.provider), field('Model', f.model)),
       h('div', { class: 'grid cols-3' }, field('Yeniden deneme (0–5)', f.retries), field('Zaman aşımı (sn)', f.timeout), field('Çıktı token sınırı', f.maxTok)),
+      h('div', { class: 'grid cols-2' }, field('Günlük token limiti (0 = sınırsız)', f.daily), h('div', { class: 'small muted', style: 'align-self:end' }, `Bugün kullanılan: ${fmtN(a.today_tokens ?? 0)} token`)),
       h('div', {}, h('b', {}, 'Araç yetkileri (salt okunur)'), h('div', { class: 'row wrap' }, toolBoxes.map(([, box, label]) => h('label', { class: 'switch' }, box, h('i'), h('span', {}, label))))),
       h('div', { class: 'row wrap' }, h('label', { class: 'switch' }, f.appr, h('i'), h('span', {}, 'Çıktısı insan onayı gerektirir')), h('label', { class: 'switch' }, f.en, h('i'), h('span', {}, 'Ajan açık'))),
-      h('div', { class: 'grid cols-2' }, field('Girdi şeması (JSON)', f.inS), field('Çıktı şeması (JSON) — model çıktısı buna göre doğrulanır', f.outS))),
+      h('div', { class: 'grid cols-2' }, field('Girdi şeması (JSON)', f.inS), field('Çıktı şeması (JSON) — model çıktısı buna göre doğrulanır', f.outS)), history),
     actions: [
       { label: 'Varsayılana sıfırla', class: 'secondary', close: false, onClick: async (close) => { if (!(await confirmBox({ title: 'Ajan varsayılana dönsün mü?', message: 'Talimat, araç ve şema ayarları varsayılana döner.', confirmLabel: 'Sıfırla' }))) return false; try { await api.post(`/x/orkestra/ajanlar/${a.key}/sifirla`); toast('Sıfırlandı', 'ok'); close(); done(); } catch (e) { toast(e.message, 'err'); return false; } } },
       { label: 'Kapat', class: 'secondary' },
       { label: 'Kaydet', close: false, onClick: async (close) => {
         let inS, outS;
         try { inS = JSON.parse(f.inS.value); outS = JSON.parse(f.outS.value); } catch { toast('Şema geçerli JSON olmalı', 'err'); return false; }
-        try { await api.put(`/x/orkestra/ajanlar/${a.key}`, { name: f.name.value, role: f.role.value, system_prompt: f.prompt.value, provider: f.provider.value, model: f.model.value.trim(), max_retries: Number(f.retries.value), timeout_s: Number(f.timeout.value), max_tokens: Number(f.maxTok.value), tools: toolBoxes.filter(([, b]) => b.checked).map(([k]) => k), requires_approval: f.appr.checked, enabled: f.en.checked, input_schema: inS, output_schema: outS }); toast('Ajan kaydedildi', 'ok'); close(); done(); } catch (e) { toast(e.message, 'err'); return false; }
+        try { await api.put(`/x/orkestra/ajanlar/${a.key}`, { name: f.name.value, role: f.role.value, system_prompt: f.prompt.value, provider: f.provider.value, model: f.model.value.trim(), max_retries: Number(f.retries.value), timeout_s: Number(f.timeout.value), max_tokens: Number(f.maxTok.value), daily_token_limit: Number(f.daily.value), tools: toolBoxes.filter(([, b]) => b.checked).map(([k]) => k), requires_approval: f.appr.checked, enabled: f.en.checked, input_schema: inS, output_schema: outS }); toast('Ajan kaydedildi', 'ok'); close(); done(); } catch (e) { toast(e.message, 'err'); return false; }
       } }],
   });
   return m;
@@ -232,6 +267,7 @@ export const renderAgents = wrap('AI Agents Management', '12 yapılandırılabil
         a.executable ? null : h('div', { class: 'small', style: 'color:var(--warn)' }, a.notConnectedReason),
         h('div', { class: 'row wrap small' }, chip(a.model || a.provider ? `${a.provider || 'varsayılan'} · ${a.model || 'varsayılan model'}` : 'varsayılan model'), a.requires_approval ? chip('Onay gerekir', 'warn') : null, ...a.tools.map((t) => chip(t))),
         h('div', { class: 'small muted' }, u ? `Son 30 gün: ${u.tasks} görev · ${fmtN(u.tokens_in + u.tokens_out)} token · ${u.failed} hata · ${u.retried} yeniden deneme` : 'Son 30 günde çalışmadı'),
+        a.daily_token_limit ? h('div', { class: 'small muted' }, `Bugün: ${fmtN(a.today_tokens)} / ${fmtN(a.daily_token_limit)} token`) : null,
         h('div', { class: 'row wrap' }, h('button', { class: 'btn secondary sm', onclick: () => editAgent(a, st.providers, load) }, icon('edit', 14), isAdmin() ? 'Yapılandır' : 'Görüntüle'), h('a', { class: 'btn ghost sm', href: '#/orkestra/kayit' }, 'Geçmiş')));
     })),
   ];
@@ -306,9 +342,12 @@ const runDetail = async (id, load) => {
   const d = await api.get(`/x/orkestra/calistirmalar/${id}`);
   const r = d.run;
   const steps = d.tasks.map((t) => ({ ref: t.ref, kind: t.kind, agent: t.agent, title: t.title, depends_on: t.depends_on }));
-  const active = ['queued', 'running', 'awaiting_approval'].includes(r.status);
+  const active = ['queued', 'running', 'awaiting_approval', 'paused'].includes(r.status);
+  const act = async (path, msg) => { try { await api.post(`/x/orkestra/calistirmalar/${id}/${path}`); toast(msg, 'ok'); load(); } catch (e) { toast(e.message, 'err'); } };
+  const pauseBtn = ['queued', 'running', 'awaiting_approval'].includes(r.status) ? h('button', { class: 'btn secondary sm', title: 'Devam eden görevler tamamlanır, yenisi başlamaz', onclick: () => act('duraklat', 'Duraklatıldı') }, 'Duraklat') : r.status === 'paused' ? h('button', { class: 'btn sm', onclick: () => act('devam', 'Devam ediyor') }, 'Devam ettir') : null;
   return [
     h('div', { class: 'row wrap' }, h('a', { class: 'btn ghost sm', href: '#/orkestra/izleme' }, icon('chevron', 14), 'Tüm çalıştırmalar'), h('h2', { class: 'grow' }, r.title), stChip(r.status),
+      pauseBtn,
       active ? h('button', { class: 'btn danger secondary sm', onclick: async () => { if (await confirmBox({ title: 'Çalıştırma iptal edilsin mi?', message: 'Bekleyen görevler iptal edilir; devam eden görevin sonucu atılır.', confirmLabel: 'İptal et', danger: true })) { try { await api.post(`/x/orkestra/calistirmalar/${id}/iptal`); toast('İptal edildi', 'ok'); load(); } catch (e) { toast(e.message, 'err'); } } } }, 'İptal et') : null),
     r.error ? h('div', { class: 'banner danger' }, icon('alert'), h('div', {}, r.error)) : null,
     h('div', { class: 'kpis' },
@@ -365,6 +404,7 @@ export const renderApprovals = wrap('Human Approval Center', 'Ajan çıktıları
       a.kind === 'approval' ? outputView('gate', out) : outputView(a.agent, out),
       qa ? h('details', { open: !qa.passed }, h('summary', {}, `Kalite raporu — ${qa.passed ? 'geçti' : `${qa.blocking_count} kritik bulgu`}`), outputView('qa', qa)) : null,
       seo ? h('details', {}, h('summary', {}, 'SEO raporu'), outputView('seo', seo)) : null,
+      ...Object.values(ctx).filter((c) => c?.draft_reply || (c?.stage && c?.priority) || (c?.template && c?.theme) || Array.isArray(c?.posts) || c?.media).map((c) => h('details', { open: true }, h('summary', {}, c.draft_reply ? 'Talep analizi ve yanıt taslağı' : c.stage ? 'CRM fırsat önerisi' : c.template ? 'Görsel kurgusu' : c.media ? 'Üretilen görsel' : 'Sosyal gönderi metinleri'), outputView(null, c))),
       final ? h('details', {}, h('summary', {}, `Taslak metni (${final.split(/\s+/).length} sözcük)`), h('pre', { class: 'ov-pre' }, final)) : null,
       approvalBtns(a, load), h('a', { class: 'small', href: `#/orkestra/izleme/${a.run_id}` }, 'Çalıştırma ayrıntısı'));
   });
@@ -377,15 +417,16 @@ export const renderModelConfig = wrap('AI Model & API Configuration', 'Sağlayı
   const prov = h('select', { class: 'select', disabled: !isAdmin() }, [['', 'Otomatik (bağlı ilk sağlayıcı)'], ...st.providers.map((p) => [p.id, `${p.label}${p.connected ? '' : ' (bağlı değil)'}`])].map(([v, l]) => h('option', { value: v, selected: v === s.provider }, l)));
   const conc = h('input', { class: 'input', type: 'number', min: 1, max: 6, value: s.concurrency, disabled: !isAdmin() });
   const lim = h('input', { class: 'input', type: 'number', min: 0, value: s.tokenLimit, disabled: !isAdmin() });
+  const dlim = h('input', { class: 'input', type: 'number', min: 0, value: s.dailyTokenLimit ?? 0, disabled: !isAdmin() });
   return [
     st.fake ? infoBox('TEST MODU: ORCH_FAKE_LLM=1 — ajanlar gerçek model yerine deterministik sahte yanıt üretiyor. Canlı ortamda bu değişken kullanılmaz (NODE_ENV=production iken devre dışıdır).', 'warn') : null,
     panel('Sağlayıcılar', h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Sağlayıcı', 'Durum', 'Model', 'Bu ay', 'Aylık bütçe'].map((x) => h('th', {}, x)))),
       h('tbody', {}, st.providers.map((p) => h('tr', {}, h('td', {}, h('b', {}, p.label)), h('td', {}, p.connected ? chip('Bağlı', 'ok') : chip('Bağlantı gerekli', 'warn')), h('td', { class: 'mono small' }, p.model), h('td', { class: 'small' }, `${p.month.calls} çağrı · ${fmtN(p.month.inputTokens + p.month.outputTokens)} token`), h('td', { class: 'small' }, p.budget ? fmtN(p.budget) : 'sınırsız')))))),
       { ic: 'plug', action: h('a', { class: 'btn secondary sm', href: '#/entegrasyonlar' }, 'API anahtarı / bütçe') }),
     panel('Orkestrasyon ayarları', h('div', { class: 'stack' },
-      h('div', { class: 'grid cols-3' }, field('Varsayılan sağlayıcı', prov), field('Eşzamanlı görev (1–6)', conc), field('Çalıştırma başına token limiti (0 = sınırsız)', lim)),
+      h('div', { class: 'grid cols-3' }, field('Varsayılan sağlayıcı', prov), field('Eşzamanlı görev (1–6)', conc), field('Çalıştırma başına token limiti (0 = sınırsız)', lim), field('Günlük genel token limiti (0 = sınırsız)', dlim)),
       h('p', { class: 'small muted' }, 'Token limiti aşılan çalıştırma durdurulur. Aylık sağlayıcı bütçesi Entegrasyonlar sayfasındadır ve Orchestra çağrıları için de geçerlidir. Test ve canlı ortam ayrımı: ORCH_FAKE_LLM yalnızca NODE_ENV≠production iken çalışır.'),
-      isAdmin() ? h('button', { class: 'btn', style: 'justify-self:start', onclick: async () => { try { await api.put('/x/orkestra/ayarlar', { provider: prov.value, concurrency: Number(conc.value), tokenLimit: Number(lim.value) }); toast('Kaydedildi', 'ok'); load(); } catch (e) { toast(e.message, 'err'); } } }, 'Kaydet') : infoBox('Ayarları yalnızca yönetici değiştirebilir.')), { ic: 'gear' }),
+      isAdmin() ? h('button', { class: 'btn', style: 'justify-self:start', onclick: async () => { try { await api.put('/x/orkestra/ayarlar', { provider: prov.value, concurrency: Number(conc.value), tokenLimit: Number(lim.value), dailyTokenLimit: Number(dlim.value) }); toast('Kaydedildi', 'ok'); load(); } catch (e) { toast(e.message, 'err'); } } }, 'Kaydet') : infoBox('Ayarları yalnızca yönetici değiştirebilir.')), { ic: 'gear' }),
     panel('Ajan bazlı model', h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Ajan', 'Sağlayıcı', 'Model', ''].map((x) => h('th', {}, x)))),
       h('tbody', {}, d.agents.filter((a) => a.executable).map((a) => {
         const ps = h('select', { class: 'select', disabled: !isAdmin() }, [['', 'Orchestra varsayılanı'], ...st.providers.map((p) => [p.id, p.label])].map(([v, l]) => h('option', { value: v, selected: v === a.provider }, l)));

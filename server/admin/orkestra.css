@@ -41,3 +41,6 @@
 tr.clickable { cursor: pointer; }
 tr.clickable:hover { background: var(--accent-soft, #e8f3fc); }
 @media (max-width: 640px) { .ov-row { grid-template-columns: 1fr; } }
+
+.ov-img { max-width: 100%; max-height: 260px; border-radius: 10px; border: 1px solid var(--border, #e6e8ee); display: block; margin-bottom: 6px; }
+.ov-warn { color: var(--warn, #b54708); font-weight: 600; }

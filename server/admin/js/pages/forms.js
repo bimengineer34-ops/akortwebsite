@@ -33,6 +33,10 @@ const detail = (id, onDone) => (close) => {
           h('div', { class: 'row wrap' },
             h('button', { class: 'btn', onclick: async () => { try { await api.patch(`/formlar/${f.id}`, { status: status.value, note: note.value }); toast('Güncellendi', 'ok'); onDone(); close(); } catch (e) { toast(e.message, 'err'); } } }, 'Kaydet'),
             h('a', { class: 'btn secondary', href: `mailto:${f.email}?subject=${encodeURIComponent('Re: ' + (f.subject || 'AKORT Mühendislik talebiniz'))}` }, icon('mail', 16), 'E-postayla yanıtla'),
+            ['admin', 'editor'].includes(session.user.role) && f.kind !== 'firsat' ? h('button', { class: 'btn secondary', title: 'AI Orchestra: Sales → CRM → onay → fırsat kaydı. Kişisel veriler (ad, e-posta, telefon) modele gönderilmez; e-posta/teklif gönderilmez.', onclick: async (e) => {
+              e.currentTarget.disabled = true;
+              try { const r = await api.post('/x/orkestra/talep-analizi', { formId: f.id, idempotencyKey: crypto.randomUUID() }); toast('Analiz başlatıldı', 'ok'); close(); location.hash = `#/orkestra/izleme/${r.id}`; } catch (er) { toast(er.data?.error ?? er.message, 'err'); e.target.disabled = false; }
+            } }, icon('spark', 16), 'AI ile analiz et') : null,
             h('span', { class: 'grow' }),
             session.user.role === 'admin' ? h('button', { class: 'btn danger secondary', onclick: async () => {
               if (!(await confirmBox({ title: 'Talep silinsin mi?', message: 'Bu kayıt kalıcı olarak silinir.', confirmLabel: 'Sil', danger: true }))) return;

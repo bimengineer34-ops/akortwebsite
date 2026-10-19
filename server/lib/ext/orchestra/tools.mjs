@@ -5,7 +5,9 @@ import path from 'node:path';
 import { q } from '../../db.mjs';
 import '../../stats.mjs'; // pageviews/referrers tablolarının varlığını garanti eder
 import { config } from '../../config.mjs';
-import { ENTRY_KINDS } from '../../entries.mjs';
+import { ENTRY_KINDS, listEntries, getEntry } from '../../entries.mjs';
+import { scanSite, internalLinkSuggestions } from '../seo.mjs';
+import { brandData } from '../brand.mjs';
 import { cleanExternal, looksLikeInjection, scanRiskyClaims } from './safety.mjs';
 
 const fold = (s) => String(s).toLocaleLowerCase('tr').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u');
@@ -99,3 +101,64 @@ export const seoCheck = ({ title = '', description = '', body = '', focus = '', 
 };
 
 export const riskScan = (text) => scanRiskyClaims(String(text ?? ''));
+
+/* ------------------------------ mevcut sayfaların SEO taraması (salt okunur) ------------------------------ */
+export const siteSeoInfo = () => {
+  const scan = scanSite();
+  const pages = scan.pages.filter((p) => !p.noindex);
+  const bad = [...pages].sort((a, b) => a.score - b.score).slice(0, 14).map((p) => ({
+    url: p.url, title: cleanExternal(p.title, 120), titleLen: (p.title ?? '').length, descLen: (p.description ?? '').length, score: p.score, h1: p.h1,
+    issues: (p.issues ?? []).slice(0, 5).map(([sev, text]) => `${sev}: ${cleanExternal(text, 90)}`),
+  }));
+  // içerik kayıtlarındaki gerçek eksikler (yayındaki blog/proje)
+  const gaps = { shortMeta: [], noInternalLink: [] };
+  for (const kind of ['blog', 'projects']) {
+    for (const r of listEntries(kind).filter((x) => !x.draft)) {
+      try {
+        const e = getEntry(kind, r.slug);
+        const desc = e.data.seo?.description ?? e.data.description ?? e.data.summary ?? '';
+        const url = kind === 'blog' ? `/blog/${r.slug}` : `/projeler/${r.slug}`;
+        if (desc.length < 120) gaps.shortMeta.push({ url, len: desc.length });
+        if (!/\]\(\//.test(e.body)) {
+          const sug = (() => { try { return internalLinkSuggestions(kind, r.slug).slice(0, 3).map((x) => ({ to: x.url, title: cleanExternal(x.title, 80) })); } catch { return []; } })();
+          gaps.noInternalLink.push({ url, suggestions: sug });
+        }
+      } catch { /* bozuk kayıt */ }
+    }
+  }
+  return {
+    total: scan.total, errors: scan.errors, warnings: scan.warnings, infos: scan.infos, avgScore: scan.avgScore,
+    duplicateTitles: (scan.duplicateTitles ?? []).slice(0, 5), notInSitemap: (scan.sitemap?.indexableNotInSitemap ?? []).slice(0, 8),
+    worstPages: bad, shortMeta: gaps.shortMeta.slice(0, 8), noInternalLink: gaps.noInternalLink.slice(0, 6),
+    urls: new Set(scan.pages.map((p) => p.url)),
+  };
+};
+
+/* ------------------------------ müşteri talebi (KİŞİSEL VERİLER MASKELİ: ad/e-posta/telefon/IP/UA modele gitmez) ------------------------------ */
+/** Serbest metindeki e-posta, telefon, IBAN ve TC kimlik benzeri değerleri maskeler (ad/soyad gibi serbest metin kimlikleri maskelenemez) */
+export const scrubPII = (t) => String(t ?? '')
+  .replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, '[e-posta]')
+  .replace(/\bTR\d{2}(?:\s?\d{4}){5}\s?\d{2}\b/gi, '[iban]')
+  .replace(/\b\d{11}\b/g, '[no]')
+  .replace(/(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{2}[\s.-]?\d{2}\b/g, '[telefon]');
+const PII_KEY = /mail|posta|telefon|phone|\btel\b|gsm|mobil|ad_?soyad|soyad|\bad\b|name|adres|address|ip|\bua\b|kvkk|consent|onay|website|unvan|firma|sirket|company|kurum/i;
+export const formInfo = (formId) => {
+  const r = q.get('SELECT id, kind, created_at, company, subject, message, payload, status FROM forms WHERE id = ?', Number(formId));
+  if (!r) return null;
+  let payload = {};
+  try { payload = JSON.parse(r.payload || '{}'); } catch { /* */ }
+  const safe = {};
+  for (const [k, v] of Object.entries(payload)) {
+    if (PII_KEY.test(k)) continue;
+    const val = Array.isArray(v) ? v.map((x) => scrubPII(cleanExternal(x, 80))).join(', ') : scrubPII(cleanExternal(v, 200));
+    safe[cleanExternal(k, 40)] = val;
+  }
+  const message = scrubPII(cleanExternal(r.message, 1500));
+  return { id: r.id, kind: r.kind, date: String(r.created_at).slice(0, 10), corporate: !!(r.company && String(r.company).trim()), subject: scrubPII(cleanExternal(r.subject, 160)), message, details: safe, status: r.status, suspicious: looksLikeInjection(`${r.subject} ${r.message}`) };
+};
+
+/* ------------------------------ Brand Kit seçenekleri ------------------------------ */
+export const brandKitInfo = () => {
+  const b = brandData();
+  return { templates: b.templates.map((t) => ({ key: t.key, name: t.name, note: t.note })), themes: b.themes.map((t) => ({ key: t.key, label: t.label })), formats: b.formats.map((f) => ({ key: f.key, label: f.label })) };
+};
