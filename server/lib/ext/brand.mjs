@@ -1,4 +1,4 @@
-// Brand Kit: GERÇEK marka verisi (site token'ları, logolar, ikonlar) + deterministik şablon oluşturucu.
+// Marka Seti: GERÇEK marka verisi (site token'ları, logolar, ikonlar) + deterministik şablon oluşturucu.
 // Marka metni/logo her zaman şablon katmanı olarak bindirilir — yapay zekâ logo/tipografi uydurmaz.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -21,7 +21,7 @@ export const brandData = () => {
   const css = fs.existsSync(tokensFile) ? fs.readFileSync(tokensFile, 'utf8') : '';
   const val = (k) => new RegExp(`--color-${k}:\\s*(#[0-9a-fA-F]{3,8})`).exec(css)?.[1]?.toLowerCase() ?? null;
   const palette = PALETTE_KEYS.map(([k, name, use]) => ({ key: k, name, use, hex: val(k) })).filter((c) => c.hex);
-  const sizes = [['display', 'Display'], ['h1', 'H1'], ['h2', 'H2'], ['h3', 'H3'], ['lead', 'Lead'], ['body', 'Body'], ['small', 'Small'], ['xs', 'XS']].map(([k, label]) => {
+  const sizes = [['display', 'Büyük Başlık'], ['h1', 'Başlık 1'], ['h2', 'Başlık 2'], ['h3', 'Başlık 3'], ['lead', 'Giriş Metni'], ['body', 'Gövde'], ['small', 'Küçük'], ['xs', 'Çok Küçük']].map(([k, label]) => {
     const m = new RegExp(`--text-${k}:\\s*([^;]+);`).exec(css);
     return m ? { key: k, label, value: m[1].replace(/\/\*.*$/, '').trim() } : null;
   }).filter(Boolean);
@@ -46,7 +46,7 @@ export const brandData = () => {
 export const FORMATS = {
   'ig-kare': { label: 'Instagram Gönderi (1080 × 1080)', w: 1080, h: 1080 },
   'ig-dikey': { label: 'Instagram Dikey (1080 × 1350)', w: 1080, h: 1350 },
-  story: { label: 'Story / Reels (1080 × 1920)', w: 1080, h: 1920 },
+  story: { label: 'Hikâye / Reels (1080 × 1920)', w: 1080, h: 1920 },
   link: { label: 'LinkedIn / Facebook Bağlantı (1200 × 628)', w: 1200, h: 628 },
   yatay: { label: 'YouTube / 16:9 (1600 × 900)', w: 1600, h: 900 },
 };
@@ -189,12 +189,12 @@ export const saveRender = async (o, user) => {
   return rec;
 };
 
-/** AI ile üretilmiş görseli medya kitaplığına kaydeder; başlıkta "AI görseli" etiketi (şeffaflık) */
+/** Yapay Zekâ ile üretilmiş görseli medya kitaplığına kaydeder; başlıkta "Yapay Zekâ görseli" etiketi (şeffaflık) */
 export const saveAiImage = async ({ data, title, alt }, user) => {
   const buf = Buffer.from(String(data ?? ''), 'base64');
   if (buf.length < 100 || buf.length > 14 * 1024 * 1024) throw new HttpError(400, 'Geçersiz görsel verisi');
   const rec = await uploadMedia(buf, `ai-gorsel-${Date.now().toString(36)}.png`, user);
-  const t = `AI görseli: ${String(title ?? '').trim().slice(0, 80) || 'Marka görseli'}`;
+  const t = `Yapay Zekâ görseli: ${String(title ?? '').trim().slice(0, 80) || 'Marka görseli'}`;
   updateMedia(rec.id, { title: t, alt: String(alt ?? '').trim().slice(0, 200) || 'Yapay zekâ ile üretilmiş görsel' }, user);
   audit(user, 'marka.ai_gorsel_kaydet', rec.filename);
   return getMedia(rec.id);

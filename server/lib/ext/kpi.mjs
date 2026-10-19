@@ -54,11 +54,11 @@ export const CATALOG = {
   social_awaiting: { label: 'Onay bekleyen içerik', group: 'Sosyal', icon: 'shield', color: '#ff9f43', goodUp: false, compute: snap(() => q.get(`SELECT COUNT(*) AS n FROM social_posts WHERE status = 'onay_bekliyor'`).n) },
   social_planned: { label: 'Planlanan paylaşım', group: 'Sosyal', icon: 'share', color: '#0b7bd6', compute: snap(() => q.get(`SELECT COUNT(*) AS n FROM social_posts WHERE status IN ('onaylandi','planlandi')`).n) },
   social_published: { label: 'Yayımlanan paylaşım', group: 'Sosyal', icon: 'check', color: '#28c76f', compute: snap(() => q.get(`SELECT COUNT(*) AS n FROM social_posts WHERE status = 'yayimlandi'`).n) },
-  ai_tokens: { label: 'AI token kullanımı', group: 'AI', icon: 'spark', color: '#8b5cf6', goodUp: false, compute: flowMetric(`SELECT ${ist('ts')} AS day, COALESCE(SUM(input_tokens),0)+COALESCE(SUM(output_tokens),0) AS v FROM ai_usage WHERE ok = 1 AND ${ist('ts')} >= ? GROUP BY 1`) },
-  ai_calls: { label: 'AI çağrısı', group: 'AI', icon: 'spark', color: '#8b5cf6', goodUp: false, compute: flowMetric(`SELECT ${ist('ts')} AS day, COUNT(*) AS v FROM ai_usage WHERE ${ist('ts')} >= ? GROUP BY 1`) },
+  ai_tokens: { label: 'Yapay Zekâ belirteç kullanımı', group: 'Yapay Zekâ', icon: 'spark', color: '#8b5cf6', goodUp: false, compute: flowMetric(`SELECT ${ist('ts')} AS day, COALESCE(SUM(input_tokens),0)+COALESCE(SUM(output_tokens),0) AS v FROM ai_usage WHERE ok = 1 AND ${ist('ts')} >= ? GROUP BY 1`) },
+  ai_calls: { label: 'Yapay Zekâ çağrısı', group: 'Yapay Zekâ', icon: 'spark', color: '#8b5cf6', goodUp: false, compute: flowMetric(`SELECT ${ist('ts')} AS day, COUNT(*) AS v FROM ai_usage WHERE ${ist('ts')} >= ? GROUP BY 1`) },
   news: { label: 'Yeni sektör haberi', group: 'Pazar', icon: 'radar', color: '#00cfe8', compute: flowMetric(`SELECT ${ist('fetched_at')} AS day, COUNT(*) AS v FROM source_items WHERE ${ist('fetched_at')} >= ? GROUP BY 1`) },
   competitor_changes: { label: 'Rakip değişikliği', group: 'Pazar', icon: 'eye', color: '#ea5455', goodUp: false, compute: flowMetric(`SELECT ${ist('ts')} AS day, COUNT(*) AS v FROM competitor_checks WHERE changed = 1 AND ${ist('ts')} >= ? GROUP BY 1`) },
-  backlinks_won: { label: 'Doğrulanmış backlink', group: 'SEO', icon: 'link', color: '#28c76f', compute: snap(() => q.get(`SELECT COUNT(*) AS n FROM backlink_opps WHERE status = 'kazanildi'`).n) },
+  backlinks_won: { label: 'Doğrulanmış geri bağlantı', group: 'SEO', icon: 'link', color: '#28c76f', compute: snap(() => q.get(`SELECT COUNT(*) AS n FROM backlink_opps WHERE status = 'kazanildi'`).n) },
   pending: { label: 'Yayın bekleyen değişiklik', group: 'Sistem', icon: 'rocket', color: '#ff9f43', goodUp: false, compute: snap(() => q.get('SELECT COUNT(*) AS n FROM drafts').n + (getSetting('entries_dirty', '0') === '1' ? 1 : 0)) },
 };
 
@@ -74,7 +74,7 @@ export const getPrefs = (userId) => {
 };
 export const setPrefs = (user, body) => {
   const range = [7, 30, 90].includes(Number(body.range)) ? Number(body.range) : 30;
-  if (!Array.isArray(body.cards)) throw new HttpError(400, 'cards listesi gerekli');
+  if (!Array.isArray(body.cards)) throw new HttpError(400, 'Kart listesi gerekli');
   const seen = new Set();
   const cards = [];
   for (const c of body.cards.slice(0, 12)) {
@@ -84,7 +84,7 @@ export const setPrefs = (user, body) => {
     if (target !== null && (!Number.isFinite(target) || target < 0)) throw new HttpError(400, `${CATALOG[c.id].label}: hedef geçersiz`);
     cards.push(target ? { id: c.id, target } : { id: c.id });
   }
-  if (!cards.length) throw new HttpError(400, 'En az bir KPI seçin');
+  if (!cards.length) throw new HttpError(400, 'En az bir gösterge seçin');
   setSetting(prefKey(user.id), JSON.stringify({ range, cards }));
   audit(user, 'kpi.tercih', String(cards.length));
   return { range, cards };

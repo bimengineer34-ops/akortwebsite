@@ -1,4 +1,4 @@
-// AKORT genişletme paketi (SEO / Hız / AI / Sosyal / Pazar-Medya / Rakip / Backlink) — YALNIZCA EKLEMELİ şema.
+// AKORT genişletme paketi (SEO / Hız / AI / Sosyal / Pazar-Medya / Rakip / Geri Bağlantı) — YALNIZCA EKLEMELİ şema.
 // Mevcut tablolara dokunmaz; geri alma: bu tabloları DROP etmek yeterlidir (mevcut veri etkilenmez).
 import { db, getSetting } from '../db.mjs';
 

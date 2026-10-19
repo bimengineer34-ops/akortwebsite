@@ -1,4 +1,4 @@
-// AKORT AI Orchestra — YALNIZCA EKLEMELİ şema. Mevcut tablolara dokunmaz.
+// AKORT Yapay Zekâ Orkestrası — YALNIZCA EKLEMELİ şema. Mevcut tablolara dokunmaz.
 // Geri alma: aşağıdaki orch_* tabloları DROP edilebilir (mevcut veri etkilenmez).
 import { db } from '../../db.mjs';
 

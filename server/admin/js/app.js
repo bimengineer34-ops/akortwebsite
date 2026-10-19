@@ -162,7 +162,7 @@ const buildShell = () => {
   view = h('main', { class: 'content', id: 'main', tabindex: '-1' });
   shell = h('div', { class: 'shell' },
     h('aside', { class: 'sidebar' },
-      h('a', { class: 'brand', href: '#/', 'aria-label': 'AKORT Mühendislik — Dashboard' }, h('img', { src: '/yonetim/img/logo-h.png', alt: 'AKORT Mühendislik', width: 190 })),
+      h('a', { class: 'brand', href: '#/', 'aria-label': 'AKORT Mühendislik — Pano' }, h('img', { src: '/yonetim/img/logo-h.png', alt: 'AKORT Mühendislik', width: 190 })),
       nav.el,
       h('a', { class: 'side-promo', href: '/', target: '_blank', rel: 'noopener' }, h('img', { src: '/yonetim/img/logo-mark-dark.png', alt: '' }), h('div', {}, h('span', {}, 'Mühendislikte'), h('b', {}, 'Daha İleriye')), h('span', { class: 'go' }, icon('external', 16))),
       h('div', { class: 'sidebar-foot' },

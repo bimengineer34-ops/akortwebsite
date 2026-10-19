@@ -1,4 +1,4 @@
-// AI Orchestra LLM katmanı: mevcut sağlayıcı adaptörleri (ai.mjs) üzerinden; anahtarlar yalnızca kasada, buradan geçmez.
+// Yapay Zekâ Orkestrası LLM katmanı: mevcut sağlayıcı adaptörleri (ai.mjs) üzerinden; anahtarlar yalnızca kasada, buradan geçmez.
 // Test/geliştirme: ORCH_FAKE_LLM=1 (yalnızca NODE_ENV!=production) veya setLlmOverride() ile deterministik sahte yanıt — canlıda ASLA kullanılmaz.
 import { getSetting } from '../../db.mjs';
 import { HttpError } from '../../http.mjs';
@@ -12,7 +12,7 @@ export const setLlmOverride = (fn) => { override = fn; };
 
 export const fakeEnabled = () => process.env.ORCH_FAKE_LLM === '1' && process.env.NODE_ENV !== 'production';
 
-/** Kullanılacak sağlayıcı: ajan ayarı → Orchestra varsayılanı → bağlı ilk sağlayıcı */
+/** Kullanılacak sağlayıcı: ajan ayarı → Orkestra varsayılanı → bağlı ilk sağlayıcı */
 export const resolveProvider = (agent) => {
   const connected = providerStatus().filter((p) => p.connected).map((p) => p.id);
   const want = agent?.provider || getSetting('orch.provider', '');

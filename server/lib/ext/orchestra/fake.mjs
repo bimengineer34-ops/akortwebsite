@@ -1,4 +1,4 @@
-// AI Orchestra TEST/GELİŞTİRME sahte modeli — yalnızca ORCH_FAKE_LLM=1 ve NODE_ENV!=production iken kullanılır (llm.mjs).
+// Yapay Zekâ Orkestrası TEST/GELİŞTİRME sahte modeli — yalnızca ORCH_FAKE_LLM=1 ve NODE_ENV!=production iken kullanılır (llm.mjs).
 // Girdideki konuyu, kaynak adreslerini ve izin verilen kategori/sayfa listelerini okuyup şemaya uyan deterministik JSON üretir.
 // Amaç: motoru, doğrulamaları ve arayüzü gerçek bir sağlayıcı olmadan sınamak. Gerçek içerik kalitesi hakkında hiçbir şey kanıtlamaz.
 
@@ -38,7 +38,7 @@ export const fakeRespond = (key, prompt) => {
     const urls = [...(section(prompt, 'EN DÜŞÜK PUANLI SAYFALAR').matchAll(/"url":"(\/[^"]*)"/g))].map((m) => m[1]);
     return JSON.stringify({
       summary: 'Tarama verisine göre öncelikli iyileştirmeler listelendi.',
-      priorities: [...urls.slice(0, 3).map((u, i) => ({ page: u, issue: 'Meta açıklama kısa veya eksik olabilir', fix: 'Açıklamayı 120–160 karaktere tamamlayın', impact: i ? 'orta' : 'yuksek' })), { page: '/uydurma-sayfa-yok', issue: 'Uydurma sayfa sorunu', fix: 'Gerçek olmayan sayfa', impact: 'dusuk' }],
+      priorities: [...urls.slice(0, 3).map((u, i) => ({ page: u, issue: 'Arama açıklaması kısa veya eksik olabilir', fix: 'Açıklamayı 120–160 karaktere tamamlayın', impact: i ? 'orta' : 'yuksek' })), { page: '/uydurma-sayfa-yok', issue: 'Uydurma sayfa sorunu', fix: 'Gerçek olmayan sayfa', impact: 'dusuk' }],
       quick_wins: ['Kısa meta açıklamaları tamamlayın'],
       internal_link_opportunities: urls.length > 1 ? [{ from: urls[0], to: urls[1], anchor: 'ilgili sayfa' }, { from: urls[0], to: '/uydurma-hedef', anchor: 'uydurma' }] : [],
     });
@@ -89,7 +89,7 @@ const fakePlan = (prompt) => {
     const dep = steps.some((s) => s.ref === 'seo') ? ['seo'] : [];
     steps.push({ ref: 'sosyal', kind: 'agent', agent: 'social', title: 'LinkedIn gönderisi hazırla', depends_on: dep, input: { topic } });
     steps.push({ ref: 'sosyal_onay', kind: 'approval', agent: '', title: 'İnsan onayı: sosyal gönderi', depends_on: ['sosyal'], input: {} });
-    steps.push({ ref: 'sosyal_taslak', kind: 'action', agent: 'action.social_draft', title: 'Social Studio taslağı oluştur', depends_on: ['sosyal_onay', 'sosyal'], input: {} });
+    steps.push({ ref: 'sosyal_taslak', kind: 'action', agent: 'action.social_draft', title: 'Sosyal Medya Stüdyosu taslağı oluştur', depends_on: ['sosyal_onay', 'sosyal'], input: {} });
   }
   if (/teklif|e-?posta gönder/.test(cmd)) unsupported.push('Harici e-posta/teklif gönderimi bu sürümde yok');
   if (!steps.length) steps.push({ ref: 'arastirma', kind: 'agent', agent: 'research', title: `Sektör araştırması: ${topic}`, depends_on: [], input: { topic } });

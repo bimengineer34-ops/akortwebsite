@@ -1,4 +1,4 @@
-// AI Content Studio — referans düzeni: sağlayıcı kartları, konu/prompt, editör, SEO + marka sesi skoru, öneriler, hashtag, görsel önizleme, prompt iyileştirme.
+// Yapay Zekâ İçerik Stüdyosu — referans düzeni: sağlayıcı kartları, konu/prompt, editör, SEO + marka sesi skoru, öneriler, hashtag, görsel önizleme, prompt iyileştirme.
 // Üretilen metin düz metin olarak gösterilir; siz kabul edene kadar hiçbir içeriğe kaydedilmez. Skorlar kural tabanlıdır (Google/marka onayı değildir).
 import { api } from '../api.js';
 import { h, icon, chip, toast, spinner, errorBanner, debounce, copyText } from '../ui.js';
@@ -8,7 +8,7 @@ import { analyze } from './x-seo.js';
 import { openMediaPicker } from './media.js';
 import { createRichEditor } from '../richtext.js';
 
-const TYPES = [['blog', 'Blog Yazısı', 'Başlık + giriş + ara başlıklı bölümler içeren Markdown blog yazısı yaz.'], ['sosyal', 'Sosyal Medya Gönderisi', 'Platforma uygun kısa, etkileyici bir sosyal medya gönderisi yaz; sonda 3-5 hashtag öner.'], ['hizmet', 'Hizmet Sayfası Metni', 'Hizmet sayfası için kapsam, fayda ve süreç anlatan bölümler yaz.'], ['proje', 'Proje Anlatımı (örnek senaryo)', 'Gerçek müşteri, rakam, konum veya tarih UYDURMADAN genel bir örnek senaryo anlat.'], ['meta', 'Meta Açıklama ve Başlık', 'Verilen konu için SEO başlığı (≤60) ve meta açıklaması (120-160) öner.']];
+const TYPES = [['blog', 'Blog Yazısı', 'Başlık + giriş + ara başlıklı bölümler içeren Markdown blog yazısı yaz.'], ['sosyal', 'Sosyal Medya Gönderisi', 'Platforma uygun kısa, etkileyici bir sosyal medya gönderisi yaz; sonda 3-5 hashtag öner.'], ['hizmet', 'Hizmet Sayfası Metni', 'Hizmet sayfası için kapsam, fayda ve süreç anlatan bölümler yaz.'], ['proje', 'Proje Anlatımı (örnek senaryo)', 'Gerçek müşteri, rakam, konum veya tarih UYDURMADAN genel bir örnek senaryo anlat.'], ['meta', 'Arama Açıklaması ve Başlığı', 'Verilen konu için SEO başlığı (≤60) ve meta açıklaması (120-160) öner.']];
 const TONES = [['Profesyonel ve bilgilendirici', 'Profesyonel & Bilgilendirici'], ['Samimi ve yakın ama kurumsal', 'Samimi & Yakın'], ['Teknik ve ayrıntılı', 'Teknik & Detaylı'], ['İlham verici ve vizyoner', 'İlham Verici']];
 const PLATS = [['LinkedIn', 3000], ['Instagram', 2200], ['Facebook', 63206], ['X', 280], ['Threads', 500]];
 
@@ -34,7 +34,7 @@ const brandVoice = (t) => {
 };
 
 export const renderAiStudio = async (ctx) => {
-  ctx.setTitle('AI Content Studio');
+  ctx.setTitle('Yapay Zekâ İçerik Stüdyosu');
   const root = h('div', {}, spinner());
   try {
     const d = await api.get('/x/ai');
@@ -98,8 +98,8 @@ export const renderAiStudio = async (ctx) => {
     };
 
     const ask = async (task, input, extra = {}) => {
-      if (!connected.length) { toast('Önce bir AI sağlayıcısı bağlayın (Entegrasyonlar)', 'err'); return null; }
-      if (!consent.checked) { toast('Metnin harici bir AI sağlayıcısına gönderileceğini onaylayın (korumalı proje belgesi göndermeyin)', 'err'); return null; }
+      if (!connected.length) { toast('Önce bir Yapay Zekâ sağlayıcısı bağlayın (Entegrasyonlar)', 'err'); return null; }
+      if (!consent.checked) { toast('Metnin harici bir Yapay Zekâ sağlayıcısına gönderileceğini onaylayın (korumalı proje belgesi göndermeyin)', 'err'); return null; }
       const ids = compare ? connected.map((p) => p.id) : [chosen];
       const note = `${TYPES.find((t) => t[0] === typeSel.value)[2]}${typeSel.value === 'sosyal' ? ` Platform: ${platSel.value} (karakter sınırı ${PLATS.find((p) => p[0] === platSel.value)[1]}).` : ''}`;
       const res = await Promise.allSettled(ids.map((id) => api.post('/x/ai/uret', { provider: id, task, text: input, tone: toneSel.value, note, ...extra })));
@@ -132,23 +132,23 @@ export const renderAiStudio = async (ctx) => {
     const chipAdd = (label, add) => h('button', { class: 'btn secondary sm', onclick: () => { prompt.value = `${prompt.value.trim()} ${add}`.trim(); } }, label);
 
     root.replaceChildren(
-      pageHead('AI Content Studio', 'GPT, Claude ve Gemini ile blog, hizmet ve sosyal medya içeriklerinizi profesyonelce yazın.'),
+      pageHead('Yapay Zekâ İçerik Stüdyosu', 'GPT, Claude ve Gemini ile blog, hizmet ve sosyal medya içeriklerinizi profesyonelce yazın.'),
       connected.length ? null : h('div', { style: 'margin-bottom:14px' }, connectBox('Yapay zekâ sağlayıcısı bağlı değil', 'Metin üretimi için Entegrasyonlar sayfasından en az bir API anahtarı ekleyin. Şablon, görsel, hashtag ve skor araçları anahtarsız çalışır.')),
       h('div', { class: 'ai-top' }, provRow, h('div', { class: 'pillsel col' }, h('span', {}, 'İçerik Türü'), typeSel), h('div', { class: 'pillsel col' }, h('span', {}, 'Marka Tonu'), toneSel), h('div', { class: 'pillsel col' }, h('span', {}, 'Platform'), platSel)),
       h('div', { class: 'ai-cols' },
         h('div', { class: 'stack' },
-          panel('Konu / Prompt', h('div', { class: 'stack' }, h('div', { class: 'row', style: 'gap:10px;align-items:stretch' }, prompt, h('button', { class: 'btn', style: 'min-width:110px', onclick: (e) => write(e.currentTarget, 'taslak', prompt.value) }, icon('spark', 16), 'AI ile Yaz')),
-            h('label', { class: 'switch' }, consent, h('i'), h('span', {}, 'Metni harici AI sağlayıcısına göndermeyi onaylıyorum (korumalı proje belgesi içermiyor)'))), { ic: 'edit' }),
+          panel('Konu / İstem', h('div', { class: 'stack' }, h('div', { class: 'row', style: 'gap:10px;align-items:stretch' }, prompt, h('button', { class: 'btn', style: 'min-width:110px', onclick: (e) => write(e.currentTarget, 'taslak', prompt.value) }, icon('spark', 16), 'Yapay Zekâ ile Yaz')),
+            h('label', { class: 'switch' }, consent, h('i'), h('span', {}, 'Metni harici Yapay Zekâ sağlayıcısına göndermeyi onaylıyorum (korumalı proje belgesi içermiyor)'))), { ic: 'edit' }),
           panel('İçerik Editörü', h('div', { class: 'stack' }, toolbar, text.el, h('div', { class: 'row wrap' }, stats), h('div', { class: 'row wrap' },
             h('button', { class: 'btn secondary', onclick: (e) => write(e.currentTarget, 'taslak', prompt.value || text.value) }, icon('history', 16), 'Alternatif Üret'),
             h('button', { class: 'btn secondary', onclick: (e) => { const sel = text.selectedText() || text.value; write(e.currentTarget, 'yeniden-yaz', sel); } }, icon('edit', 16), 'Metni Geliştir'),
             h('button', { class: 'btn', onclick: makeImage }, icon('image', 16), 'Görsel Oluştur'),
-            h('button', { class: 'btn secondary', onclick: async () => { try { await api.post('/x/sosyal/gonderiler', { title: headline(), body: text.value, platforms: [], category: 'AI Taslak' }); toast('Sosyal taslağa aktarıldı (Onay Merkezi)', 'ok'); } catch (e) { toast(e.message, 'err'); } } }, icon('share', 16), 'Sosyal Taslağa Aktar'),
+            h('button', { class: 'btn secondary', onclick: async () => { try { await api.post('/x/sosyal/gonderiler', { title: headline(), body: text.value, platforms: [], category: 'Yapay Zekâ Taslak' }); toast('Sosyal taslağa aktarıldı (Onay Merkezi)', 'ok'); } catch (e) { toast(e.message, 'err'); } } }, icon('share', 16), 'Sosyal Taslağa Aktar'),
             h('button', { class: 'btn ghost', onclick: async () => { await copyText(text.value, 'Metin kopyalandı'); } }, icon('copy', 16), 'Kopyala'))), { ic: 'doc', action: h('label', { class: 'switch' }, h('input', { type: 'checkbox', onchange: (e) => { compare = e.target.checked; } }), h('i'), h('span', { class: 'small' }, 'Modelleri Karşılaştır')) }),
-          panel('Prompt\'u İyileştir', h('div', { class: 'stack' }, h('div', { class: 'row wrap' }, chipAdd('Daha profesyonel', 'Daha profesyonel bir dille.'), chipAdd('Daha kısa', 'Daha kısa ve öz.'), chipAdd('Daha ilham verici', 'Daha ilham verici bir tonla.'), chipAdd('Soru ekle', 'Sonda bir soru sor.'), chipAdd('Hashtag öner', 'Sonda hashtag öner.'), h('span', { class: 'grow' }), h('button', { class: 'btn', onclick: (e) => improve(e.currentTarget) }, icon('spark', 16), 'Prompt\'u İyileştir'))), { ic: 'spark' })),
+          panel('İstemi İyileştir', h('div', { class: 'stack' }, h('div', { class: 'row wrap' }, chipAdd('Daha profesyonel', 'Daha profesyonel bir dille.'), chipAdd('Daha kısa', 'Daha kısa ve öz.'), chipAdd('Daha ilham verici', 'Daha ilham verici bir tonla.'), chipAdd('Soru ekle', 'Sonda bir soru sor.'), chipAdd('Etiket öner', 'Sonda hashtag öner.'), h('span', { class: 'grow' }), h('button', { class: 'btn', onclick: (e) => improve(e.currentTarget) }, icon('spark', 16), 'İstemi İyileştir'))), { ic: 'spark' })),
         h('div', { class: 'stack' },
           panel('SEO Skoru', seoBox, { ic: 'search', sub: 'okunabilirlik + teknik (yerel)' }), panel('Marka Sesi Skoru', voiceBox, { ic: 'shield', sub: 'kural tabanlı' }),
-          panel('AI Önerileri', tipBox, { ic: 'spark' }), panel('Hashtag Önerileri', tagBox, { ic: 'share', action: h('button', { class: 'btn secondary sm', onclick: loadTags }, 'Yenile') }), panel('Görsel Önizleme', imgBox, { ic: 'image', sub: 'Marka şablonu (logo/tipografi sabit)' }))),
+          panel('Yapay Zekâ Önerileri', tipBox, { ic: 'spark' }), panel('Etiket Önerileri', tagBox, { ic: 'share', action: h('button', { class: 'btn secondary sm', onclick: loadTags }, 'Yenile') }), panel('Görsel Önizleme', imgBox, { ic: 'image', sub: 'Marka şablonu (logo/tipografi sabit)' }))),
       infoBox('Üretilen metin yalnızca düz metin olarak gösterilir (HTML çalıştırılmaz). Teknik/mevzuat iddiaları kaynak gerektirir; yayımlamadan önce insan incelemesi zorunludur. Skorlar kural tabanlıdır, Google veya marka onayı değildir.'));
     imgBox.replaceChildren(h('div', { class: 'muted small', style: 'padding:6px 0' }, 'Metin yazın ve "Görsel Oluştur"a basın — başlıktan marka şablonlu görsel üretilir.'));
     tagBox.replaceChildren(h('div', { class: 'muted small' }, 'Yükleniyor…')); loadTags();

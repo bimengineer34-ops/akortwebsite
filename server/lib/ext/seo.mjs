@@ -1,4 +1,4 @@
-// SEO Intelligence — derlenmiş siteyi (dist) tarayan GERÇEK teknik denetim. Puanlar Google skoru değildir.
+// SEO Analizi — derlenmiş siteyi (dist) tarayan GERÇEK teknik denetim. Puanlar Google skoru değildir.
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../config.mjs';
@@ -43,7 +43,7 @@ export const analyzePage = (html, url) => {
   if (!title) issues.push(['err', 'Başlık (title) yok']);
   else if (title.length > 65) issues.push(['warn', `Başlık uzun (${title.length}); ~60 karakter önerilir`]);
   else if (title.length < 20) issues.push(['warn', `Başlık kısa (${title.length})`]);
-  if (!description) issues.push(['err', 'Meta açıklama yok']);
+  if (!description) issues.push(['err', 'Arama açıklaması yok']);
   else if (description.length > 175) issues.push(['warn', `Açıklama uzun (${description.length})`]);
   else if (description.length < 70) issues.push(['warn', `Açıklama kısa (${description.length})`]);
   if (!canonicalHref) issues.push(['err', 'Canonical bağlantı yok']);
@@ -52,9 +52,9 @@ export const analyzePage = (html, url) => {
   if (noAlt) issues.push(['err', `${noAlt} görselde alt özniteliği yok`]);
   if (!ogImage) issues.push(['info', 'og:image yok (sosyal paylaşım önizlemesi)']);
   if (!jsonld.length) issues.push(['info', 'Yapısal veri (JSON-LD) yok']);
-  if (words < 120 && !robots.includes('noindex')) issues.push(['info', `İçerik az (${words} kelime)`]);
+  if (words < 120 && !robots.includes('dizin dışı')) issues.push(['info', `İçerik az (${words} kelime)`]);
   const score = Math.max(0, 100 - issues.reduce((s, [k]) => s + (k === 'err' ? 18 : k === 'warn' ? 7 : 3), 0));
-  return { url, title, description, canonical: canonicalHref, h1, images: imgs.length, imagesNoAlt: noAlt, ogImage: !!ogImage, noindex: robots.includes('noindex'), schema: [...new Set(jsonld)], words, issues, score };
+  return { url, title, description, canonical: canonicalHref, h1, images: imgs.length, imagesNoAlt: noAlt, ogImage: !!ogImage, noindex: robots.includes('dizin dışı'), schema: [...new Set(jsonld)], words, issues, score };
 };
 
 let cache = { at: 0, data: null };
@@ -132,12 +132,12 @@ export const speedReport = () => {
       static: 'Sunucu: HTML için ETag + no-cache (her seferinde yeniden doğrulama, değişmediyse 304); diğer statik varlıklar için ETag ve uzun ömürlü Cache-Control (server/lib/static.mjs).',
       adminNoStore: 'Yönetim ve API yanıtları Cache-Control: no-store — oturumlu içerik herkese açık önbelleğe girmez.',
     },
-    cdn: { available: false, reason: 'CDN/Proxy adaptörü bağlı değil. Veridyen planı veya Cloudflare gibi bir proxy ile sunucu düzeyinde etkinleştirilebilir.' },
-    cwv: { available: false, reason: 'Alan verisi (CrUX/RUM) için Search Console / PageSpeed API anahtarı gerekir; sentetik ve alan verisi ayrı tutulur.' },
+    cdn: { available: false, reason: 'CDN/vekil sunucu adaptörü bağlı değil. Veridyen planı veya Cloudflare gibi bir vekil sunucu ile sunucu düzeyinde etkinleştirilebilir.' },
+    cwv: { available: false, reason: 'Alan verisi (gerçek kullanıcı) için Google Arama Konsolu / Sayfa Hızı API anahtarı gerekir; sentetik ve alan verisi ayrı tutulur.' },
   };
 };
 
-/* ---------- SEO Intelligence genel bakış: yalnızca gerçek veriler ---------- */
+/* ---------- SEO Analizi genel bakış: yalnızca gerçek veriler ---------- */
 export const seoOverview = (n = 30) => {
   const scan = scanSite();
   const st = getStats(n);

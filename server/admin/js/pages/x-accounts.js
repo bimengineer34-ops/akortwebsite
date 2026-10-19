@@ -16,15 +16,15 @@ export const announceReturn = () => {
 };
 
 const appModal = (a, done) => {
-  const id = h('input', { class: 'input', autocomplete: 'off', placeholder: 'Client ID / App ID / Client Key' });
-  const secret = h('input', { class: 'input', type: 'password', autocomplete: 'off', placeholder: 'Client Secret / App Secret' });
+  const id = h('input', { class: 'input', autocomplete: 'off', placeholder: 'İstemci Kimliği / Uygulama Kimliği' });
+  const secret = h('input', { class: 'input', type: 'password', autocomplete: 'off', placeholder: 'İstemci Gizli Anahtarı / Uygulama Gizli Anahtarı' });
   const redirect = h('input', { class: 'input', readonly: true, value: a.redirectUri, onfocus: (e) => e.target.select() });
   modal({
     title: `${a.label} — uygulama bilgileri`, wide: true,
     body: h('div', { class: 'stack' },
       h('p', { class: 'small muted' }, `1) ${a.label} geliştirici konsolunda bir uygulama oluşturun. 2) Aşağıdaki yönlendirme adresini (Redirect/Callback URL) uygulamaya ekleyin. 3) Client ID ve Secret'ı buraya yapıştırın. Sır şifreli saklanır, geri gösterilmez.`),
       field('Yönlendirme adresi (Redirect URI) — kopyalayın', h('div', { class: 'row' }, h('div', { class: 'grow' }, redirect), h('button', { class: 'btn secondary sm', onclick: async () => { try { await copyText(a.redirectUri, 'Kopyalandı'); } catch { redirect.select(); } } }, 'Kopyala'))),
-      field('Client ID', id), field('Client Secret', secret),
+      field('İstemci Kimliği', id), field('İstemci Gizli Anahtarı', secret),
       h('div', { class: 'small' }, h('a', { href: a.url, target: '_blank', rel: 'noopener noreferrer' }, 'Geliştirici konsolu ↗'), ' · ', h('a', { href: a.docs, target: '_blank', rel: 'noopener noreferrer' }, 'API belgeleri ↗')),
       h('div', { class: 'small muted' }, `Gereken: ${a.needs}`)),
     actions: [{ label: 'Vazgeç', class: 'secondary' }, { label: 'Kaydet', close: false, onClick: async (close) => {

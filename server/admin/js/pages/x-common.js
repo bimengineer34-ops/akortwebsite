@@ -20,7 +20,7 @@ export const datePill = (onChange) => {
 };
 
 /**
- * Sayfa başlığı. Seçenekler (düz nesne): { crumbs: 'Social Studio › Genel Bakış', range: true, onRange }. Diğer argümanlar eylem düğmeleridir.
+ * Sayfa başlığı. Seçenekler (düz nesne): { crumbs: 'Sosyal Medya Stüdyosu › Genel Bakış', range: true, onRange }. Diğer argümanlar eylem düğmeleridir.
  */
 export const pageHead = (title, lead, ...rest) => {
   const opts = rest.find((x) => x && !(x instanceof Node)) ?? {};

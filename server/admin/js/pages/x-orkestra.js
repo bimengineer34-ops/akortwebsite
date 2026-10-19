@@ -1,7 +1,7 @@
-// AKORT AI Orchestra — 8 sayfa: Pano, Komut Merkezi, Ajanlar, İş Akışı Oluşturucu, Görev İzleme, Onay Merkezi, Model & API, Kayıtlar & Analitik.
+// AKORT Yapay Zekâ Orkestrası — 8 sayfa: Pano, Komut Merkezi, Ajanlar, İş Akışı Oluşturucu, Görev İzleme, Onay Merkezi, Model ve API, Kayıtlar & Analitik.
 // Tüm veriler /x/orkestra/* uçlarından gelir (sahte veri yok). Metinler DOM'a metin düğümü olarak eklenir (XSS güvenli).
 import { api, session } from '../api.js';
-import { h, icon, chip, toast, spinner, errorBanner, field, modal, confirmBox } from '../ui.js';
+import { h, icon, chip, toast, spinner, errorBanner, field, modal, confirmBox, levelTr, eventTr } from '../ui.js';
 import { kpiCard, areaChart, hbars, panel } from '../charts.js';
 import { pageHead, infoBox, empty, fmtLocal, needConn } from './x-common.js';
 
@@ -43,13 +43,13 @@ const wrap = (title, lead, build, opts = {}) => async (ctx) => {
   };
   load();
   if (opts.refresh) live(root, () => load(true), opts.refresh);
-  return h('div', {}, pageHead(title, lead, { crumbs: 'AI Orchestra' }), subnav(), root);
+  return h('div', {}, pageHead(title, lead, { crumbs: 'Yapay Zekâ Orkestrası' }), subnav(), root);
 };
 
-const SUBNAV = [['/orkestra', 'Pano'], ['/orkestra/komut', 'Komut Merkezi'], ['/orkestra/ajanlar', 'Ajanlar'], ['/orkestra/akislar', 'İş Akışı Oluşturucu'], ['/orkestra/izleme', 'Görev İzleme'], ['/orkestra/onay', 'Onay Merkezi'], ['/orkestra/model', 'Model & API'], ['/orkestra/kayit', 'Kayıtlar & Analitik']];
+const SUBNAV = [['/orkestra', 'Pano'], ['/orkestra/komut', 'Komut Merkezi'], ['/orkestra/ajanlar', 'Ajanlar'], ['/orkestra/akislar', 'İş Akışı Oluşturucu'], ['/orkestra/izleme', 'Görev İzleme'], ['/orkestra/onay', 'Onay Merkezi'], ['/orkestra/model', 'Model ve API'], ['/orkestra/kayit', 'Kayıtlar & Analitik']];
 const subnav = () => {
   const cur = location.hash.replace(/^#/, '').split('?')[0];
-  return h('nav', { class: 'orch-tabs', 'aria-label': 'AI Orchestra bölümleri' }, SUBNAV.map(([to, label]) => h('a', { href: `#${to}`, 'aria-current': (to === '/orkestra' ? cur === to : cur === to || cur.startsWith(`${to}/`)) ? 'page' : null }, label)));
+  return h('nav', { class: 'orch-tabs', 'aria-label': 'Yapay Zekâ Orkestrası bölümleri' }, SUBNAV.map(([to, label]) => h('a', { href: `#${to}`, 'aria-current': (to === '/orkestra' ? cur === to : cur === to || cur.startsWith(`${to}/`)) ? 'page' : null }, label)));
 };
 
 /* ------------------------------ DAG çizimi ------------------------------ */
@@ -98,12 +98,12 @@ export const outputView = (agent, out) => {
     kv('Ana noktalar', list(out.key_points, (k) => h('span', {}, `${k.point} `, k.confidence === 'kaynakli' ? chip('kaynaklı', 'ok') : chip('genel bilgi', 'warn'), ' ', ...(k.source_urls ?? []).map((u) => [link(u, '↗'), ' '])))),
     kv('Taslak yapısı', list(out.outline)), kv('Boşluklar', list(out.gaps)), kv('Kaynaklar', list(out.sources, (s) => link(s.url, s.title || s.url))),
     out.meta ? h('div', { class: 'small muted' }, `${out.meta.sourceCount} kaynak kullanıldı · ${out.meta.blockedSources} şüpheli kaynak dışlandı · ${out.meta.strippedCitations} doğrulanamayan atıf temizlendi`) : null);
-  if (agent === 'content') return h('div', { class: 'ov' }, kv('Başlık', out.title), kv('Meta açıklama', out.description), kv('Kategori', out.category), kv('Etiketler', (out.tags ?? []).join(', ') || '—'),
+  if (agent === 'content') return h('div', { class: 'ov' }, kv('Başlık', out.title), kv('Arama açıklaması', out.description), kv('Kategori', out.category), kv('Etiketler', (out.tags ?? []).join(', ') || '—'),
     out.risk_flags?.length ? kv('Otomatik risk', list(out.risk_flags)) : null, kv('Kaynak isteyen iddialar', list(out.claims_needing_source)), body(out.body));
   if (out.priorities) return h('div', { class: 'ov' }, kv('Özet', out.summary), kv('Tarama', `${out.scan?.pages ?? '—'} sayfa · ${out.scan?.errors ?? 0} kritik · ${out.scan?.warnings ?? 0} önemli · ${out.scan?.infos ?? 0} iyileştirme · ortalama skor ${out.scan?.avgScore ?? '—'}`),
     kv('Öncelikler', list(out.priorities, (p) => h('span', {}, chip(p.impact, p.impact === 'yuksek' ? 'danger' : p.impact === 'orta' ? 'warn' : ''), ' ', link(p.page, p.page), ` — ${p.issue} → `, h('b', {}, p.fix)))), kv('Hızlı kazanımlar', list(out.quick_wins)),
     kv('İç bağlantı fırsatları', list(out.internal_link_opportunities, (l) => h('span', {}, `${l.from} → `, link(l.to, l.to), ` (“${l.anchor}”)`))), h('div', { class: 'small muted' }, 'Bu analiz yalnızca öneridir; hiçbir sayfa değiştirilmedi.'));
-  if (agent === 'seo') return h('div', { class: 'ov' }, kv('SEO başlığı', out.title), kv('Meta açıklama', out.description), kv('Adres', `/blog/${out.slug}`), kv('Skor', chip(`${out.score ?? '—'}`, out.score >= 85 ? 'ok' : out.score >= 60 ? 'warn' : 'danger')),
+  if (agent === 'seo') return h('div', { class: 'ov' }, kv('SEO başlığı', out.title), kv('Arama açıklaması', out.description), kv('Adres', `/blog/${out.slug}`), kv('Skor', chip(`${out.score ?? '—'}`, out.score >= 85 ? 'ok' : out.score >= 60 ? 'warn' : 'danger')),
     kv('İç bağlantılar', list(out.internal_links, (l) => h('span', {}, link(l.url, l.anchor), ` → ${l.url}`))), kv('Kontroller', list(out.checks, (c) => h('span', {}, chip(c.ok ? 'OK' : 'Eksik', c.ok ? 'ok' : 'warn'), ' ', c.note ?? c.id))));
   if (agent === 'qa') return h('div', { class: 'ov' }, kv('Sonuç', chip(out.passed ? 'Geçti' : 'Kritik bulgu var', out.passed ? 'ok' : 'danger')), kv('Özet', out.summary),
     kv('Bulgular', list(out.issues, (i) => h('span', {}, chip(i.severity, i.severity === 'kritik' ? 'danger' : i.severity === 'uyari' ? 'warn' : ''), ` ${i.text}`))));
@@ -116,12 +116,12 @@ export const outputView = (agent, out) => {
   if (agent === 'social' || Array.isArray(out.posts)) return h('div', { class: 'ov' }, ...(out.posts ?? []).map((p) => kv(p.platform === 'x' ? 'X' : 'LinkedIn', h('div', {}, body(p.text), h('div', { class: 'small muted' }, (p.hashtags ?? []).join(' '))))));
   if (out.title && out.qa_passed !== undefined) return h('div', { class: 'ov' }, kv('Taslak', out.title), kv('QA', out.qa_passed === null ? '—' : chip(out.qa_passed ? 'Geçti' : `${out.qa_blocking} kritik bulgu`, out.qa_passed ? 'ok' : 'danger')), kv('SEO skoru', out.seo_score ?? '—'), kv('Sözcük', out.words ?? '—'));
   if (out.slug && out.draft) return h('div', { class: 'ov' }, kv('Oluşturulan taslak', h('a', { href: out.href }, `${out.title ?? out.slug} → blog editörü`)), h('div', { class: 'small muted' }, 'Taslak yayınlanmadı; blog editöründe inceleyip kendiniz yayınlayın.'));
-  if (out.postIds) return h('div', { class: 'ov' }, kv('Social Studio taslakları', h('a', { href: out.href }, `${out.postIds.length} gönderi taslağı → İçerik Arşivi`)));
+  if (out.postIds) return h('div', { class: 'ov' }, kv('Sosyal Medya Stüdyosu taslakları', h('a', { href: out.href }, `${out.postIds.length} gönderi taslağı → İçerik Arşivi`)));
   return body(JSON.stringify(out, null, 2));
 };
 
 /* ------------------------------ 1) Pano ------------------------------ */
-export const renderOrkestraDashboard = wrap('AI Orchestra', 'Çok ajanlı yapay zekâ yönetimi: komut verin, ajanların çalışmasını izleyin, çıktıları onaylayın.', async () => {
+export const renderOrkestraDashboard = wrap('Yapay Zekâ Orkestrası', 'Çok ajanlı yapay zekâ yönetimi: komut verin, ajanların çalışmasını izleyin, çıktıları onaylayın.', async () => {
   const [ov, runs, ap] = await Promise.all([api.get('/x/orkestra/ozet'), api.get('/x/orkestra/calistirmalar?limit=8'), api.get('/x/orkestra/onaylar'), loadAgents()]);
   const c = ov.counts;
   const days = [...Array(14)].map((_, i) => new Date(Date.now() - (13 - i) * 86_400_000).toLocaleDateString('sv-SE'));
@@ -132,10 +132,10 @@ export const renderOrkestraDashboard = wrap('AI Orchestra', 'Çok ajanlı yapay 
       kpiCard({ ic: 'bolt', label: 'Çalışan / Sırada', value: c.running + c.queued, to: '/orkestra/izleme', color: '#0b7bd6', deltaLabel: `${c.total} toplam çalıştırma` }),
       kpiCard({ ic: 'shield', label: 'Onay Bekleyen', value: ov.pending, to: '/orkestra/onay', color: '#ff9f43', deltaLabel: ov.pending ? 'İnsan onayı gerekli' : 'Bekleyen yok' }),
       kpiCard({ ic: 'alert', label: 'Başarısız', value: c.failed, to: '/orkestra/izleme', color: '#ea5455', goodUp: false }),
-      kpiCard({ ic: 'chart', label: 'Bu Ay Token', value: fmtN(ov.month.i + ov.month.o), to: '/orkestra/kayit', color: '#8b5cf6', deltaLabel: ov.month.cost ? `≈ ${usd(ov.month.cost)}` : 'maliyet: fiyat tanımsız olabilir' })),
+      kpiCard({ ic: 'chart', label: 'Bu Ay Belirteç', value: fmtN(ov.month.i + ov.month.o), to: '/orkestra/kayit', color: '#8b5cf6', deltaLabel: ov.month.cost ? `≈ ${usd(ov.month.cost)}` : 'maliyet: fiyat tanımsız olabilir' })),
     h('div', { class: 'dash-grid' },
       h('div', { class: 'span-7' }, panel('Çalıştırmalar (son 14 gün)', areaChart({ labels: days.map((d) => d.slice(5)), series: [{ name: 'Çalıştırma', color: '#0b7bd6', values: series }], height: 200 }), { ic: 'chart' })),
-      h('div', { class: 'span-5' }, panel('Ajan Başına Token', hbars(ov.byAgent.filter((a) => a.tokens).map((a) => ({ label: agentName(a.agent), value: a.tokens })), { empty: 'Henüz token kullanılmadı' }), { ic: 'spark' })),
+      h('div', { class: 'span-5' }, panel('Ajan Başına Belirteç', hbars(ov.byAgent.filter((a) => a.tokens).map((a) => ({ label: agentName(a.agent), value: a.tokens })), { empty: 'Henüz belirteç kullanılmadı' }), { ic: 'spark' })),
       h('div', { class: 'span-7' }, panel('Son Çalıştırmalar', runs.runs.length ? h('div', {}, runs.runs.map((r) => h('a', { class: 'listrow link', href: `#/orkestra/izleme/${r.id}` }, h('div', { class: 'grow' }, h('b', {}, r.title), h('span', {}, `${fmtLocal(r.created_at)} · ${r.done_count}/${r.task_count} adım · ${r.created_by ?? ''}`)), stChip(r.status)))) : empty('Henüz çalıştırma yok. Komut Merkezi\'nden başlayın.'),
         { ic: 'rocket', action: h('a', { class: 'btn sm', href: '#/orkestra/komut' }, 'Yeni komut') })),
       h('div', { class: 'span-5' }, panel('Onay Bekleyenler', ap.approvals.length ? h('div', {}, ap.approvals.slice(0, 5).map((a) => h('a', { class: 'listrow link', href: '#/orkestra/onay' }, h('div', { class: 'grow' }, h('b', {}, a.title), h('span', {}, a.run_title)), chip('Onay', 'warn')))) : empty('Bekleyen onay yok.'), { ic: 'shield' })),
@@ -150,14 +150,14 @@ const EXAMPLES = [
   'Son 30 günün site ziyaret sayaçlarını yorumla ve içerik önerileri çıkar.',
 ];
 export const renderCommandCenter = async (ctx) => {
-  ctx.setTitle('AI Command Center');
+  ctx.setTitle('Komut Merkezi');
   const root = h('div', { class: 'stack' });
   const cmd = h('textarea', { class: 'textarea', rows: 4, maxlength: 2000, placeholder: 'Örn: Bu hafta BIM koordinasyonu konusunda iki blog yazısı hazırla, rakip içerikleri araştır, SEO analizini yap, LinkedIn gönderisi oluştur ve onayıma sun.' });
   const planBox = h('div', { class: 'stack' });
   let idemKey = uuid();
   const runPlan = async (plan) => {
     const title = h('input', { class: 'input', value: cmd.value.slice(0, 80) });
-    planBox.replaceChildren(panel('Master planı', h('div', { class: 'stack' },
+    planBox.replaceChildren(panel('Ana koordinatör planı', h('div', { class: 'stack' },
       h('p', {}, plan.summary),
       plan.notes?.length ? infoBox(plan.notes.join(' · '), 'warn') : null,
       plan.unsupported?.length ? infoBox(`Bu sürümde desteklenmeyen istekler (plana alınmadı): ${plan.unsupported.join('; ')}`, 'warn') : null,
@@ -165,17 +165,17 @@ export const renderCommandCenter = async (ctx) => {
       h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Adım', 'Tür', 'Ajan / eylem', 'Bağımlılık'].map((x) => h('th', {}, x)))),
         h('tbody', {}, plan.steps.map((s) => h('tr', {}, h('td', {}, s.title), h('td', {}, KIND[s.kind]), h('td', {}, s.kind === 'approval' ? '—' : agentName(s.agent)), h('td', { class: 'mono small' }, (s.depends_on ?? []).join(', ') || '—')))))),
       field('Çalıştırma adı', title),
-      h('div', { class: 'small muted' }, `Plan üretimi: ${plan.usage.inTok}+${plan.usage.outTok} token (${plan.usage.model}). Dış sistemi değiştiren her adımdan önce insan onayı vardır; blog ve sosyal çıktılar yalnızca TASLAK olarak açılır.`),
+      h('div', { class: 'small muted' }, `Plan üretimi: ${plan.usage.inTok}+${plan.usage.outTok} belirteç (${plan.usage.model}). Dış sistemi değiştiren her adımdan önce insan onayı vardır; blog ve sosyal çıktılar yalnızca TASLAK olarak açılır.`),
       h('div', { class: 'row wrap' },
         h('button', { class: 'btn', onclick: async (e) => { e.currentTarget.disabled = true; try { const r = await api.post('/x/orkestra/calistir', { title: title.value, command: cmd.value, steps: plan.steps, idempotencyKey: idemKey }); toast(r.duplicate ? 'Bu plan zaten çalıştırılmış' : 'Çalıştırma başlatıldı', 'ok'); location.hash = `#/orkestra/izleme/${r.id}`; } catch (er) { toast(er.data?.errors?.join(' · ') || er.message, 'err'); e.currentTarget.disabled = false; } } }, icon('rocket', 16), 'Planı onayla ve çalıştır'),
         h('button', { class: 'btn secondary', onclick: () => planBox.replaceChildren() }, 'Vazgeç'))), { ic: 'spark' }));
   };
   const planBtn = h('button', { class: 'btn', onclick: async (e) => {
     if (cmd.value.trim().length < 8) return toast('Komut çok kısa', 'err');
-    e.currentTarget.disabled = true; planBox.replaceChildren(spinner('Master planlıyor…'));
+    e.currentTarget.disabled = true; planBox.replaceChildren(spinner('Ana koordinatör planlıyor…'));
     try { idemKey = uuid(); await loadAgents(); await runPlan(await api.post('/x/orkestra/plan', { command: cmd.value })); } catch (er) { planBox.replaceChildren(errorBanner(er)); }
     e.target.disabled = false;
-  } }, icon('spark', 16), 'Master ile planla');
+  } }, icon('spark', 16), 'Ana ajan ile planla');
   // hızlı başlat: yerleşik blog taslağı iş akışı
   const topic = h('input', { class: 'input', placeholder: 'Örn: BIM koordinasyonu' }), focus = h('input', { class: 'input', placeholder: 'Odak ifade (isteğe bağlı)' });
   const quick = panel('Hızlı başlat: Blog taslağı iş akışı', h('div', { class: 'stack' }, h('p', { class: 'small muted' }, 'Research → Content → SEO → QA → İnsan onayı → Blog taslağı. Yazı yayınlanmaz; onayınızdan sonra blog editöründe TASLAK olarak açılır.'),
@@ -211,9 +211,9 @@ export const renderCommandCenter = async (ctx) => {
     h('div', { class: 'dash-grid' }, h('div', { class: 'span-7' }, panel('Türkçe komut', h('div', { class: 'stack' }, cmd,
       h('div', { class: 'row wrap' }, EXAMPLES.map((x, i) => h('button', { class: 'btn ghost sm', onclick: () => { cmd.value = x; } }, `Örnek ${i + 1}`))), h('div', {}, planBtn)), { ic: 'edit' })), h('div', { class: 'span-5' }, quick)),
     panel('Hazır iş akışları', wfBox, { ic: 'rocket', sub: 'Site SEO denetimi · Müşteri talebi analizi · Sosyal gönderi + görsel' }),
-    infoBox('Master Orchestrator komutu yalnızca etkin ve bağlı ajanlarla çalışan bir görev planına ayırır; planı siz onaylamadan hiçbir ajan çalışmaz. Plan model çıktısıdır ve sunucuda yeniden doğrulanır.'),
+    infoBox('Ana Koordinatör komutu yalnızca etkin ve bağlı ajanlarla çalışan bir görev planına ayırır; planı siz onaylamadan hiçbir ajan çalışmaz. Plan model çıktısıdır ve sunucuda yeniden doğrulanır.'),
     planBox);
-  return h('div', {}, pageHead('AI Command Center', 'Türkçe komutu Master Orchestrator alt görevlere ayırsın; planı onaylayın, ajanlar çalışsın.', { crumbs: 'AI Orchestra' }), subnav(), root);
+  return h('div', {}, pageHead('Komut Merkezi', 'Türkçe komutu Ana Koordinatör alt görevlere ayırsın; planı onaylayın, ajanlar çalışsın.', { crumbs: 'Yapay Zekâ Orkestrası' }), subnav(), root);
 };
 
 /* ------------------------------ 3) Ajanlar ------------------------------ */
@@ -221,7 +221,7 @@ const jsonArea = (v) => { const t = h('textarea', { class: 'textarea mono', rows
 const editAgent = (a, providers, done) => {
   const f = {
     name: h('input', { class: 'input', value: a.name }), role: h('textarea', { class: 'textarea', rows: 2 }), prompt: h('textarea', { class: 'textarea', rows: 9 }),
-    provider: h('select', { class: 'select' }, [['', 'Orchestra varsayılanı'], ...providers.map((p) => [p.id, `${p.label}${p.connected ? '' : ' (bağlı değil)'}`])].map(([v, l]) => h('option', { value: v, selected: v === a.provider }, l))),
+    provider: h('select', { class: 'select' }, [['', 'Orkestra varsayılanı'], ...providers.map((p) => [p.id, `${p.label}${p.connected ? '' : ' (bağlı değil)'}`])].map(([v, l]) => h('option', { value: v, selected: v === a.provider }, l))),
     model: h('input', { class: 'input', value: a.model, placeholder: 'boş = sağlayıcı varsayılanı' }),
     retries: h('input', { class: 'input', type: 'number', min: 0, max: 5, value: a.max_retries }), timeout: h('input', { class: 'input', type: 'number', min: 10, max: 600, value: a.timeout_s }), maxTok: h('input', { class: 'input', type: 'number', min: 200, max: 8000, value: a.max_tokens }), daily: h('input', { class: 'input', type: 'number', min: 0, value: a.daily_token_limit ?? 0, disabled: !isAdmin() }),
     appr: h('input', { type: 'checkbox', checked: a.requires_approval }), en: h('input', { type: 'checkbox', checked: a.enabled }),
@@ -229,7 +229,7 @@ const editAgent = (a, providers, done) => {
   };
   f.role.value = a.role; f.prompt.value = a.system_prompt;
   const history = h('div', { class: 'stack' }, h('b', {}, 'Son çalıştırmalar'), h('div', { class: 'small muted' }, 'Yükleniyor…'));
-  api.get(`/x/orkestra/ajanlar/${a.key}/gecmis`).then(({ history: hs }) => history.replaceChildren(h('b', {}, 'Son çalıştırmalar'), hs.length ? h('div', { class: 'tbl-wrap', style: 'max-height:200px;overflow:auto' }, h('table', { class: 'tbl' }, h('tbody', {}, hs.map((x) => h('tr', {}, h('td', { class: 'small muted' }, fmtLocal(x.started_at ?? '')), h('td', {}, h('a', { href: `#/orkestra/izleme/${x.run_id}`, onclick: () => document.querySelector('.overlay')?.remove() }, x.run_title)), h('td', {}, stChip(x.status)), h('td', { class: 'small' }, `${fmtN(x.tokens)} token${x.attempts > 1 ? ` · ${x.attempts} deneme` : ''}`), h('td', { class: 'small', style: 'color:var(--danger)' }, x.error ? String(x.error).slice(0, 60) : ''))))) ) : h('div', { class: 'small muted' }, 'Henüz çalışmadı.'))).catch(() => {});
+  api.get(`/x/orkestra/ajanlar/${a.key}/gecmis`).then(({ history: hs }) => history.replaceChildren(h('b', {}, 'Son çalıştırmalar'), hs.length ? h('div', { class: 'tbl-wrap', style: 'max-height:200px;overflow:auto' }, h('table', { class: 'tbl' }, h('tbody', {}, hs.map((x) => h('tr', {}, h('td', { class: 'small muted' }, fmtLocal(x.started_at ?? '')), h('td', {}, h('a', { href: `#/orkestra/izleme/${x.run_id}`, onclick: () => document.querySelector('.overlay')?.remove() }, x.run_title)), h('td', {}, stChip(x.status)), h('td', { class: 'small' }, `${fmtN(x.tokens)} belirteç${x.attempts > 1 ? ` · ${x.attempts} deneme` : ''}`), h('td', { class: 'small', style: 'color:var(--danger)' }, x.error ? String(x.error).slice(0, 60) : ''))))) ) : h('div', { class: 'small muted' }, 'Henüz çalışmadı.'))).catch(() => {});
   const toolBoxes = agentCache.tools.map(([k, label]) => [k, h('input', { type: 'checkbox', checked: a.tools.includes(k) }), label]);
   const m = modal({
     title: `${a.name} — yapılandırma`, wide: true,
@@ -238,8 +238,8 @@ const editAgent = (a, providers, done) => {
       h('div', { class: 'grid cols-2' }, field('Ad', f.name), field('Görev tanımı', f.role)),
       field('Sistem talimatı', f.prompt, 'Güvenlik kuralları (güvenilmez kaynaklara uyma, sır ifşa etme, uydurma yapma) sunucuda her çağrıya EK olarak eklenir; buradan kaldırılamaz.'),
       h('div', { class: 'grid cols-2' }, field('Sağlayıcı', f.provider), field('Model', f.model)),
-      h('div', { class: 'grid cols-3' }, field('Yeniden deneme (0–5)', f.retries), field('Zaman aşımı (sn)', f.timeout), field('Çıktı token sınırı', f.maxTok)),
-      h('div', { class: 'grid cols-2' }, field('Günlük token limiti (0 = sınırsız)', f.daily), h('div', { class: 'small muted', style: 'align-self:end' }, `Bugün kullanılan: ${fmtN(a.today_tokens ?? 0)} token`)),
+      h('div', { class: 'grid cols-3' }, field('Yeniden deneme (0–5)', f.retries), field('Zaman aşımı (sn)', f.timeout), field('Çıktı belirteç sınırı', f.maxTok)),
+      h('div', { class: 'grid cols-2' }, field('Günlük belirteç limiti (0 = sınırsız)', f.daily), h('div', { class: 'small muted', style: 'align-self:end' }, `Bugün kullanılan: ${fmtN(a.today_tokens ?? 0)} belirteç`)),
       h('div', {}, h('b', {}, 'Araç yetkileri (salt okunur)'), h('div', { class: 'row wrap' }, toolBoxes.map(([, box, label]) => h('label', { class: 'switch' }, box, h('i'), h('span', {}, label))))),
       h('div', { class: 'row wrap' }, h('label', { class: 'switch' }, f.appr, h('i'), h('span', {}, 'Çıktısı insan onayı gerektirir')), h('label', { class: 'switch' }, f.en, h('i'), h('span', {}, 'Ajan açık'))),
       h('div', { class: 'grid cols-2' }, field('Girdi şeması (JSON)', f.inS), field('Çıktı şeması (JSON) — model çıktısı buna göre doğrulanır', f.outS)), history),
@@ -254,7 +254,7 @@ const editAgent = (a, providers, done) => {
   });
   return m;
 };
-export const renderAgents = wrap('AI Agents Management', '12 yapılandırılabilir ajan: talimat, model, araç yetkisi, şema, hata yönetimi ve çalıştırma geçmişi.', async (load) => {
+export const renderAgents = wrap('Ajan Yönetimi', '12 yapılandırılabilir ajan: talimat, model, araç yetkisi, şema, hata yönetimi ve çalıştırma geçmişi.', async (load) => {
   const [d, an, st] = await Promise.all([loadAgents(true), api.get('/x/orkestra/analitik?gun=30'), api.get('/x/orkestra/ayarlar')]);
   const usage = Object.fromEntries(an.byAgent.map((x) => [x.agent, x]));
   return [
@@ -266,8 +266,8 @@ export const renderAgents = wrap('AI Agents Management', '12 yapılandırılabil
         h('div', { class: 'small muted' }, a.role),
         a.executable ? null : h('div', { class: 'small', style: 'color:var(--warn)' }, a.notConnectedReason),
         h('div', { class: 'row wrap small' }, chip(a.model || a.provider ? `${a.provider || 'varsayılan'} · ${a.model || 'varsayılan model'}` : 'varsayılan model'), a.requires_approval ? chip('Onay gerekir', 'warn') : null, ...a.tools.map((t) => chip(t))),
-        h('div', { class: 'small muted' }, u ? `Son 30 gün: ${u.tasks} görev · ${fmtN(u.tokens_in + u.tokens_out)} token · ${u.failed} hata · ${u.retried} yeniden deneme` : 'Son 30 günde çalışmadı'),
-        a.daily_token_limit ? h('div', { class: 'small muted' }, `Bugün: ${fmtN(a.today_tokens)} / ${fmtN(a.daily_token_limit)} token`) : null,
+        h('div', { class: 'small muted' }, u ? `Son 30 gün: ${u.tasks} görev · ${fmtN(u.tokens_in + u.tokens_out)} belirteç · ${u.failed} hata · ${u.retried} yeniden deneme` : 'Son 30 günde çalışmadı'),
+        a.daily_token_limit ? h('div', { class: 'small muted' }, `Bugün: ${fmtN(a.today_tokens)} / ${fmtN(a.daily_token_limit)} belirteç`) : null,
         h('div', { class: 'row wrap' }, h('button', { class: 'btn secondary sm', onclick: () => editAgent(a, st.providers, load) }, icon('edit', 14), isAdmin() ? 'Yapılandır' : 'Görüntüle'), h('a', { class: 'btn ghost sm', href: '#/orkestra/kayit' }, 'Geçmiş')));
     })),
   ];
@@ -276,7 +276,7 @@ export const renderAgents = wrap('AI Agents Management', '12 yapılandırılabil
 /* ------------------------------ 4) İş Akışı Oluşturucu ------------------------------ */
 const paramsOf = (steps) => [...new Set(JSON.stringify(steps).match(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi)?.map((x) => x.replace(/[{}\s]/g, '')) ?? [])];
 export const renderWorkflows = async (ctx) => {
-  ctx.setTitle('Workflow Builder');
+  ctx.setTitle('İş Akışı Oluşturucu');
   const root = h('div', { class: 'stack' });
   let current = null; // { id, name, description, builtin, steps }
   const draw = async () => {
@@ -329,7 +329,7 @@ export const renderWorkflows = async (ctx) => {
         isAdmin() && w.id && !w.builtin ? h('button', { class: 'btn danger secondary', onclick: async () => { if (await confirmBox({ title: 'İş akışı silinsin mi?', message: w.name, confirmLabel: 'Sil', danger: true })) { await api.del(`/x/orkestra/akislar/${w.id}`); current = null; draw(); } } }, 'Sil') : null)), { ic: 'rocket' }));
   };
   try { await draw(); } catch (e) { root.replaceChildren(errorBanner(e)); }
-  return h('div', {}, pageHead('Workflow Builder', 'Ajan, onay ve eylem adımlarından bağımlılıklı iş akışları oluşturun; sıralı veya paralel çalıştırın.', { crumbs: 'AI Orchestra' }), subnav(), root);
+  return h('div', {}, pageHead('İş Akışı Oluşturucu', 'Ajan, onay ve eylem adımlarından bağımlılıklı iş akışları oluşturun; sıralı veya paralel çalıştırın.', { crumbs: 'Yapay Zekâ Orkestrası' }), subnav(), root);
 };
 
 /* ------------------------------ 5) Görev İzleme ------------------------------ */
@@ -352,23 +352,23 @@ const runDetail = async (id, load) => {
     r.error ? h('div', { class: 'banner danger' }, icon('alert'), h('div', {}, r.error)) : null,
     h('div', { class: 'kpis' },
       kpiCard({ ic: 'bolt', label: 'Durum', value: ST[r.status]?.[0] ?? r.status, color: '#0b7bd6', deltaLabel: `${fmtLocal(r.created_at)} · ${r.created_by ?? ''}` }),
-      kpiCard({ ic: 'chart', label: 'Token', value: fmtN(r.tokens_in + r.tokens_out), color: '#8b5cf6', deltaLabel: `${fmtN(r.tokens_in)} girdi · ${fmtN(r.tokens_out)} çıktı${r.token_limit ? ` · limit ${fmtN(r.token_limit)}` : ''}` }),
+      kpiCard({ ic: 'chart', label: 'Belirteç', value: fmtN(r.tokens_in + r.tokens_out), color: '#8b5cf6', deltaLabel: `${fmtN(r.tokens_in)} girdi · ${fmtN(r.tokens_out)} çıktı${r.token_limit ? ` · limit ${fmtN(r.token_limit)}` : ''}` }),
       kpiCard({ ic: 'scale', label: 'Maliyet (tahmin)', value: usd(r.cost_est), color: '#28c76f', deltaLabel: 'fiyat tanımlıysa' }),
       kpiCard({ ic: 'log', label: 'Süre', value: dur(r.started_at ?? r.created_at, r.finished_at), color: '#ff9f43' })),
     panel('İş akışı', dag(steps, Object.fromEntries(d.tasks.map((t) => [t.ref, t.status]))), { ic: 'rocket' }),
     panel('Görevler', h('div', { class: 'stack' }, d.tasks.map((t) => h('details', { class: 'taskrow', open: t.status === 'awaiting_approval' || t.status === 'failed' },
-      h('summary', {}, h('span', { class: 'grow' }, h('b', {}, t.title), h('span', { class: 'muted small' }, ` · ${t.kind === 'agent' ? agentName(t.agent) : KIND[t.kind]}${t.attempts ? ` · deneme ${t.attempts}/${t.max_attempts}` : ''}${t.tokens_in + t.tokens_out ? ` · ${fmtN(t.tokens_in + t.tokens_out)} token` : ''}${t.started_at ? ` · ${dur(t.started_at, t.finished_at)}` : ''}`)), stChip(t.status)),
+      h('summary', {}, h('span', { class: 'grow' }, h('b', {}, t.title), h('span', { class: 'muted small' }, ` · ${t.kind === 'agent' ? agentName(t.agent) : KIND[t.kind]}${t.attempts ? ` · deneme ${t.attempts}/${t.max_attempts}` : ''}${t.tokens_in + t.tokens_out ? ` · ${fmtN(t.tokens_in + t.tokens_out)} belirteç` : ''}${t.started_at ? ` · ${dur(t.started_at, t.finished_at)}` : ''}`)), stChip(t.status)),
       h('div', { class: 'taskbody stack' },
         t.error ? h('div', { class: 'banner danger' }, icon('alert'), h('div', {}, t.error)) : null,
         t.approval_state === 'approved' || t.approval_state === 'rejected' ? h('div', { class: 'small muted' }, `${t.approval_state === 'approved' ? 'Onaylayan' : 'Reddeden'}: ${t.approved_by} · ${fmtLocal(t.approved_at)}${t.approval_note ? ` · "${t.approval_note}"` : ''}`) : null,
         t.status === 'awaiting_approval' ? approvalBtns(t, load) : null,
         t.status === 'failed' && t.approval_state !== 'rejected' ? h('button', { class: 'btn secondary sm', style: 'justify-self:start', onclick: async () => { try { await api.post(`/x/orkestra/gorevler/${t.id}/yeniden-dene`); toast('Yeniden başlatıldı', 'ok'); load(); } catch (e) { toast(e.message, 'err'); } } }, 'Yeniden dene') : null,
         t.output ? outputView(t.kind === 'agent' ? t.agent : t.kind === 'approval' ? 'gate' : t.agent, t.output) : null)))), { ic: 'log' }),
-    panel('Olay günlüğü', d.events.length ? h('div', { class: 'tbl-wrap', style: 'max-height:260px;overflow:auto' }, h('table', { class: 'tbl' }, h('tbody', {}, d.events.map((e) => h('tr', {}, h('td', { class: 'small muted' }, fmtLocal(e.ts)), h('td', {}, chip(e.level, e.level === 'error' ? 'danger' : e.level === 'warn' ? 'warn' : '')), h('td', { class: 'mono small' }, e.event), h('td', { class: 'small' }, e.message)))))) : empty('Olay yok.'), { ic: 'history' }),
+    panel('Olay günlüğü', d.events.length ? h('div', { class: 'tbl-wrap', style: 'max-height:260px;overflow:auto' }, h('table', { class: 'tbl' }, h('tbody', {}, d.events.map((e) => h('tr', {}, h('td', { class: 'small muted' }, fmtLocal(e.ts)), h('td', {}, chip(levelTr(e.level), e.level === 'error' ? 'danger' : e.level === 'warn' ? 'warn' : '')), h('td', { class: 'small' }, eventTr(e.event)), h('td', { class: 'small' }, e.message)))))) : empty('Olay yok.'), { ic: 'history' }),
   ];
 };
 export const renderMonitor = async (ctx, runId) => {
-  ctx.setTitle('Task Execution Monitor');
+  ctx.setTitle('Görev İzleme');
   const root = h('div', { class: 'stack' });
   const filter = { status: '' };
   const load = async (silent = false) => {
@@ -378,17 +378,17 @@ export const renderMonitor = async (ctx, runId) => {
       await loadAgents();
       const { runs } = await api.get(`/x/orkestra/calistirmalar?durum=${filter.status}&limit=60`);
       const sel = h('select', { class: 'select', onchange: (e) => { filter.status = e.target.value; load(); } }, [['', 'Tüm durumlar'], ...Object.entries(ST).filter(([k]) => ['queued', 'running', 'awaiting_approval', 'succeeded', 'failed', 'cancelled'].includes(k)).map(([k, v]) => [k, v[0]])].map(([k, l]) => h('option', { value: k, selected: k === filter.status }, l)));
-      root.replaceChildren(h('div', { class: 'row' }, sel), runs.length ? h('div', { class: 'card' }, h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['#', 'Çalıştırma', 'Durum', 'İlerleme', 'Token', 'Oluşturan', 'Zaman'].map((x) => h('th', {}, x)))),
+      root.replaceChildren(h('div', { class: 'row' }, sel), runs.length ? h('div', { class: 'card' }, h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['#', 'Çalıştırma', 'Durum', 'İlerleme', 'Belirteç', 'Oluşturan', 'Zaman'].map((x) => h('th', {}, x)))),
         h('tbody', {}, runs.map((r) => h('tr', { class: 'clickable', onclick: () => { location.hash = `#/orkestra/izleme/${r.id}`; } }, h('td', {}, r.id), h('td', {}, h('b', {}, r.title)), h('td', {}, stChip(r.status)), h('td', {}, `${r.done_count}/${r.task_count}`), h('td', {}, fmtN(r.tokens_in + r.tokens_out)), h('td', { class: 'small' }, r.created_by ?? '—'), h('td', { class: 'small muted' }, fmtLocal(r.created_at)))))))) : empty('Çalıştırma yok.'));
     } catch (e) { root.replaceChildren(errorBanner(e)); }
   };
   load();
   live(root, () => load(true), 3000);
-  return h('div', {}, pageHead('Task Execution Monitor', 'Çalıştırmaları, hangi ajanda olduğunu ve tamamlanma durumunu canlı izleyin.', { crumbs: 'AI Orchestra' }), subnav(), root);
+  return h('div', {}, pageHead('Görev İzleme', 'Çalıştırmaları, hangi ajanda olduğunu ve tamamlanma durumunu canlı izleyin.', { crumbs: 'Yapay Zekâ Orkestrası' }), subnav(), root);
 };
 
 /* ------------------------------ 6) Onay Merkezi ------------------------------ */
-export const renderApprovals = wrap('Human Approval Center', 'Ajan çıktıları ve eylemler yalnızca sizin onayınızdan sonra ilerler. Blog ve sosyal çıktılar taslak olarak açılır, yayınlanmaz.', async (load) => {
+export const renderApprovals = wrap('İnsan Onay Merkezi', 'Ajan çıktıları ve eylemler yalnızca sizin onayınızdan sonra ilerler. Blog ve sosyal çıktılar taslak olarak açılır, yayınlanmaz.', async (load) => {
   await loadAgents();
   const { approvals } = await api.get('/x/orkestra/onaylar');
   if (!approvals.length) return [empty('Onay bekleyen görev yok.')];
@@ -410,8 +410,8 @@ export const renderApprovals = wrap('Human Approval Center', 'Ajan çıktıları
   });
 }, { refresh: 8000 });
 
-/* ------------------------------ 7) Model & API ------------------------------ */
-export const renderModelConfig = wrap('AI Model & API Configuration', 'Sağlayıcılar, varsayılan model, eşzamanlılık ve token sınırları. API anahtarları yalnızca sunucuda şifreli tutulur.', async (load) => {
+/* ------------------------------ 7) Model ve API ------------------------------ */
+export const renderModelConfig = wrap('Model ve API Yapılandırması', 'Sağlayıcılar, varsayılan model, eşzamanlılık ve belirteç sınırları. API anahtarları yalnızca sunucuda şifreli tutulur.', async (load) => {
   const [st, d] = await Promise.all([api.get('/x/orkestra/ayarlar'), loadAgents(true)]);
   const s = st.settings;
   const prov = h('select', { class: 'select', disabled: !isAdmin() }, [['', 'Otomatik (bağlı ilk sağlayıcı)'], ...st.providers.map((p) => [p.id, `${p.label}${p.connected ? '' : ' (bağlı değil)'}`])].map(([v, l]) => h('option', { value: v, selected: v === s.provider }, l)));
@@ -422,16 +422,16 @@ export const renderModelConfig = wrap('AI Model & API Configuration', 'Sağlayı
   return [
     st.fake ? infoBox('TEST MODU: ORCH_FAKE_LLM=1 — ajanlar gerçek model yerine deterministik sahte yanıt üretiyor. Canlı ortamda bu değişken kullanılmaz (NODE_ENV=production iken devre dışıdır).', 'warn') : null,
     panel('Sağlayıcılar', h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Sağlayıcı', 'Durum', 'Model', 'Bu ay', 'Aylık bütçe'].map((x) => h('th', {}, x)))),
-      h('tbody', {}, st.providers.map((p) => h('tr', {}, h('td', {}, h('b', {}, p.label)), h('td', {}, p.connected ? chip('Bağlı', 'ok') : chip('Bağlantı gerekli', 'warn')), h('td', { class: 'mono small' }, p.model), h('td', { class: 'small' }, `${p.month.calls} çağrı · ${fmtN(p.month.inputTokens + p.month.outputTokens)} token`), h('td', { class: 'small' }, p.budget ? fmtN(p.budget) : 'sınırsız')))))),
+      h('tbody', {}, st.providers.map((p) => h('tr', {}, h('td', {}, h('b', {}, p.label)), h('td', {}, p.connected ? chip('Bağlı', 'ok') : chip('Bağlantı gerekli', 'warn')), h('td', { class: 'mono small' }, p.model), h('td', { class: 'small' }, `${p.month.calls} çağrı · ${fmtN(p.month.inputTokens + p.month.outputTokens)} belirteç`), h('td', { class: 'small' }, p.budget ? fmtN(p.budget) : 'sınırsız')))))),
       { ic: 'plug', action: h('a', { class: 'btn secondary sm', href: '#/entegrasyonlar' }, 'API anahtarı / bütçe') }),
     panel('Orkestrasyon ayarları', h('div', { class: 'stack' },
-      h('div', { class: 'grid cols-3' }, field('Varsayılan sağlayıcı', prov), field('Eşzamanlı görev (1–6)', conc), field('Çalıştırma başına token limiti (0 = sınırsız)', lim), field('Günlük genel token limiti (0 = sınırsız)', dlim)),
-      h('label', { class: 'switch' }, aiImg, h('i'), h('span', {}, 'Design ajanı: onaydan sonra AI ile arka plan görseli üret (Gemini/OpenAI görsel kotası gerekir; yoksa şablon kullanılır)')),
-      h('p', { class: 'small muted' }, 'Token limiti aşılan çalıştırma durdurulur. Aylık sağlayıcı bütçesi Entegrasyonlar sayfasındadır ve Orchestra çağrıları için de geçerlidir. Test ve canlı ortam ayrımı: ORCH_FAKE_LLM yalnızca NODE_ENV≠production iken çalışır.'),
+      h('div', { class: 'grid cols-3' }, field('Varsayılan sağlayıcı', prov), field('Eşzamanlı görev (1–6)', conc), field('Çalıştırma başına belirteç limiti (0 = sınırsız)', lim), field('Günlük genel belirteç limiti (0 = sınırsız)', dlim)),
+      h('label', { class: 'switch' }, aiImg, h('i'), h('span', {}, 'Design ajanı: onaydan sonra Yapay Zekâ ile arka plan görseli üret (Gemini/OpenAI görsel kotası gerekir; yoksa şablon kullanılır)')),
+      h('p', { class: 'small muted' }, 'Belirteç limiti aşılan çalıştırma durdurulur. Aylık sağlayıcı bütçesi Entegrasyonlar sayfasındadır ve Orkestra çağrıları için de geçerlidir. Test ve canlı ortam ayrımı: ORCH_FAKE_LLM yalnızca NODE_ENV≠production iken çalışır.'),
       isAdmin() ? h('button', { class: 'btn', style: 'justify-self:start', onclick: async () => { try { await api.put('/x/orkestra/ayarlar', { provider: prov.value, concurrency: Number(conc.value), tokenLimit: Number(lim.value), dailyTokenLimit: Number(dlim.value), aiImage: aiImg.checked }); toast('Kaydedildi', 'ok'); load(); } catch (e) { toast(e.message, 'err'); } } }, 'Kaydet') : infoBox('Ayarları yalnızca yönetici değiştirebilir.')), { ic: 'gear' }),
     panel('Ajan bazlı model', h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Ajan', 'Sağlayıcı', 'Model', ''].map((x) => h('th', {}, x)))),
       h('tbody', {}, d.agents.filter((a) => a.executable).map((a) => {
-        const ps = h('select', { class: 'select', disabled: !isAdmin() }, [['', 'Orchestra varsayılanı'], ...st.providers.map((p) => [p.id, p.label])].map(([v, l]) => h('option', { value: v, selected: v === a.provider }, l)));
+        const ps = h('select', { class: 'select', disabled: !isAdmin() }, [['', 'Orkestra varsayılanı'], ...st.providers.map((p) => [p.id, p.label])].map(([v, l]) => h('option', { value: v, selected: v === a.provider }, l)));
         const md = h('input', { class: 'input', value: a.model, placeholder: 'boş = varsayılan', disabled: !isAdmin() });
         return h('tr', {}, h('td', {}, h('b', {}, a.name)), h('td', {}, ps), h('td', {}, md), h('td', {}, isAdmin() ? h('button', { class: 'btn secondary sm', onclick: async () => { try { await api.put(`/x/orkestra/ajanlar/${a.key}`, { provider: ps.value, model: md.value.trim() }); toast('Kaydedildi', 'ok'); } catch (e) { toast(e.message, 'err'); } } }, 'Kaydet') : null));
       })))), { ic: 'spark' }),
@@ -440,7 +440,7 @@ export const renderModelConfig = wrap('AI Model & API Configuration', 'Sağlayı
 
 /* ------------------------------ 8) Kayıtlar & Analitik ------------------------------ */
 export const renderLogs = async (ctx) => {
-  ctx.setTitle('Execution Logs & Analytics');
+  ctx.setTitle('Çalıştırma Kayıtları ve Analiz');
   const root = h('div', { class: 'stack' });
   const f = { days: 30, level: '', run: '' };
   const load = async () => {
@@ -455,16 +455,16 @@ export const renderLogs = async (ctx) => {
       const tot = an.byAgent.reduce((a, x) => ({ t: a.t + x.tasks, i: a.i + x.tokens_in, o: a.o + x.tokens_out, c: a.c + x.cost, f: a.f + x.failed }), { t: 0, i: 0, o: 0, c: 0, f: 0 });
       root.replaceChildren(
         h('div', { class: 'row wrap' }, dsel),
-        h('div', { class: 'kpis' }, kpiCard({ ic: 'bolt', label: 'Ajan görevi', value: tot.t, color: '#0b7bd6' }), kpiCard({ ic: 'chart', label: 'Token', value: fmtN(tot.i + tot.o), color: '#8b5cf6', deltaLabel: `${fmtN(tot.i)} girdi · ${fmtN(tot.o)} çıktı` }), kpiCard({ ic: 'scale', label: 'Maliyet (tahmin)', value: usd(tot.c || null), color: '#28c76f', deltaLabel: tot.c ? '' : 'sağlayıcı fiyatı tanımsız' }), kpiCard({ ic: 'alert', label: 'Başarısız görev', value: tot.f, color: '#ea5455', goodUp: false })),
+        h('div', { class: 'kpis' }, kpiCard({ ic: 'bolt', label: 'Ajan görevi', value: tot.t, color: '#0b7bd6' }), kpiCard({ ic: 'chart', label: 'Belirteç', value: fmtN(tot.i + tot.o), color: '#8b5cf6', deltaLabel: `${fmtN(tot.i)} girdi · ${fmtN(tot.o)} çıktı` }), kpiCard({ ic: 'scale', label: 'Maliyet (tahmin)', value: usd(tot.c || null), color: '#28c76f', deltaLabel: tot.c ? '' : 'sağlayıcı fiyatı tanımsız' }), kpiCard({ ic: 'alert', label: 'Başarısız görev', value: tot.f, color: '#ea5455', goodUp: false })),
         h('div', { class: 'dash-grid' },
-          h('div', { class: 'span-7' }, panel('Günlük görev ve token', areaChart({ labels: days.map((d) => d.slice(5)), series: [{ name: 'Görev', color: '#0b7bd6', values: days.map((d) => an.byDay.find((x) => x.day === d)?.tasks ?? 0) }], height: 200 }), { ic: 'chart' })),
-          h('div', { class: 'span-5' }, panel('Token (ajan başına)', hbars(an.byAgent.filter((a) => a.tokens_in + a.tokens_out).map((a) => ({ label: agentName(a.agent), value: a.tokens_in + a.tokens_out })), { empty: 'Veri yok' }), { ic: 'spark' })),
-          h('div', { class: 'span-12' }, panel('Ajan performansı', an.byAgent.length ? h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Ajan', 'Görev', 'Girdi token', 'Çıktı token', 'Maliyet', 'Hata', 'Yeniden deneme'].map((x) => h('th', {}, x)))),
+          h('div', { class: 'span-7' }, panel('Günlük görev ve belirteç', areaChart({ labels: days.map((d) => d.slice(5)), series: [{ name: 'Görev', color: '#0b7bd6', values: days.map((d) => an.byDay.find((x) => x.day === d)?.tasks ?? 0) }], height: 200 }), { ic: 'chart' })),
+          h('div', { class: 'span-5' }, panel('Belirteç (ajan başına)', hbars(an.byAgent.filter((a) => a.tokens_in + a.tokens_out).map((a) => ({ label: agentName(a.agent), value: a.tokens_in + a.tokens_out })), { empty: 'Veri yok' }), { ic: 'spark' })),
+          h('div', { class: 'span-12' }, panel('Ajan performansı', an.byAgent.length ? h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Ajan', 'Görev', 'Girdi belirteç', 'Çıktı belirteç', 'Maliyet', 'Hata', 'Yeniden deneme'].map((x) => h('th', {}, x)))),
             h('tbody', {}, an.byAgent.map((a) => h('tr', {}, h('td', {}, h('b', {}, agentName(a.agent))), h('td', {}, a.tasks), h('td', {}, fmtN(a.tokens_in)), h('td', {}, fmtN(a.tokens_out)), h('td', {}, usd(a.cost || null)), h('td', {}, a.failed ? chip(String(a.failed), 'danger') : '0'), h('td', {}, a.retried)))))) : empty('Bu aralıkta ajan görevi yok.'), { ic: 'users' }))),
         panel('Yürütme kayıtları', h('div', { class: 'stack' }, h('div', { class: 'row wrap' }, lsel, rin), ev.events.length ? h('div', { class: 'tbl-wrap', style: 'max-height:380px;overflow:auto' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Zaman', 'Seviye', 'Çalıştırma', 'Ajan', 'Olay', 'Mesaj'].map((x) => h('th', {}, x)))),
-          h('tbody', {}, ev.events.map((e) => h('tr', {}, h('td', { class: 'small muted' }, fmtLocal(e.ts)), h('td', {}, chip(e.level, e.level === 'error' ? 'danger' : e.level === 'warn' ? 'warn' : '')), h('td', {}, e.run_id ? h('a', { href: `#/orkestra/izleme/${e.run_id}` }, `#${e.run_id}`) : '—'), h('td', { class: 'small' }, e.agent ? agentName(e.agent) : '—'), h('td', { class: 'mono small' }, e.event), h('td', { class: 'small' }, e.message)))))) : empty('Kayıt yok.')), { ic: 'log' }));
+          h('tbody', {}, ev.events.map((e) => h('tr', {}, h('td', { class: 'small muted' }, fmtLocal(e.ts)), h('td', {}, chip(levelTr(e.level), e.level === 'error' ? 'danger' : e.level === 'warn' ? 'warn' : '')), h('td', {}, e.run_id ? h('a', { href: `#/orkestra/izleme/${e.run_id}` }, `#${e.run_id}`) : '—'), h('td', { class: 'small' }, e.agent ? agentName(e.agent) : '—'), h('td', { class: 'small' }, eventTr(e.event)), h('td', { class: 'small' }, e.message)))))) : empty('Kayıt yok.')), { ic: 'log' }));
     } catch (e) { root.replaceChildren(errorBanner(e)); }
   };
   load();
-  return h('div', {}, pageHead('Execution Logs & Analytics', 'Yürütme kayıtları, token ve maliyet takibi, ajan başarı/hata oranları. Kayıtlara gizli bilgi yazılmaz.', { crumbs: 'AI Orchestra' }), subnav(), root);
+  return h('div', {}, pageHead('Çalıştırma Kayıtları ve Analiz', 'Yürütme kayıtları, belirteç ve maliyet takibi, ajan başarı/hata oranları. Kayıtlara gizli bilgi yazılmaz.', { crumbs: 'Yapay Zekâ Orkestrası' }), subnav(), root);
 };

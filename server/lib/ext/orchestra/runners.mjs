@@ -1,4 +1,4 @@
-// AI Orchestra ajan çalıştırıcıları. Her çalıştırıcı: araçları (yetki listesine göre) çalıştırır → modeli çağırır → çıktıyı şemaya karşı doğrular
+// Yapay Zekâ Orkestrası ajan çalıştırıcıları. Her çalıştırıcı: araçları (yetki listesine göre) çalıştırır → modeli çağırır → çıktıyı şemaya karşı doğrular
 // → kaynak/iç bağlantı/iddia denetimlerini deterministik uygular. Model çıktısı HİÇBİR ZAMAN doğrudan güvenilmez.
 import { config } from '../../config.mjs';
 import { chatJson } from './llm.mjs';
@@ -220,7 +220,7 @@ const social = async ({ agent, task, input, deps }) => {
   return { output, usage };
 };
 
-/* ------------------------------ Visual Design (yalnızca kurgu; görsel Brand Kit ile deterministik üretilir) ------------------------------ */
+/* ------------------------------ Visual Design (yalnızca kurgu; görsel Marka Seti ile deterministik üretilir) ------------------------------ */
 const design = async ({ agent, task, input, deps, log }) => {
   if (!has(agent, 'brand_kit')) throw Object.assign(new Error('Bu ajanın brand_kit aracı yetkisi yok'), { fatal: true });
   const kit = brandKitInfo();

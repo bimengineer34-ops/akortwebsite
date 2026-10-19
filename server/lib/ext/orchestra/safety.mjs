@@ -1,4 +1,4 @@
-// AI Orchestra güvenlik yardımcıları: güvenilmez dış içerik, prompt-injection şüphesi, log sızıntı önleme, çıktı doğrulama.
+// Yapay Zekâ Orkestrası güvenlik yardımcıları: güvenilmez dış içerik, prompt-injection şüphesi, log sızıntı önleme, çıktı doğrulama.
 
 /** Loglara/olay kayıtlarına yazılmadan önce anahtar benzeri değerleri maskeler */
 const SECRET_RES = [
@@ -89,7 +89,7 @@ export const sanitizeMarkdown = (md, { allowedUrls = new Set(), siteOrigin = '' 
   return out;
 };
 
-/** NO_FAKE_DATA: doğrulanamayacak kesin iddia kalıpları (QA ve SEO kontrolleri için deterministik) */
+/** sahte veri yasağı: doğrulanamayacak kesin iddia kalıpları (QA ve SEO kontrolleri için deterministik) */
 export const RISKY_CLAIMS = [
   { re: /\b\d{1,3}(?:[.,]\d+)?\s*%\s*(?:oranında\s+)?(?:tasarruf|azalma|artış|verim|kazanç|düşüş)/i, why: 'Kaynaksız yüzdesel iddia' },
   { re: /\b\d+\+?\s*yıllık\s+(?:deneyim|tecrübe)/i, why: 'Doğrulanmamış deneyim iddiası' },

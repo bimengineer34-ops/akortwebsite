@@ -1,4 +1,4 @@
-// AI Orchestra orkestrasyon motoru — SQLite'ta kalıcı görev grafı (DAG), süreç içi zamanlayıcı, yeniden deneme, iptal, onay kapıları.
+// Yapay Zekâ Orkestrası orkestrasyon motoru — SQLite'ta kalıcı görev grafı (DAG), süreç içi zamanlayıcı, yeniden deneme, iptal, onay kapıları.
 // Tasarım ilkeleri: (1) model çıktısı güvenilmez → şema + deterministik doğrulama; (2) dış sistemi/blog/sosyali değiştiren her eylem insan onayından SONRA ve
 // tek sefer (idempotent) çalışır; (3) her geçiş atomik (CAS) olduğundan aynı işlem iki kez yürütülmez; (4) hiçbir gizli bilgi loga/olaya yazılmaz.
 import crypto from 'node:crypto';
@@ -24,8 +24,8 @@ const num = (name, def) => { const n = Number(getSetting(name, '')); return Numb
 export const settings = () => ({ concurrency: num('orch.concurrency', 2), tokenLimit: Number(getSetting('orch.token_limit', '150000')) || 0, dailyTokenLimit: Number(getSetting('orch.daily_token_limit', '0')) || 0, provider: getSetting('orch.provider', ''), aiImage: getSetting('orch.ai_image', '1') !== '0' });
 export const saveSettings = (b, user) => {
   if (b.concurrency !== undefined) { const n = Number(b.concurrency); if (!Number.isInteger(n) || n < 1 || n > 6) throw new HttpError(400, 'Eşzamanlılık 1–6 arasında olmalı'); setSetting('orch.concurrency', String(n)); }
-  if (b.tokenLimit !== undefined) { const n = Number(b.tokenLimit); if (!Number.isInteger(n) || n < 0 || n > 5_000_000) throw new HttpError(400, 'Görev başına token limiti 0–5.000.000 olmalı (0 = sınırsız)'); setSetting('orch.token_limit', String(n)); }
-  if (b.dailyTokenLimit !== undefined) { const n = Number(b.dailyTokenLimit); if (!Number.isInteger(n) || n < 0 || n > 100_000_000) throw new HttpError(400, 'Günlük genel token limiti 0–100.000.000 olmalı (0 = sınırsız)'); setSetting('orch.daily_token_limit', String(n)); }
+  if (b.tokenLimit !== undefined) { const n = Number(b.tokenLimit); if (!Number.isInteger(n) || n < 0 || n > 5_000_000) throw new HttpError(400, 'Görev başına belirteç limiti 0–5.000.000 olmalı (0 = sınırsız)'); setSetting('orch.token_limit', String(n)); }
+  if (b.dailyTokenLimit !== undefined) { const n = Number(b.dailyTokenLimit); if (!Number.isInteger(n) || n < 0 || n > 100_000_000) throw new HttpError(400, 'Günlük genel belirteç limiti 0–100.000.000 olmalı (0 = sınırsız)'); setSetting('orch.daily_token_limit', String(n)); }
   if (b.provider !== undefined) { if (b.provider && !['openai', 'anthropic', 'gemini'].includes(b.provider)) throw new HttpError(400, 'Geçersiz sağlayıcı'); setSetting('orch.provider', b.provider); }
   if (b.aiImage !== undefined) setSetting('orch.ai_image', b.aiImage ? '1' : '0');
   audit(user, 'orkestra.ayar', 'orkestra', j({ concurrency: settings().concurrency, tokenLimit: settings().tokenLimit, dailyTokenLimit: settings().dailyTokenLimit }));
@@ -66,14 +66,14 @@ const ACTIONS = {
     },
   },
   'action.social_draft': {
-    label: 'Social Studio\'da gönderi TASLAKLARI oluştur (yayınlamaz)', external: false,
+    label: 'Sosyal Medya Stüdyosu\'da gönderi TASLAKLARI oluştur (yayınlamaz)', external: false,
     run: async ({ task, deps, run }) => {
       const key = `orch.action.${task.id}`;
       const done = p(getSetting(key, ''), null);
       if (done) return { output: done };
       const sc = Object.values(deps).find((d) => Array.isArray(d?.posts));
       if (!sc) throw Object.assign(new Error('Sosyal gönderi çıktısı bulunamadı'), { fatal: true });
-      const img = Object.values(deps).find((d) => d?.media && d?.filename); // Visual Design → Brand Kit görseli (varsa)
+      const img = Object.values(deps).find((d) => d?.media && d?.filename); // Visual Design → Marka Seti görseli (varsa)
       const ids = [];
       for (const post of sc.posts) {
         try {
@@ -109,7 +109,7 @@ const ACTIONS = {
     },
   },
   'action.brand_image': {
-    label: 'Brand Kit görseli üret (AI arka plan + marka katmanı) ve medya kitaplığına kaydet (yayınlamaz)', external: false,
+    label: 'Marka Seti görseli üret (Yapay Zekâ arka planı + marka katmanı) ve medya kitaplığına kaydet (yayınlamaz)', external: false,
     run: async ({ task, deps, run }) => {
       const key = `orch.action.${task.id}`;
       const done = p(getSetting(key, ''), null);
@@ -131,7 +131,7 @@ const ACTIONS = {
       let rec;
       try { rec = await saveRender({ format: d.format, theme: d.theme, title: d.title, subtitle: d.subtitle, template: 'orkestra', out: 'png', ...(bg ? { bg } : {}) }, who); }
       catch (e) { throw Object.assign(new Error(`Görsel üretilemedi: ${e.message}`), { fatal: true }); }
-      const out = { media: rec.url, id: rec.id, filename: rec.filename, alt: d.alt, width: rec.width, height: rec.height, ...(ai ? { ai } : {}), ...(aiError ? { aiError: `AI arka plan üretilemedi, şablon kullanıldı: ${aiError}` } : {}) };
+      const out = { media: rec.url, id: rec.id, filename: rec.filename, alt: d.alt, width: rec.width, height: rec.height, ...(ai ? { ai } : {}), ...(aiError ? { aiError: `Yapay Zekâ arka plan üretilemedi, şablon kullanıldı: ${aiError}` } : {}) };
       setSetting(key, j(out));
       return { output: out };
     },
@@ -163,7 +163,7 @@ export const validateSteps = (input, { autoApproval = false } = {}) => {
     if (!s.title) errors.push(`${s.ref}: başlık gerekli`);
     if (s.kind === 'agent') {
       const a = getAgent(s.agent);
-      if (s.agent === 'master') errors.push(`${s.ref}: Master Orchestrator iş akışı adımı olarak kullanılamaz (yalnızca planlar)`);
+      if (s.agent === 'master') errors.push(`${s.ref}: Ana Koordinatör iş akışı adımı olarak kullanılamaz (yalnızca planlar)`);
       else if (!a) errors.push(`${s.ref}: bilinmeyen ajan "${s.agent}"`);
       else if (!a.executable) errors.push(`${s.ref}: "${a.name}" bu sürümde çalıştırılamaz — ${a.notConnectedReason}`);
       else if (!a.enabled) errors.push(`${s.ref}: "${a.name}" kapalı (Ajanlar sayfasından açın)`);
@@ -202,8 +202,8 @@ const fill = (v, params) => (typeof v === 'string' ? v.replace(/\{\{\s*([a-z0-9_
 
 /* ------------------------------ yerleşik iş akışı ------------------------------ */
 export const BLOG_WORKFLOW = {
-  name: 'Blog Taslağı: Araştırma → İçerik → SEO → QA → Onay → Taslak',
-  description: 'Konu verin; Research, Content, SEO ve QA ajanları çalışır, siz onaylarsanız blog editöründe TASLAK olarak açılır (yayınlanmaz).',
+  name: 'Blog Taslağı: Araştırma → İçerik → SEO → Kalite → Onay → Taslak',
+  description: 'Konu verin; Araştırma, İçerik, SEO ve Kalite ajanları çalışır, siz onaylarsanız blog editöründe TASLAK olarak açılır (yayınlanmaz).',
   steps: [
     { ref: 'research', kind: 'agent', agent: 'research', title: 'Araştırma ve kaynak taraması', depends_on: [], input: { topic: '{{topic}}' } },
     { ref: 'content', kind: 'agent', agent: 'content', title: 'Blog taslağını yaz', depends_on: ['research'], input: { topic: '{{topic}}' } },
@@ -219,7 +219,7 @@ export const SITE_SEO_WORKFLOW = {
   steps: [{ ref: 'seo', kind: 'agent', agent: 'seo', title: 'Mevcut sayfaların SEO analizi', depends_on: [], input: { scope: 'site' } }],
 };
 export const CRM_WORKFLOW = {
-  name: 'Müşteri Talebi Analizi: Sales → CRM → Onay → Fırsat kaydı',
+  name: 'Müşteri Talebi Analizi: Satış → CRM → Onay → Fırsat kaydı',
   description: 'Bir iletişim talebini analiz eder (kişisel veriler modele gönderilmez), yanıt TASLAĞI ve iş fırsatı önerisi hazırlar; onayınızdan sonra CRM\'e fırsat kaydı açar. E-posta/teklif GÖNDERMEZ.',
   steps: [
     { ref: 'sales', kind: 'agent', agent: 'sales', title: 'Talep analizi ve yanıt taslağı', depends_on: [], input: { formId: '{{formId}}' } },
@@ -229,17 +229,21 @@ export const CRM_WORKFLOW = {
   ],
 };
 export const SOCIAL_WORKFLOW = {
-  name: 'Sosyal Gönderi: Social + Design → Onay → Görsel + Taslak',
-  description: 'Social ajanı metni, Visual Design ajanı görsel kurgusunu paralel hazırlar; onayınızdan sonra Brand Kit görseli üretilir ve gönderi Social Studio\'da TASLAK olarak açılır (yayınlanmaz).',
+  name: 'Sosyal Gönderi: Sosyal + Tasarım → Onay → Görsel + Taslak',
+  description: 'Sosyal ajan metni, Görsel Tasarım ajanı görsel kurgusunu paralel hazırlar; onayınızdan sonra Marka Seti görseli üretilir ve gönderi Sosyal Medya Stüdyosu\'da TASLAK olarak açılır (yayınlanmaz).',
   steps: [
     { ref: 'social', kind: 'agent', agent: 'social', title: 'Gönderi metinleri', depends_on: [], input: { topic: '{{topic}}' } },
     { ref: 'design', kind: 'agent', agent: 'design', title: 'Görsel kurgusu', depends_on: [], input: { topic: '{{topic}}' } },
     { ref: 'approval', kind: 'approval', agent: '', title: 'İnsan onayı: gönderi ve görsel', depends_on: ['social', 'design'], input: {} },
-    { ref: 'image', kind: 'action', agent: 'action.brand_image', title: 'Brand Kit görselini üret', depends_on: ['approval', 'design'], input: {} },
-    { ref: 'draft', kind: 'action', agent: 'action.social_draft', title: 'Social Studio taslağı oluştur', depends_on: ['approval', 'social', 'image'], input: {} },
+    { ref: 'image', kind: 'action', agent: 'action.brand_image', title: 'Marka Seti görselini üret', depends_on: ['approval', 'design'], input: {} },
+    { ref: 'draft', kind: 'action', agent: 'action.social_draft', title: 'Sosyal Medya Stüdyosu taslağı oluştur', depends_on: ['approval', 'social', 'image'], input: {} },
   ],
 };
+const OLD_WORKFLOW_NAMES = [['Blog Taslağı: Araştırma → İçerik → SEO → QA → Onay → Taslak', BLOG_WORKFLOW], ['Müşteri Talebi Analizi: Satış → CRM → Onay → Fırsat kaydı', CRM_WORKFLOW], ['Sosyal Gönderi: Social + Design → Onay → Görsel + Taslak', SOCIAL_WORKFLOW]];
 export const seedWorkflows = () => {
+  // eski İngilizce adlı yerleşik iş akışlarını Türkçe adlarına taşı (yeni satır açmadan)
+  for (const [old, w] of OLD_WORKFLOW_NAMES) q.run(`UPDATE orch_workflows SET name = ?, description = ?, steps = ? WHERE builtin = 1 AND name = ?`, w.name, w.description, j(w.steps), old);
+  for (const w of [BLOG_WORKFLOW, SITE_SEO_WORKFLOW, CRM_WORKFLOW, SOCIAL_WORKFLOW]) q.run(`UPDATE orch_workflows SET steps = ? WHERE builtin = 1 AND name = ?`, j(w.steps), w.name);
   for (const w of [BLOG_WORKFLOW, SITE_SEO_WORKFLOW, CRM_WORKFLOW, SOCIAL_WORKFLOW]) q.run(`INSERT OR IGNORE INTO orch_workflows (name, description, steps, builtin, created_by) VALUES (?,?,?,1,'sistem')`, w.name, w.description, j(w.steps));
 };
 
@@ -271,14 +275,14 @@ export const deleteWorkflow = (id, user) => {
   audit(user, 'orkestra.akis_sil', String(id), cur.name);
 };
 
-/* ------------------------------ Master planlama ------------------------------ */
+/* ------------------------------ Ana koordinatör planlama ------------------------------ */
 export const planFromCommand = async (command, user) => {
   flag();
   command = String(command ?? '').trim();
   if (command.length < 8) throw new HttpError(400, 'Komut çok kısa');
   if (command.length > 2000) throw new HttpError(413, 'Komut çok uzun (en çok 2000 karakter)');
   const master = getAgent('master');
-  if (!master?.enabled) throw new HttpError(409, 'Master Orchestrator kapalı');
+  if (!master?.enabled) throw new HttpError(409, 'Ana Koordinatör kapalı');
   if (!llmReady()) throw new HttpError(409, 'Yapay zekâ sağlayıcısı bağlı değil: Entegrasyonlar sayfasından bir API anahtarı ekleyin.');
   const agents = listAgents().filter((a) => a.executable && a.enabled && a.key !== 'master');
   const catalog = agents.map((a) => `- ${a.key}: ${a.role} | girdi alanları: ${Object.keys(a.input_schema.properties ?? {}).join(', ') || '—'}`).join('\n');
@@ -287,10 +291,10 @@ export const planFromCommand = async (command, user) => {
   const prompt = `## KOMUT\n${command}\n\n## KULLANILABİLİR AJANLAR (kind: "agent", agent: anahtar)\n${catalog}\n\n## KULLANILABİLİR EYLEMLER (kind: "action", agent: eylem anahtarı; her eylemden önce kind: "approval" adımı gerekir)\n${actions}\n\n## KURALLAR\n- En çok 12 adım. "ref" yalnızca küçük harf, rakam ve _ ; en çok 24 karakter.\n- Blog yazısı hazırlama sırası: research → content → seo → qa → approval → action.blog_draft.\n- Listede olmayan istekleri "unsupported" içine yaz.`;
   const { json, usage } = await chatJson({ agent: master, key: 'master', system, prompt, max: master.max_tokens });
   const schemaErrs = validateSchema(master.output_schema, json);
-  if (schemaErrs.length) throw new HttpError(502, `Master geçerli plan üretemedi: ${schemaErrs.slice(0, 3).join('; ')}`);
+  if (schemaErrs.length) throw new HttpError(502, `Ana koordinatör geçerli plan üretemedi: ${schemaErrs.slice(0, 3).join('; ')}`);
   const v = validateSteps(json.steps, { autoApproval: true });
-  if (v.errors.length) throw new HttpError(422, 'Master planı doğrulamadan geçemedi', { errors: v.errors });
-  ev(null, null, 'master', 'info', 'plan', `Komut ${v.steps.length} adıma ayrıldı (${usage.inTok}+${usage.outTok} token)`);
+  if (v.errors.length) throw new HttpError(422, 'Ana koordinatör planı doğrulamadan geçemedi', { errors: v.errors });
+  ev(null, null, 'master', 'info', 'plan', `Komut ${v.steps.length} adıma ayrıldı (${usage.inTok}+${usage.outTok} belirteç)`);
   audit(user, 'orkestra.plan', '', command.slice(0, 120));
   return { summary: json.summary, steps: v.steps, notes: v.notes, unsupported: json.unsupported ?? [], usage: { inTok: usage.inTok, outTok: usage.outTok, model: usage.model } };
 };
@@ -376,7 +380,7 @@ const finishTask = (task, run, { output, usage }, requiresApproval) => {
   const ok = q.run(`UPDATE orch_tasks SET status = ?, output = ?, error = NULL, approval_state = ?, tokens_in = tokens_in + ?, tokens_out = tokens_out + ?, model = ?, cost_est = COALESCE(cost_est,0) + ?, finished_at = datetime('now') WHERE id = ? AND status = 'running'`,
     status, j(output), requiresApproval ? 'pending' : task.approval_state === 'approved' ? 'approved' : 'none', usage?.inTok ?? 0, usage?.outTok ?? 0, usage?.model ?? null, usage?.costUsd ?? 0, task.id).changes;
   if (ok && usage) q.run('UPDATE orch_runs SET tokens_in = tokens_in + ?, tokens_out = tokens_out + ?, cost_est = COALESCE(cost_est,0) + ? WHERE id = ?', usage.inTok ?? 0, usage.outTok ?? 0, usage.costUsd ?? 0, run.id);
-  ev(run.id, task.id, task.agent, 'info', requiresApproval ? 'onay_bekliyor' : 'tamamlandi', `${task.title}${usage ? ` · ${usage.inTok ?? 0}+${usage.outTok ?? 0} token` : ''}`);
+  ev(run.id, task.id, task.agent, 'info', requiresApproval ? 'onay_bekliyor' : 'tamamlandi', `${task.title}${usage ? ` · ${usage.inTok ?? 0}+${usage.outTok ?? 0} belirteç` : ''}`);
 };
 
 const NO_RETRY = new Set([400, 401, 403, 404, 409, 413, 422, 429]);
@@ -399,19 +403,19 @@ const failOrRetry = (task, run, e) => {
   }
 };
 
-/** Günlük token sınırları (ajan başına + genel). Kullanım görev bitince yazıldığından eşzamanlı görevlerde küçük bir aşım olabilir. */
+/** Günlük belirteç sınırları (ajan başına + genel). Kullanım görev bitince yazıldığından eşzamanlı görevlerde küçük bir aşım olabilir. */
 const todayTokens = (where, ...args) => q.get(`SELECT COALESCE(SUM(tokens_in + tokens_out), 0) AS n FROM orch_tasks WHERE date(started_at) = date('now') ${where}`, ...args).n;
 const warnOnce = (key, log, msg) => { if (getSetting(key, '') === '1') return; setSetting(key, '1'); log('warn', 'butce_uyari', msg); };
 const checkDaily = (agent, log) => {
   const day = new Date().toISOString().slice(0, 10);
   for (const [kind, label, lim, used] of [
     ['ajan', agent.name, agent.daily_token_limit, () => todayTokens('AND agent = ?', agent.key)],
-    ['genel', 'AI Orchestra', settings().dailyTokenLimit, () => todayTokens("AND kind = 'agent'")],
+    ['genel', 'Yapay Zekâ Orkestrası', settings().dailyTokenLimit, () => todayTokens("AND kind = 'agent'")],
   ]) {
     if (!(lim > 0)) continue;
     const u = used();
-    if (u >= lim) throw Object.assign(new Error(`${label} günlük token limiti aşıldı (${u}/${lim}); yarın veya limit yükseltilince devam eder`), { fatal: true });
-    if (u >= lim * 0.8) warnOnce(`orch.warned.${kind}.${kind === 'ajan' ? agent.key : 'x'}.${day}`, log, `${label} günlük token limitinin %80'ine ulaştı (${u}/${lim})`);
+    if (u >= lim) throw Object.assign(new Error(`${label} günlük belirteç limiti aşıldı (${u}/${lim}); yarın veya limit yükseltilince devam eder`), { fatal: true });
+    if (u >= lim * 0.8) warnOnce(`orch.warned.${kind}.${kind === 'ajan' ? agent.key : 'x'}.${day}`, log, `${label} günlük belirteç limitinin %80'ine ulaştı (${u}/${lim})`);
   }
 };
 const executeTask = async (task) => {
@@ -436,7 +440,7 @@ const executeTask = async (task) => {
     if (!agent?.enabled) throw Object.assign(new Error(`${agent?.name ?? task.agent} kapalı`), { fatal: true });
     const runner = RUNNERS[agent.key];
     if (!runner) throw Object.assign(new Error('Bu ajan için çalıştırıcı bağlı değil'), { fatal: true });
-    if (run.token_limit > 0 && run.tokens_in + run.tokens_out >= run.token_limit) throw Object.assign(new Error(`Çalıştırma token limiti aşıldı (${run.token_limit})`), { fatal: true });
+    if (run.token_limit > 0 && run.tokens_in + run.tokens_out >= run.token_limit) throw Object.assign(new Error(`Çalıştırma belirteç limiti aşıldı (${run.token_limit})`), { fatal: true });
     const log = (level, event, msg) => ev(run.id, task.id, agent.key, level, event, msg);
     checkDaily(agent, log);
     const fresh = q.get('SELECT * FROM orch_tasks WHERE id = ?', task.id);
@@ -638,7 +642,7 @@ void crypto;
 
 export const agentHistory = (key, n = 15) => q.all(`SELECT t.id, t.run_id, r.title AS run_title, t.title, t.status, t.attempts, t.tokens_in + t.tokens_out AS tokens, t.model, t.error, t.started_at, t.finished_at FROM orch_tasks t JOIN orch_runs r ON r.id = t.run_id WHERE t.agent = ? AND t.kind = 'agent' ORDER BY t.id DESC LIMIT ?`, key, Math.min(Number(n) || 15, 50));
 
-/** Bir müşteri talebi için yerleşik "Sales → CRM → Onay → Fırsat kaydı" akışını başlatır */
+/** Bir müşteri talebi için yerleşik "Satış → CRM → Onay → Fırsat kaydı" akışını başlatır */
 export const createFormRun = ({ formId, idempotencyKey }, user) => {
   const f = q.get('SELECT id, kind FROM forms WHERE id = ?', Number(formId));
   if (!f) throw new HttpError(404, 'Talep bulunamadı');

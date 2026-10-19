@@ -1,4 +1,4 @@
-// Canlı SEO Editörü (referans düzeni): temel bilgiler, içerik editörü, SEO skoru + halkalar, Google/mobil önizleme, öneriler, AI öneriler, iç bağlantı, görsel SEO
+// Canlı SEO Editörü (referans düzeni): temel bilgiler, içerik editörü, SEO skoru + halkalar, Google/mobil önizleme, öneriler, Yapay Zekâ öneriler, iç bağlantı, görsel SEO
 import { api } from '../api.js';
 import { h, icon, chip, debounce, toast, spinner, errorBanner } from '../ui.js';
 import { ring, panel } from '../charts.js';
@@ -14,7 +14,7 @@ const closeness = (len, lo, hi) => (len === 0 ? 0 : len >= lo && len <= hi ? 100
 /** Liste: tüm blog/proje girdileri ve her birinin yerel SEO skoru */
 export const renderSeoEditorList = async (ctx) => {
   ctx.setTitle('Canlı SEO Editörü');
-  const root = h('div', {}, pageHead('Canlı SEO Editörü', 'Sayfa, blog ve proje içeriklerinizi gerçek zamanlı olarak optimize edin.', { crumbs: 'SEO Intelligence › Canlı SEO Editörü' }), spinner());
+  const root = h('div', {}, pageHead('Canlı SEO Editörü', 'Sayfa, blog ve proje içeriklerinizi gerçek zamanlı olarak optimize edin.', { crumbs: 'SEO Analizi › Canlı SEO Editörü' }), spinner());
   try {
     const list = (await api.get('/x/seo/girdiler')).rows;
     const rows = await Promise.all(list.map(async (r) => {
@@ -61,7 +61,7 @@ export const renderSeoEditor = async (ctx, kind, slug) => {
       wc.textContent = `Kelime sayısı: ${words}   |   Okuma süresi: ${Math.max(1, Math.round(words / 200))} dk`;
       const kw = a.checks.filter((c) => c.group === 'seo' && /Odak|anahtar|yoğunluk/i.test(c.label));
       const kwScore = kw.length ? Math.round((kw.filter((c) => c.ok).length / kw.length) * 100) : 0;
-      const sub = { 'Okunabilirlik': a.scores.okunabilirlik, 'Teknik SEO': a.scores.teknik, 'Anahtar Kelime': kwScore, 'Başlık Uzunluğu': closeness(T.length, 40, 60), 'Meta Açıklama': closeness(desc.value.length, 120, 160) };
+      const sub = { 'Okunabilirlik': a.scores.okunabilirlik, 'Teknik SEO': a.scores.teknik, 'Anahtar Kelime': kwScore, 'Başlık Uzunluğu': closeness(T.length, 40, 60), 'Arama Açıklaması': closeness(desc.value.length, 120, 160) };
       const overall = Math.round(Object.values(sub).reduce((x, y) => x + y, 0) / 5);
       const lvl = overall >= 80 ? ['İyi Seviye', 'Küçük iyileştirmelerle mükemmel seviyeye ulaşabilirsiniz.'] : overall >= 55 ? ['Orta Seviye', 'Aşağıdaki önerileri uygulayarak skoru yükseltin.'] : ['Zayıf', 'Temel SEO alanları eksik; önerileri uygulayın.'];
       scoreBox.replaceChildren(h('div', { class: 'row', style: 'gap:18px;align-items:center;flex-wrap:wrap' }, ring(overall, { size: 130, sub: '/100', label: 'SEO skoru' }), h('div', { style: 'min-width:150px;flex:1' }, h('h3', { style: `color:${overall >= 80 ? '#12b76a' : overall >= 55 ? '#f79009' : '#f04438'}` }, lvl[0]), h('p', { class: 'muted small' }, lvl[1]))),
@@ -88,18 +88,18 @@ export const renderSeoEditor = async (ctx, kind, slug) => {
     };
     ctx.setLeaveGuard(() => !dirty || confirm('Kaydedilmemiş değişiklikler var. Sayfadan ayrılmak istiyor musunuz?'));
 
-    // AI SEO önerileri (yalnızca bağlı sağlayıcı varsa)
+    // Yapay Zekâ SEO önerileri (yalnızca bağlı sağlayıcı varsa)
     const connected = (ai.providers ?? []).filter((p) => p.connected);
     const aiBox = h('div');
     const parseAi = (txt, kindKey) => [...txt.matchAll(new RegExp(`${kindKey}\\s*\\d*\\s*:\\s*(.+)`, 'gi'))].map((m2) => m2[1].trim());
     let aiTab = 'BAŞLIK';
     const drawAi = (items) => {
-      aiBox.replaceChildren(h('div', { class: 'tabs2' }, ['BAŞLIK', 'AÇIKLAMA'].map((k) => h('button', { 'aria-selected': String(k === aiTab), onclick: () => { aiTab = k; drawAi(items); } }, k === 'BAŞLIK' ? 'Alternatif Başlıklar' : 'Alternatif Meta Açıklamalar'))),
+      aiBox.replaceChildren(h('div', { class: 'tabs2' }, ['BAŞLIK', 'AÇIKLAMA'].map((k) => h('button', { 'aria-selected': String(k === aiTab), onclick: () => { aiTab = k; drawAi(items); } }, k === 'BAŞLIK' ? 'Alternatif Başlıklar' : 'Alternatif Arama Açıklamaları'))),
         items ? h('div', {}, parseAi(items, aiTab).map((t) => h('label', { class: 'rec', style: 'cursor:pointer' }, h('input', { type: 'radio', name: 'aisel', onchange: () => { if (aiTab === 'BAŞLIK') seoTitle.value = t; else desc.value = t; seoTitle.dispatchEvent(new Event('input')); } }), h('div', { class: 'grow' }, t), chip(String(t.length))))) : h('p', { class: 'muted small' }, 'Üretmek için "Yenile"ye basın (seçili sağlayıcıya metnin başı gönderilir).'));
     };
     const aiPanel = connected.length
-      ? panel('AI SEO Önerileri', aiBox, { ic: 'spark', action: h('button', { class: 'btn secondary sm', onclick: async (ev) => { ev.target.disabled = true; try { const r = await api.post('/x/ai/uret', { provider: connected[0].id, task: 'meta-oneri', text: `Başlık: ${h1.value}\n\n${body.value.slice(0, 2500)}`, focus: focus.value }); drawAi(r.output); } catch (er) { toast(er.message, 'err'); } ev.target.disabled = false; } }, 'Yenile') })
-      : panel('AI SEO Önerileri', connectBox('Yapay zekâ bağlı değil', 'Alternatif başlık ve meta açıklama önerileri için bir AI sağlayıcısı bağlayın.'), { ic: 'spark' });
+      ? panel('Yapay Zekâ SEO Önerileri', aiBox, { ic: 'spark', action: h('button', { class: 'btn secondary sm', onclick: async (ev) => { ev.target.disabled = true; try { const r = await api.post('/x/ai/uret', { provider: connected[0].id, task: 'meta-oneri', text: `Başlık: ${h1.value}\n\n${body.value.slice(0, 2500)}`, focus: focus.value }); drawAi(r.output); } catch (er) { toast(er.message, 'err'); } ev.target.disabled = false; } }, 'Yenile') })
+      : panel('Yapay Zekâ SEO Önerileri', connectBox('Yapay zekâ bağlı değil', 'Alternatif başlık ve meta açıklama önerileri için bir Yapay Zekâ sağlayıcısı bağlayın.'), { ic: 'spark' });
     if (connected.length) drawAi(null);
 
     const linkPanel = panel('İç Bağlantı Önerileri', links.rows.length ? h('div', {}, links.rows.map((l) => h('div', { class: 'listrow' }, h('span', { class: 'lic' }, icon('doc', 16)), h('div', { class: 'grow' }, h('b', {}, l.title), h('span', { class: 'mono' }, l.url)),
@@ -108,18 +108,18 @@ export const renderSeoEditor = async (ctx, kind, slug) => {
     const imgPanel = panel('Görsel SEO (Öne Çıkan Görsel)', h('div', {},
       h('div', { class: 'stat-row' }, h('span', { class: 'grow' }, 'Dosya adı'), cover ? h('span', { class: 'mono' }, cover) : chip('Kapak yok', 'warn')),
       h('div', { class: 'stat-row' }, h('span', { class: 'grow' }, 'Alt metin'), d.coverAlt ? h('span', { class: 'small' }, d.coverAlt) : chip(d.cover ? 'Eksik' : '—', d.cover ? 'danger' : '')),
-      h('div', { class: 'row wrap', style: 'margin-top:8px' }, chip('Schema Uyumlu', d.cover ? 'ok' : ''), chip('Open Graph uyumlu', d.cover ? 'ok' : ''), chip('Kapak için Blog düzenleyicisini kullanın'))), { ic: 'image' });
+      h('div', { class: 'row wrap', style: 'margin-top:8px' }, chip('Şema Uyumlu', d.cover ? 'ok' : ''), chip('Sosyal paylaşım uyumlu', d.cover ? 'ok' : ''), chip('Kapak için Blog düzenleyicisini kullanın'))), { ic: 'image' });
 
     root.replaceChildren(
-      pageHead('Canlı SEO Editörü', 'Sayfa, blog ve hizmet içeriklerinizi gerçek zamanlı olarak optimize edin.', { crumbs: 'SEO Intelligence › Canlı SEO Editörü' }),
+      pageHead('Canlı SEO Editörü', 'Sayfa, blog ve hizmet içeriklerinizi gerçek zamanlı olarak optimize edin.', { crumbs: 'SEO Analizi › Canlı SEO Editörü' }),
       h('div', { class: 'card ebar' }, h('a', { class: 'btn secondary sm', href: '#/seo/editor' }, icon('chevron', 14), 'İçerik Listesine Dön'), h('span', { class: 'muted' }, `${kind === 'blog' ? 'Blog' : 'Proje'} › ${d.title}`),
         h('div', { class: 'grow' }), dirtyDot, savedTxt,
         h('a', { class: 'btn secondary', href: `/${base}/${slug}`, target: '_blank', rel: 'noopener' }, icon('eye', 16), 'Önizle'), h('button', { class: 'btn secondary', onclick: () => doSave(false) }, icon('doc', 16), 'Taslak Kaydet'), h('button', { class: 'btn', onclick: () => doSave(true) }, icon('rocket', 16), 'Kaydet ve Yayına Git')),
       h('div', { class: 'editor-cols' },
         h('div', { class: 'stack' },
-          panel('Temel Bilgiler', h('div', { class: 'stack' }, fld('Başlık (H1) *', h1, ctr(h1, 70)), fld('Meta Başlık (Title)', seoTitle, ctr(seoTitle, 60), 'Boşsa H1 kullanılır.'), fld('Meta Açıklama (Description)', desc, ctr(desc, 160)),
-            h('div', { class: 'grid cols-2' }, fld('URL Slug (değiştirilemez)', h('input', { class: 'input', value: `/${base}/${slug}`, readOnly: true })), fld('Odak Anahtar Kelime *', focus, ctr(focus, 100))),
-            h('label', { class: 'switch' }, noindex, h('i'), h('span', {}, 'Arama motorlarından gizle (noindex)'))), { ic: 'doc' }),
+          panel('Temel Bilgiler', h('div', { class: 'stack' }, fld('Başlık (H1) *', h1, ctr(h1, 70)), fld('Arama Başlığı', seoTitle, ctr(seoTitle, 60), 'Boşsa H1 kullanılır.'), fld('Arama Açıklaması', desc, ctr(desc, 160)),
+            h('div', { class: 'grid cols-2' }, fld('Adres (değiştirilemez)', h('input', { class: 'input', value: `/${base}/${slug}`, readOnly: true })), fld('Odak Anahtar Kelime *', focus, ctr(focus, 100))),
+            h('label', { class: 'switch' }, noindex, h('i'), h('span', {}, 'Arama motorlarından gizle (dizin dışı bırak)'))), { ic: 'doc' }),
           panel('İçerik Editörü', h('div', { class: 'stack' }, body.el, h('div', { class: 'small muted' }, wc)), { ic: 'edit' })),
         h('div', { class: 'stack' },
           panel('SEO Analiz Skoru', scoreBox, { ic: 'shield' }),

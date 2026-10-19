@@ -4,9 +4,9 @@
 export const ROLES = {
   admin: { label: 'Yönetici', desc: 'Her şey: kullanıcılar, günlük, yedek, entegrasyonlar, onay ve yayın.' },
   editor: { label: 'Editör', desc: 'İçerik, SEO, sosyal medya, yayın ve CRM; kullanıcı/yedek/anahtar yönetimi yok.' },
-  seo: { label: 'SEO Uzmanı', desc: 'SEO, hız, pazar/rakip/backlink ve AI Stüdyo\'da düzenler; yayın yapamaz.' },
-  icerik: { label: 'İçerik Yazarı', desc: 'Sayfa, blog, proje ve medyayı düzenler, AI Stüdyo kullanır; yayın yapamaz.' },
-  sosyal: { label: 'Sosyal Medya Uzmanı', desc: 'Social Studio, Brand Kit ve medya; AI Stüdyo. Onay ve hesap bağlama yöneticidedir.' },
+  seo: { label: 'SEO Uzmanı', desc: 'SEO, hız, pazar/rakip/geri bağlantı ve Yapay Zekâ Stüdyosu\'da düzenler; yayın yapamaz.' },
+  icerik: { label: 'İçerik Yazarı', desc: 'Sayfa, blog, proje ve medyayı düzenler, Yapay Zekâ Stüdyosu kullanır; yayın yapamaz.' },
+  sosyal: { label: 'Sosyal Medya Uzmanı', desc: 'Sosyal Medya Stüdyosu, Marka Seti ve medya; Yapay Zekâ Stüdyosu. Onay ve hesap bağlama yöneticidedir.' },
   satis: { label: 'Satış / CRM', desc: 'Gelen talepler ve aboneler (kişisel veri); diğer alanlarda salt okunur.' },
   izleyici: { label: 'İzleyici', desc: 'Her yeri salt okunur görür (CRM kişisel verisi hariç); hiçbir şey değiştiremez.' },
 };
@@ -33,7 +33,7 @@ const WRITE = {
   satis: ['crm'],
   izleyici: [],
 };
-/** AI Orchestra görevlerini (komutlar, taslaklar, kaynaklar, kullanım) okuyabilen roller */
+/** Yapay Zekâ Orkestrası görevlerini (komutlar, taslaklar, kaynaklar, kullanım) okuyabilen roller */
 const READ_ORCH = new Set(['admin', 'editor']);
 /** CRM kişisel verisini okuyabilen roller */
 const READ_CRM = new Set(['admin', 'editor', 'satis']);
@@ -50,7 +50,7 @@ export const denyReason = (role, method, pathname) => {
   const read = method === 'GET' || method === 'HEAD';
   if (read) {
     if (area === 'crm' && !READ_CRM.has(role)) return 'Gelen talepler kişisel veri içerir; bu rol göremez';
-    if (area === 'orkestra' && !READ_ORCH.has(role)) return 'AI Orchestra görevleri ve çıktıları yalnızca yönetici/editör tarafından görüntülenebilir';
+    if (area === 'orkestra' && !READ_ORCH.has(role)) return 'Yapay Zekâ Orkestrası görevleri ve çıktıları yalnızca yönetici/editör tarafından görüntülenebilir';
     return null;
   }
   const w = WRITE[role];

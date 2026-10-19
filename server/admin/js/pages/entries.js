@@ -209,7 +209,7 @@ export const renderEntryEditor = async (ctx, k, slug) => {
     errBox, draftNote,
     h('div', { class: 'stack' },
       h('div', { class: 'card card-pad stack' }, isNew ? field('Adres (slug)', slugInput, 'Yalnızca küçük harf, rakam ve tire. Başlıktan otomatik üretilir; oluşturduktan sonra değiştirilemez.') : null, fieldsEl),
-      h('div', { class: 'card card-pad stack' }, h('h3', {}, 'İçerik Editörü'), h('div', { class: 'hint' }, 'WordPress benzeri görsel editör: biçimlendirmeyi araç çubuğundan yapın, görselleri medya kütüphanesinden ekleyin. İçerik Markdown olarak saklanır; isterseniz "Kaynak" düğmesiyle ham Markdown içeriğini düzenleyebilirsiniz.'), bodyEd.el)),
+      h('div', { class: 'card card-pad stack' }, h('h3', {}, 'İçerik Editörü'), h('div', { class: 'hint' }, 'Gelişmiş görsel editör: biçimlendirmeyi araç çubuğundan yapın, görselleri medya kütüphanesinden ekleyin. İçerik Markdown olarak saklanır; isterseniz "Kaynak" düğmesiyle ham Markdown içeriğini düzenleyebilirsiniz.'), bodyEd.el)),
     h('div', { class: 'savebar' }, saveBtn, status, h('span', { class: 'grow' }),
       !isNew && k !== 'yasal' ? h('a', { class: 'btn ghost', href: K.site(slug), target: '_blank', rel: 'noopener' }, icon('external', 15), 'Sitede aç (yayınlandıysa)') : null,
       h('a', { class: 'btn ghost', href: `#${K.path}` }, 'Listeye dön')));

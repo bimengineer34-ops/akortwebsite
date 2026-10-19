@@ -1,4 +1,4 @@
-// Social Studio — Genel Bakış, İçerik Takvimi, Onay Merkezi, Brand Kit, İçerik Arşivi (referans düzenleri).
+// Sosyal Medya Stüdyosu — Genel Bakış, İçerik Takvimi, Onay Merkezi, Marka Seti, İçerik Arşivi (referans düzenleri).
 // Platform OAuth bağlı olmadığı için erişim/etkileşim metrikleri "Bağlantı gerekli" gösterir; sahte rakam ve sahte "yayımlandı" yok.
 import { api, session } from '../api.js';
 import { h, icon, chip, toast, spinner, errorBanner, field, modal, fmtDate, debounce, copyText } from '../ui.js';
@@ -16,7 +16,7 @@ const todayKey = () => new Date().toLocaleDateString('sv-SE');
 
 /* ====================== GENEL BAKIŞ ====================== */
 export const renderSocialOverview = async (ctx) => {
-  ctx.setTitle('Social Studio');
+  ctx.setTitle('Sosyal Medya Stüdyosu');
   announceReturn();
   const root = h('div');
   const load = async () => {
@@ -54,7 +54,7 @@ export const renderSocialOverview = async (ctx) => {
         h('button', { class: 'qt blue', onclick: () => editor(null, reload) }, icon('edit', 22), h('div', {}, h('b', {}, 'Gönderi Oluştur'), h('span', {}, 'Metin, görsel ile yeni içerik')), icon('chevron', 16)),
         tile('purple', 'palette', 'Görsel Üret', 'Marka şablonundan görsel', '/sosyal/marka'), tile('green', 'check', 'İçeriği Onayla', `${k.awaiting} içerik bekliyor`, '/sosyal/onay'), tile('orange', 'calendar', 'Kampanya Planla', 'Takvimde çoklu paylaşım', '/sosyal/takvim')), { ic: 'bolt' });
 
-      root.replaceChildren(pageHead('Social Studio', 'Sosyal medya planlama, yapay zeka içerik önerileri, hesap yönetimi ve onay süreçlerini tek yerden yönetin.', { range: true, onRange: load }), kpis,
+      root.replaceChildren(pageHead('Sosyal Medya Stüdyosu', 'Sosyal medya planlama, yapay zeka içerik önerileri, hesap yönetimi ve onay süreçlerini tek yerden yönetin.', { range: true, onRange: load }), kpis,
         h('div', { class: 'dash-grid' }, h('div', { class: 'span-8' }, accounts), h('div', { class: 'span-4' }, brand),
           h('div', { class: 'span-8' }, perf), h('div', { class: 'span-4' }, up),
           h('div', { class: 'span-4' }, ideas), h('div', { class: 'span-4' }, special), h('div', { class: 'span-4' }, quick)),
@@ -128,7 +128,7 @@ export const renderSocialCalendar = async (ctx) => {
       h('div', { class: 'span-4' }, panel('Yaklaşan Özel Günler', ov.specialDays.length ? h('div', {}, ov.specialDays.slice(0, 4).map((d) => h('div', { class: 'listrow' }, h('div', { class: 'datebox sm' }, h('b', {}, d.date.slice(8)), h('span', {}, new Date(d.date).toLocaleDateString('tr-TR', { month: 'short' }))), h('div', { class: 'grow' }, h('b', {}, d.name), h('span', {}, `${d.inDays} gün kaldı`))))) : empty('Yakın özel gün yok'), { ic: 'calendar' })),
       h('div', { class: 'span-4' }, panel('Bu Haftanın İçerik Kuyruğu', miniList(queue.slice(0, 4)), { ic: 'doc' })),
       h('div', { class: 'span-4' }, panel('Platformlara Göre İçerik Dağılımı', donut({ items: ov.byPlatform.filter((p) => p.count).map((p) => ({ label: p.label, value: p.count, color: PCOL[p.id] })), sub: 'toplam içerik', empty: 'Henüz içerik yok' }), { ic: 'chart' })));
-    root.replaceChildren(pageHead('İçerik Takvimi', 'Tüm sosyal medya içeriklerinizi planlayın, yönetin ve yayınlayın.', { crumbs: 'Social Studio › İçerik Takvimi' }),
+    root.replaceChildren(pageHead('İçerik Takvimi', 'Tüm sosyal medya içeriklerinizi planlayın, yönetin ve yayınlayın.', { crumbs: 'Sosyal Medya Stüdyosu › İçerik Takvimi' }),
       tabs([['takvim', 'Takvim'], ['liste', 'Liste Görünümü'], ['taslak', 'Taslaklar'], ['onay', 'Onay Bekleyenler'], ['yayin', 'Yayınlanmış İçerikler'], ['kategori', 'İçerik Kategorileri']], tab, (k) => { tab = k; draw(); }), body, bottom);
     draw();
   } catch (e) { root.replaceChildren(errorBanner(e)); }
@@ -147,7 +147,7 @@ export const renderSocialApproval = async (ctx) => {
       kpiCard({ ic: 'shield', label: `Onay bekleyen ${ov.kpi.awaiting} içerik`, value: ov.kpi.awaiting, deltaLabel: 'ekibinizin onayını bekliyor', color: '#f79009' }),
       kpiCard({ ic: 'share', label: 'Planlı / onaylı içerik', value: ov.kpi.planned, deltaLabel: 'yayın bekliyor', color: '#0b7bd6', to: '/sosyal/takvim' }),
       kpiCard({ ic: 'check', label: 'Yayımlanan içerik', to: '/sosyal/arsiv', value: ov.kpi.published, deltaLabel: 'elle işaretlenenler dahil', color: '#12b76a' }));
-    root.replaceChildren(pageHead('Onay Merkezi', 'İçeriklerinizin onay sürecini yönetin; onaylanan metin+medya+platform+zaman SHA-256 ile mühürlenir.', { crumbs: 'Social Studio › Onay Merkezi', range: false }),
+    root.replaceChildren(pageHead('Onay Merkezi', 'İçeriklerinizin onay sürecini yönetin; onaylanan metin+medya+platform+zaman SHA-256 ile mühürlenir.', { crumbs: 'Sosyal Medya Stüdyosu › Onay Merkezi', range: false }),
       strip, h('div', { class: 'board' }, cols.map(([key, t, sub, c]) => { const items = rows.filter((r) => r.status === key); return h('div', { class: 'bcol', style: `--bc:${c}` }, h('div', { class: 'bh' }, h('b', {}, t), h('span', {}, String(items.length))), h('div', { class: 'small muted', style: 'margin:-4px 0 4px' }, sub),
         ...items.map((r) => h('button', { class: 'bcard', onclick: () => editor(r, reload) }, r.media ? h('img', { src: r.media, alt: '' }) : null, h('b', {}, r.title), h('span', { class: 'small muted' }, `${fmtLocal(r.scheduled_at)}`), h('div', { class: 'row', style: 'gap:4px;flex-wrap:wrap' }, r.platforms.map((p) => pbadge(p, 18)), r.category ? chip(r.category, 'info') : null, r.sealed ? chip('Mühürlü', 'ok') : null), r.review_note ? h('div', { class: 'rev' }, r.review_note) : null)),
         key === 'taslak' ? h('button', { class: 'btn secondary sm', onclick: () => editor(null, reload) }, icon('plus', 14), 'Taslak İçerik Oluştur') : null); })),
@@ -172,7 +172,7 @@ export const renderSocialArchive = async (ctx) => {
       tbody.replaceChildren(...(f.length ? f.map((r) => h('tr', { class: 'clickable', onclick: () => editor(r, reload) }, h('td', {}, h('b', {}, r.title), h('div', { class: 'small muted' }, (r.body || '').slice(0, 80))), h('td', {}, h('div', { class: 'row', style: 'gap:4px' }, r.platforms.map((p) => pbadge(p, 20)))), h('td', {}, r.category || '—'), h('td', {}, fmtLocal(r.scheduled_at)), h('td', {}, stChip(r.status)), h('td', {}, r.created_by ?? '—'))) : [h('tr', {}, h('td', { colspan: 6 }, empty('Kayıt yok')))]));
     };
     search.addEventListener('input', debounce(draw, 200)); st.addEventListener('change', draw);
-    root.replaceChildren(pageHead('İçerik Arşivi', 'Tüm sosyal medya içeriklerinizin kaydı.', { crumbs: 'Social Studio › İçerik Arşivi' }), h('div', { class: 'card card-pad stack' }, h('div', { class: 'grid cols-2' }, search, st), h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['İçerik', 'Platform', 'Kategori', 'Zaman', 'Durum', 'Hazırlayan'].map((x) => h('th', {}, x)))), tbody))));
+    root.replaceChildren(pageHead('İçerik Arşivi', 'Tüm sosyal medya içeriklerinizin kaydı.', { crumbs: 'Sosyal Medya Stüdyosu › İçerik Arşivi' }), h('div', { class: 'card card-pad stack' }, h('div', { class: 'grid cols-2' }, search, st), h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['İçerik', 'Platform', 'Kategori', 'Zaman', 'Durum', 'Hazırlayan'].map((x) => h('th', {}, x)))), tbody))));
     draw();
   } catch (e) { root.replaceChildren(errorBanner(e)); }
   return root;
@@ -180,17 +180,17 @@ export const renderSocialArchive = async (ctx) => {
 
 /* ====================== BRAND KIT ====================== */
 export const renderBrandKit = async (ctx) => {
-  ctx.setTitle('Brand Kit');
+  ctx.setTitle('Marka Seti');
   const root = h('div', {}, spinner());
   try {
     const [b, media, gopt] = await Promise.all([api.get('/x/marka'), api.get('/medya?limit=60').catch(() => ({ rows: [] })), api.get('/x/marka/gorsel-secenek').catch(() => null)]);
     const imgs = (media.rows ?? []).filter((m) => /^image\//.test(m.mime));
     const logos = panel('Logo Varyasyonları', h('div', { class: 'logo-grid' }, b.logos.map((l, i) => h('div', { class: `logo-card${i === 0 ? ' on' : ''}` }, h('div', { class: `logo-view${l.dark ? ' dark' : ''}` }, h('img', { src: l.src, alt: l.name })), h('b', {}, l.name), h('span', { class: 'small muted' }, l.note)))), { ic: 'image', sub: 'Marka logosunun kullanım biçimleri (resmî dosyalar)' });
-    const pal = panel('Renk Paleti', h('div', { class: 'sw-grid' }, b.palette.map((c) => h('button', { class: 'sw', title: 'Kopyala', onclick: async () => { await copyText(c.hex, `${c.hex} kopyalandı`); } }, h('i', { style: `background:${c.hex}` }), h('b', {}, c.name), h('span', {}, c.hex.toUpperCase())))), { ic: 'palette', sub: 'Sitenin tasarım token\'larından okunur' });
+    const pal = panel('Renk Paleti', h('div', { class: 'sw-grid' }, b.palette.map((c) => h('button', { class: 'sw', title: 'Kopyala', onclick: async () => { await copyText(c.hex, `${c.hex} kopyalandı`); } }, h('i', { style: `background:${c.hex}` }), h('b', {}, c.name), h('span', {}, c.hex.toUpperCase())))), { ic: 'palette', sub: 'Sitenin tasarım değişkenlerinden okunur' });
     const typo = panel('Tipografi Sistemi', h('div', { class: 'row', style: 'gap:18px;align-items:flex-start;flex-wrap:wrap' }, h('div', { class: 'aa' }, h('div', { class: 'aa-big' }, 'Aa'), h('b', {}, b.font.family), chip('Ana Font', 'ok'), h('div', { class: 'small muted' }, b.font.license)),
       h('div', { class: 'grow' }, b.sizes.map((s) => h('div', { class: 'stat-row' }, h('b', { style: 'width:70px' }, s.label), h('span', { class: 'grow muted small' }, s.value))))), { ic: 'edit', sub: 'Site yazı tipi ölçeği' });
     const iconsShown = b.icons.slice(0, 18);
-    const icons = panel('İkon Kütüphanesi', h('div', { class: 'ico-grid' }, iconsShown.map((n) => h('div', { class: 'ico', title: n }, h('img', { src: `/api/admin/simge/${n}`, alt: n })))), { ic: 'grid', sub: `${b.icons.length} ikon · marka stiline uygun`, action: h('button', { class: 'btn secondary sm', onclick: () => modal({ title: `İkonlar (${b.icons.length})`, wide: true, body: h('div', { class: 'ico-grid big' }, b.icons.map((n) => h('div', { class: 'ico', title: n }, h('img', { src: `/api/admin/simge/${n}`, alt: n }), h('span', { class: 'small' }, n.split('/').pop())))), actions: [{ label: 'Kapat', class: 'secondary' }] }) }, 'Tümünü Gör') });
+    const icons = panel('İkon Kütüphanesi', h('div', { class: 'ico-grid' }, iconsShown.map((n) => h('div', { class: 'ico' }, h('img', { src: `/api/admin/simge/${n}`, alt: '' })))), { ic: 'grid', sub: `${b.icons.length} ikon · marka stiline uygun`, action: h('button', { class: 'btn secondary sm', onclick: () => modal({ title: `İkonlar (${b.icons.length})`, wide: true, body: h('div', { class: 'ico-grid big' }, b.icons.map((n) => h('div', { class: 'ico', title: n }, h('img', { src: `/api/admin/simge/${n}`, alt: n }), h('span', { class: 'small' }, n.split('/').pop())))), actions: [{ label: 'Kapat', class: 'secondary' }] }) }, 'Tümünü Gör') });
     const comps = panel('Marka Bileşenleri', h('div', { class: 'comp-grid' }, h('div', {}, h('button', { class: 'btn' }, 'Birincil Buton'), h('div', { class: 'small muted' }, 'Birincil Buton')), h('div', {}, h('button', { class: 'btn secondary' }, 'İkincil Buton'), h('div', { class: 'small muted' }, 'İkincil Buton')),
       h('div', {}, h('div', { class: 'card card-pad', style: 'padding:10px' }, h('b', {}, 'Başlık'), h('div', { class: 'small muted' }, 'Açıklama metni burada…')), h('div', { class: 'small muted' }, 'Bilgi Kartı')),
       h('div', {}, chip('Yeni', 'info'), h('div', { class: 'small muted' }, 'Rozet')), h('div', {}, h('div', { class: 'tabs2' }, h('button', { 'aria-selected': 'true' }, 'Aktif'), h('button', { 'aria-selected': 'false' }, 'Pasif')), h('div', { class: 'small muted' }, 'Sekme')), h('div', {}, h('div', { class: 'progress-bar' }, h('i', { style: 'width:68%;background:#0b7bd6' })), h('div', { class: 'small muted' }, 'İlerleme Çubuğu'))), { ic: 'grid', sub: 'Panelde ve sitede kullanılan hazır bileşenler' });
@@ -225,12 +225,12 @@ export const renderBrandKit = async (ctx) => {
         h('button', { class: 'btn', onclick: async (e) => { e.target.disabled = true; try { const r = await api.post('/x/marka/kaydet', { ...st, title: titleI.value, subtitle: subI.value, format: fmtSel.value, template: st.template }); toast(`Medya kütüphanesine kaydedildi: ${r.filename}`, 'ok'); } catch (er) { toast(er.message, 'err'); } e.target.disabled = false; } }, icon('upload', 16), 'Medya Kütüphanesine Kaydet')))), { ic: 'edit', sub: 'Logo ve marka metni her zaman şablon katmanı olarak bindirilir; yapay zekâ logo/tipografi üretmez' });
 
 
-    // ---- AI ile görsel üretimi (üretken): kaydetmeden kitaplığa girmez; kaydedilince "AI görseli" etiketi alır
+    // ---- Yapay Zekâ ile görsel üretimi (üretken): kaydetmeden kitaplığa girmez; kaydedilince "Yapay Zekâ görseli" etiketi alır
     const STYLE_LABELS = { mimari: 'Mimari çizim (ince çizgi)', izometrik: 'İzometrik teknik illüstrasyon', soyut: 'Soyut geometrik arka plan', foto: 'Genel sahne (fotogerçekçi, insansız)' };
     const connectedProv = (gopt?.providers ?? []).filter((p) => p.connected);
     let aiPanel;
     if (!gopt || !connectedProv.length) {
-      aiPanel = panel('AI ile Görsel Üret', connectBox('Görsel üretimi için Gemini veya OpenAI bağlayın', 'Entegrasyonlar sayfasından API anahtarı ekleyin. Not: Görsel üretimi çoğu sağlayıcıda ücretli plan/faturalandırma gerektirir.'), { ic: 'spark' });
+      aiPanel = panel('Yapay Zekâ ile Görsel Üret', connectBox('Görsel üretimi için Gemini veya OpenAI bağlayın', 'Entegrasyonlar sayfasından API anahtarı ekleyin. Not: Görsel üretimi çoğu sağlayıcıda ücretli plan/faturalandırma gerektirir.'), { ic: 'spark' });
     } else {
       const gProv = h('select', { class: 'select' }, connectedProv.map((p) => h('option', { value: p.id }, p.label)));
       const gStyle = h('select', { class: 'select' }, gopt.styles.map((k) => h('option', { value: k }, STYLE_LABELS[k] ?? k)));
@@ -241,7 +241,7 @@ export const renderBrandKit = async (ctx) => {
       let cur = null;
       const saveCur = async (btn) => {
         btn.disabled = true;
-        try { const rec = await api.post('/x/marka/gorsel-kaydet', { data: cur.data, title: gPrompt.value.slice(0, 60), alt: '' }); toast('Medya kütüphanesine kaydedildi (AI görseli etiketiyle)', 'ok'); return rec; } catch (e) { toast(e.message, 'err'); return null; } finally { btn.disabled = false; }
+        try { const rec = await api.post('/x/marka/gorsel-kaydet', { data: cur.data, title: gPrompt.value.slice(0, 60), alt: '' }); toast('Medya kütüphanesine kaydedildi (Yapay Zekâ görseli etiketiyle)', 'ok'); return rec; } catch (e) { toast(e.message, 'err'); return null; } finally { btn.disabled = false; }
       };
       const show = () => {
         gOut.replaceChildren(h('img', { class: 'ai-gen-img', src: 'data:' + cur.mime + ';base64,' + cur.data, alt: 'Üretilen görsel önizleme' }),
@@ -256,12 +256,12 @@ export const renderBrandKit = async (ctx) => {
         genBtn.disabled = true; gOut.replaceChildren(spinner());
         try { cur = await api.post('/x/marka/gorsel-uret', { provider: gProv.value, prompt: gPrompt.value, aspect: gAsp.value, style: gStyle.value }); show(); } catch (e) { gOut.replaceChildren(errorBanner(e)); } finally { genBtn.disabled = false; }
       });
-      aiPanel = panel('AI ile Görsel Üret', h('div', { class: 'tpl-ed' },
+      aiPanel = panel('Yapay Zekâ ile Görsel Üret', h('div', { class: 'tpl-ed' },
         h('div', { class: 'stack' }, field('Sahne / konu tarifi', gPrompt), h('div', { class: 'grid cols-2' }, field('Sağlayıcı', gProv), field('Format', gAsp)), field('Stil', gStyle), genBtn,
           h('div', { class: 'small muted' }, 'Marka kuralları otomatik uygulanır: görselde yazı/logo/sahte belge ve gerçek kişi yüzü olmaz; renkler marka paletine yakın tutulur. Üretilen görsel yapay zekâ ürünüdür — gerçek bir proje fotoğrafı gibi sunmayın; yayımlamadan önce inceleyin. Logo ve metin, şablon düzenleyiciyle sonradan bindirilir.')),
         gOut), { ic: 'spark', sub: 'üretken görsel · onay sonrası kitaplığa girer' });
     }
-    root.replaceChildren(pageHead('Brand Kit & Tasarım Sistemi', 'Logo, renk, tipografi, ikon stili ve onaylı tasarım şablonlarını yönetin.', { crumbs: 'Social Studio › Brand Kit' }),
+    root.replaceChildren(pageHead('Marka Seti & Tasarım Sistemi', 'Logo, renk, tipografi, ikon stili ve onaylı tasarım şablonlarını yönetin.', { crumbs: 'Sosyal Medya Stüdyosu › Marka Seti' }),
       h('div', { class: 'dash-grid' }, h('div', { class: 'span-4' }, logos), h('div', { class: 'span-5' }, pal), h('div', { class: 'span-3' }, typo),
         h('div', { class: 'span-4' }, icons), h('div', { class: 'span-4' }, comps), h('div', { class: 'span-4' }, h('div', { class: 'empty small' }, 'Marka kuralları: logo çevresinde boşluk bırakın, renk paletinin dışına çıkmayın, abartılı sloganlardan kaçının.')),
         h('div', { class: 'span-12' }, aiPanel), h('div', { class: 'span-12' }, tpls), h('div', { class: 'span-12' }, editorP)));

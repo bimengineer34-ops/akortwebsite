@@ -1,4 +1,4 @@
-// AI Orchestra araçları — ajanlara YALNIZCA bu sunucu tarafı, salt-okunur araçlar verilir (yetki listesi ajan ayarındadır).
+// Yapay Zekâ Orkestrası araçları — ajanlara YALNIZCA bu sunucu tarafı, salt-okunur araçlar verilir (yetki listesi ajan ayarındadır).
 // Dış sistemi değiştiren araç yoktur; yazan eylemler (blog/sosyal taslağı) engine.mjs içinde onaydan sonra çalışır.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -84,7 +84,7 @@ export const seoCheck = ({ title = '', description = '', body = '', focus = '', 
   const links = (body.match(/\]\((\/[^)\s]*|https?:[^)\s]*)\)/g) ?? []).length;
   const checks = [
     { id: 'title_len', ok: title.length >= 30 && title.length <= 60, note: `Başlık ${title.length} karakter (ideal 30–60)` },
-    { id: 'desc_len', ok: description.length >= 120 && description.length <= 160, note: `Meta açıklama ${description.length} karakter (ideal 120–160)` },
+    { id: 'desc_len', ok: description.length >= 120 && description.length <= 160, note: `Arama açıklaması ${description.length} karakter (ideal 120–160)` },
     { id: 'h2', ok: h2 >= 3, note: `${h2} adet H2 ara başlık (en az 3)` },
     { id: 'words', ok: words(body) >= 600, note: `${words(body)} sözcük (öneri ≥ 600)` },
     { id: 'no_h1', ok: !/^#\s+\S/m.test(body), note: 'Gövdede ikinci bir H1 olmamalı (başlık H1 sayılır)' },
@@ -157,7 +157,7 @@ export const formInfo = (formId) => {
   return { id: r.id, kind: r.kind, date: String(r.created_at).slice(0, 10), corporate: !!(r.company && String(r.company).trim()), subject: scrubPII(cleanExternal(r.subject, 160)), message, details: safe, status: r.status, suspicious: looksLikeInjection(`${r.subject} ${r.message}`) };
 };
 
-/* ------------------------------ Brand Kit seçenekleri ------------------------------ */
+/* ------------------------------ Marka Seti seçenekleri ------------------------------ */
 export const brandKitInfo = () => {
   const b = brandData();
   return { templates: b.templates.map((t) => ({ key: t.key, name: t.name, note: t.note })), themes: b.themes.map((t) => ({ key: t.key, label: t.label })), formats: b.formats.map((f) => ({ key: f.key, label: f.label })) };

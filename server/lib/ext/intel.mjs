@@ -1,4 +1,4 @@
-// Market & Media Intelligence, Rakip izleme, Backlink fırsatları.
+// Pazar ve Medya Takibi, Rakip izleme, Geri Bağlantı fırsatları.
 // Yalnızca izinli RSS/herkese açık sayfalar; robots.txt'e uyulur, hız sınırı vardır, paywall/anti-bot aşılmaz, makale tam metni saklanmaz.
 import crypto from 'node:crypto';
 import dns from 'node:dns/promises';

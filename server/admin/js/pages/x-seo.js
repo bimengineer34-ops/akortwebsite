@@ -1,4 +1,4 @@
-// SEO Intelligence: teknik tarama, canlı SEO editörü (SERP önizleme + açıklanabilir puan), hız raporu
+// SEO Analizi: teknik tarama, canlı SEO editörü (SERP önizleme + açıklanabilir puan), hız raporu
 import { api } from '../api.js';
 import { h, icon, chip, debounce, toast, spinner, errorBanner, field, fmtDate } from '../ui.js';
 import { pageHead, tabs, stat, scoreChip, infoBox, needConn, empty } from './x-common.js';
@@ -57,11 +57,11 @@ const scanTab = async () => {
           h('div', { class: 'span-8' }, panel('En sık görülen sorunlar', hbars(Object.entries(d.pages.flatMap((p) => p.issues).reduce((m, [, t]) => { const k = t.replace(/[0-9]+/g, 'N').replace(/https?:\/\/\S+/, 'URL'); m[k] = (m[k] ?? 0) + 1; return m; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 7).map(([label, value]) => ({ label, value })), { color: '#ff9f43', empty: 'Hiç sorun bulunmadı' }), { ic: 'alert' }))),
         infoBox(d.notes.join(' ')),
         h('div', { class: 'grid cols-2' },
-          h('div', { class: 'card card-pad stack' }, h('h3', {}, 'Sitemap ve robots'),
-            h('div', {}, `Sitemap URL sayısı: `, h('b', {}, d.sitemap.urls)),
-            d.sitemap.indexableNotInSitemap.length ? infoBox(`Sitemap'te olmayan indekslenebilir sayfalar: ${d.sitemap.indexableNotInSitemap.join(', ')}`, 'warn') : chip('Tüm indekslenebilir sayfalar sitemap\'te', 'ok'),
-            d.sitemap.orphans.length ? infoBox(`Sitemap'te olup sayfası bulunmayan: ${d.sitemap.orphans.join(', ')}`, 'warn') : null,
-            h('div', { class: 'row wrap' }, chip(d.robots.present ? 'robots.txt var' : 'robots.txt yok', d.robots.present ? 'ok' : 'danger'), chip(d.robots.hasSitemapLine ? 'Sitemap satırı var' : 'Sitemap satırı yok', d.robots.hasSitemapLine ? 'ok' : 'warn'), chip(d.robots.adminBlocked ? '/yonetim engelli' : '/yonetim engelli değil', d.robots.adminBlocked ? 'ok' : 'warn'))),
+          h('div', { class: 'card card-pad stack' }, h('h3', {}, 'Site haritası ve robots.txt'),
+            h('div', {}, `Site haritası adres sayısı: `, h('b', {}, d.sitemap.urls)),
+            d.sitemap.indexableNotInSitemap.length ? infoBox(`Site haritasında olmayan indekslenebilir sayfalar: ${d.sitemap.indexableNotInSitemap.join(', ')}`, 'warn') : chip('Tüm indekslenebilir sayfalar site haritasında', 'ok'),
+            d.sitemap.orphans.length ? infoBox(`Site haritasında olup sayfası bulunmayan: ${d.sitemap.orphans.join(', ')}`, 'warn') : null,
+            h('div', { class: 'row wrap' }, chip(d.robots.present ? 'robots.txt var' : 'robots.txt yok', d.robots.present ? 'ok' : 'danger'), chip(d.robots.hasSitemapLine ? 'Site haritası satırı var' : 'Site haritası satırı yok', d.robots.hasSitemapLine ? 'ok' : 'warn'), chip(d.robots.adminBlocked ? '/yonetim engelli' : '/yonetim engelli değil', d.robots.adminBlocked ? 'ok' : 'warn'))),
           h('div', { class: 'card card-pad stack' }, h('h3', {}, 'Yinelenen başlık / açıklama'),
             d.duplicateTitles.length || d.duplicateDescriptions.length
               ? h('ul', {}, [...d.duplicateTitles.map((x) => h('li', {}, `Başlık: "${x.value}" → ${x.urls.join(', ')}`)), ...d.duplicateDescriptions.map((x) => h('li', {}, `Açıklama (${x.urls.join(', ')})`))])
@@ -70,7 +70,7 @@ const scanTab = async () => {
           h('div', { class: 'card-head' }, h('h3', {}, `Sorunlu sayfalar (${worst.length})`), h('button', { class: 'btn secondary sm', onclick: () => load(true) }, icon('history', 14), 'Yeniden tara')),
           worst.length
             ? h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Sayfa', 'Puan', 'Bulgular'].map((x) => h('th', {}, x)))),
-              h('tbody', {}, worst.map((p) => h('tr', {}, h('td', {}, h('a', { href: p.url, target: '_blank', rel: 'noopener' }, p.url), p.noindex ? h('div', {}, chip('noindex')) : null), h('td', {}, scoreChip(p.score)), h('td', {}, h('ul', { style: 'margin:0;padding-left:16px' }, p.issues.map(([k, t]) => h('li', {}, chip(k === 'err' ? 'Hata' : 'Uyarı', k === 'err' ? 'danger' : 'warn'), ' ', t)))))))))
+              h('tbody', {}, worst.map((p) => h('tr', {}, h('td', {}, h('a', { href: p.url, target: '_blank', rel: 'noopener' }, p.url), p.noindex ? h('div', {}, chip('dizin dışı')) : null), h('td', {}, scoreChip(p.score)), h('td', {}, h('ul', { style: 'margin:0;padding-left:16px' }, p.issues.map(([k, t]) => h('li', {}, chip(k === 'err' ? 'Hata' : 'Uyarı', k === 'err' ? 'danger' : 'warn'), ' ', t)))))))))
             : empty('Hiç sorun bulunmadı.')),
         h('div', { class: 'small muted' }, `Tarama zamanı: ${fmtDate(d.scannedAt)}`));
     } catch (e) { box.replaceChildren(errorBanner(e)); }
@@ -120,8 +120,8 @@ const editorTab = async () => {
           h('div', { class: 'stack' },
             field('Odak sorgu', focus, 'Bu sayfanın hedeflediği ana arama ifadesi (yalnızca panelde saklanır).'),
             field('SEO başlığı', title, 'Boşsa sayfa başlığı kullanılır.'),
-            field('Meta açıklama', desc),
-            h('label', { class: 'switch' }, noindex, h('i'), h('span', {}, 'Arama motorlarından gizle (noindex)')),
+            field('Arama açıklaması', desc),
+            h('label', { class: 'switch' }, noindex, h('i'), h('span', {}, 'Arama motorlarından gizle (dizin dışı bırak)')),
             h('button', { class: 'btn', onclick: async (ev) => {
               ev.target.disabled = true;
               try { await api.put(`/x/seo/girdi/${kind}/${slug}`, { title: title.value, description: desc.value, noindex: noindex.checked, focus: focus.value }); toast('SEO bilgileri kaydedildi (yayınlayınca sitede görünür)', 'ok'); } catch (er) { toast(er.message, 'err'); }
@@ -144,22 +144,22 @@ const speedTab = async () => {
   if (!d.available) return infoBox('Derlenmiş site bulunamadı.', 'warn');
   const kb = (n) => (n > 1024 ? `${(n / 1024).toFixed(1)} MB` : `${n} KB`);
   return h('div', { class: 'stack' },
-    infoBox('Bu sayfa derlenmiş site dosyalarının GERÇEK ağırlığını ölçer. Core Web Vitals (alan verisi) için Search Console/PageSpeed bağlantısı gerekir; sentetik ve alan verisi ayrı tutulur.'),
+    infoBox('Bu sayfa derlenmiş site dosyalarının GERÇEK ağırlığını ölçer. Temel Web Verileri (alan verisi) için Google Arama Konsolu/Sayfa Hızı bağlantısı gerekir; sentetik ve alan verisi ayrı tutulur.'),
     h('div', { class: 'grid cols-4' }, stat(d.html.count, `HTML sayfa · ort. ${d.html.avgKb} KB`), stat(kb(d.js.totalKb), `JavaScript (${d.js.count} dosya)`), stat(kb(d.css.totalKb), `CSS (${d.css.count} dosya)`), stat(kb(d.images.totalKb), `Görsel (${d.images.count} dosya, ${d.images.modern} modern biçim)`)),
     h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('h3', {}, 'En ağır dosyalar')),
       h('table', { class: 'tbl' }, h('tbody', {}, d.heavyAssets.map((f) => h('tr', {}, h('td', { class: 'mono' }, f.file), h('td', {}, kb(f.kb))))))),
     h('div', { class: 'card card-pad stack' }, h('h3', {}, 'Önbellek stratejisi'), h('p', {}, d.caching.static), h('p', {}, d.caching.adminNoStore)),
-    needConn(`CDN: ${d.cdn.reason}`), needConn(`Alan verisi (CrUX/RUM): ${d.cwv.reason}`));
+    needConn(`CDN: ${d.cdn.reason}`), needConn(`Alan verisi (gerçek kullanıcı): ${d.cwv.reason}`));
 };
 
 export const renderSeo = async (ctx) => {
-  ctx.setTitle('SEO Intelligence');
+  ctx.setTitle('SEO Analizi');
   const body = h('div');
   const show = async (k) => {
     body.replaceChildren(spinner());
     try { body.replaceChildren(k === 'tarama' ? await scanTab() : k === 'editor' ? await editorTab() : await speedTab()); } catch (e) { body.replaceChildren(errorBanner(e)); }
   };
-  const el = h('div', {}, pageHead('SEO Intelligence ve Hız', 'Derlenmiş siteyi gerçek verilerle tarar; canlı SEO editörü ve hız ölçümü içerir.'), tabs([['tarama', 'Teknik tarama'], ['editor', 'Canlı SEO editörü'], ['hiz', 'Hız motoru']], 'tarama', show), body);
+  const el = h('div', {}, pageHead('SEO Analizi ve Hız', 'Derlenmiş siteyi gerçek verilerle tarar; canlı SEO editörü ve hız ölçümü içerir.'), tabs([['tarama', 'Teknik tarama'], ['editor', 'Canlı SEO editörü'], ['hiz', 'Hız motoru']], 'tarama', show), body);
   show('tarama');
   return el;
 };

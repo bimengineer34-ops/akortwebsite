@@ -113,6 +113,16 @@ export const copyText = async (text, okMessage = 'Kopyalandı') => {
   return ok;
 };
 
+/** Orkestra olay düzeyi / olay kodu → Türkçe */
+export const levelTr = (l) => ({ info: 'bilgi', warn: 'uyarı', error: 'hata' })[l] ?? l;
+const EVENT_TR = {
+  durum_succeeded: 'Tamamlandı', durum_running: 'Çalışıyor', durum_awaiting_approval: 'Onay bekliyor', durum_failed: 'Başarısız', durum_cancelled: 'İptal edildi', durum_pending: 'Bekliyor', durum_paused: 'Duraklatıldı', durum_skipped: 'Atlandı',
+  basarisiz: 'Başarısız', basladi: 'Başladı', devam_etti: 'Devam etti', duraklatildi: 'Duraklatıldı', iptal: 'İptal', motor_hatasi: 'Motor hatası', olusturuldu: 'Oluşturuldu', onay_bekliyor: 'Onay bekliyor', onaylandi: 'Onaylandı', plan: 'Plan',
+  reddedildi: 'Reddedildi', yeniden_baslatildi: 'Yeniden başlatıldı', yeniden_deneme: 'Yeniden deneme', tamamlandi: 'Tamamlandı', atif_temizlendi: 'Kaynak göstermeleri temizlendi', baglanti_temizlendi: 'Geçersiz bağlantı temizlendi', butce_uyari: 'Bütçe uyarısı',
+  enjeksiyon_suphesi: 'Enjeksiyon şüphesi', govde_temizlendi: 'Gövde temizlendi', kategori_duzeltildi: 'Kategori düzeltildi', qa_gecmedi: 'Kalite denetimi geçilemedi', site_seo_temizlendi: 'Site SEO çıktısı temizlendi', tasarim_duzeltildi: 'Tasarım düzeltildi', yanit_riskli: 'Riskli yanıt',
+};
+export const eventTr = (e) => EVENT_TR[e] ?? String(e ?? '').replace(/_/g, ' ');
+
 export const toast = (message, kind = '') => {
   toastBox ??= document.body.appendChild(h('div', { class: 'toasts', role: 'status', 'aria-live': 'polite' }));
   const t = h('div', { class: `toast ${kind}` }, message);

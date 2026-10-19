@@ -1,4 +1,4 @@
-// AI Content Studio — OpenAI / Anthropic / Gemini sağlayıcı adaptörleri (yalnızca sunucu tarafı, anahtarlar kasada)
+// Yapay Zekâ İçerik Stüdyosu — OpenAI / Anthropic / Gemini sağlayıcı adaptörleri (yalnızca sunucu tarafı, anahtarlar kasada)
 import { q, audit, getSetting, setSetting } from '../db.mjs';
 import { HttpError } from '../http.mjs';
 import { getSecret, hasSecret, secretMeta } from './vault.mjs';
@@ -182,7 +182,7 @@ export const generate = async ({ provider, task, text, focus = '', tone = '', us
   const cfg = getCfg(provider);
   if (cfg.monthlyTokenBudget > 0) {
     const u = monthUsage(provider);
-    if (u.i + u.o >= cfg.monthlyTokenBudget) throw new HttpError(429, `${PROVIDERS[provider].label} aylık token bütçesi doldu (${cfg.monthlyTokenBudget}). Bütçeyi Entegrasyonlar sayfasından güncelleyin.`);
+    if (u.i + u.o >= cfg.monthlyTokenBudget) throw new HttpError(429, `${PROVIDERS[provider].label} aylık belirteç bütçesi doldu (${cfg.monthlyTokenBudget}). Bütçeyi Entegrasyonlar sayfasından güncelleyin.`);
   }
   checkBreaker(provider);
   const system = `${BRAND}\n\nGÖREV: ${t.sys}${tone ? `\nEk ton notu: ${tone.slice(0, 200)}` : ''}`;
@@ -214,10 +214,10 @@ export const recentUsage = () => q.all('SELECT ts, provider, model, task, input_
 /** Toplu/sistem görevleri için ham çağrı (bütçe, devre kesici ve kullanım kaydı dahil). Metin güvenilmez kabul edilir; çağıran doğrular. */
 export const rawChat = async ({ provider, system, prompt, max = 2000, task = 'sistem', model, json = false }, user = { email: 'sistem' }) => {
   const { key } = need(provider);
-  const cfg = { ...getCfg(provider), ...(model && /^[\w.:/-]{2,80}$/.test(model) ? { model } : {}) }; // model: çağrı başına geçersiz kılma (AI Orchestra ajanları)
+  const cfg = { ...getCfg(provider), ...(model && /^[\w.:/-]{2,80}$/.test(model) ? { model } : {}) }; // model: çağrı başına geçersiz kılma (Yapay Zekâ Orkestrası ajanları)
   if (cfg.monthlyTokenBudget > 0) {
     const u = monthUsage(provider);
-    if (u.i + u.o >= cfg.monthlyTokenBudget) throw new HttpError(429, `${PROVIDERS[provider].label} aylık token bütçesi doldu (${cfg.monthlyTokenBudget}).`);
+    if (u.i + u.o >= cfg.monthlyTokenBudget) throw new HttpError(429, `${PROVIDERS[provider].label} aylık belirteç bütçesi doldu (${cfg.monthlyTokenBudget}).`);
   }
   checkBreaker(provider);
   const t0 = Date.now();
@@ -259,7 +259,7 @@ export const imageProvider = (preferred = '') => { const ok = ['gemini', 'openai
 
 /** Prompt'tan görsel üretir (Gemini veya OpenAI). Dönen görsel kitaplığa KAYDEDİLMEZ; çağıran kaydeder. Anthropic görsel üretmez. */
 export const generateImage = async ({ provider, prompt, aspect = 'kare', style = 'mimari' }, user) => {
-  if (!['gemini', 'openai'].includes(provider)) throw new HttpError(400, 'Görsel üretimi yalnızca Gemini veya OpenAI ile yapılır');
+  if (!['gemini', 'openai'].includes(provider)) throw new HttpError(400, 'Görsel üretimi yalnızca Gemini veya OpenYapay Zekâ ile yapılır');
   const subject = String(prompt ?? '').trim().slice(0, 600);
   if (subject.length < 8) throw new HttpError(400, 'Görseli kısaca tarif edin (en az 8 karakter)');
   const asp = IMAGE_ASPECTS[aspect] ?? IMAGE_ASPECTS.kare;

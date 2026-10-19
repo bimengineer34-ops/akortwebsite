@@ -1,6 +1,7 @@
 // Form talepleri ve bülten aboneleri
 import { api, session } from '../api.js';
 import { h, icon, chip, fmtDate, debounce, toast, confirmBox, errorBanner, spinner, drawer, field } from '../ui.js';
+const FORM_KEYS = { consent: 'KVKK onayı', hizmet_alani: 'Hizmet alanı', proje_turu: 'Proje türü', telefon: 'Telefon', sirket: 'Şirket', website: 'Web sitesi (bot alanı)', butce: 'Bütçe', zaman: 'Zaman', kaynak: 'Kaynak' };
 
 const ST = { yeni: ['Yeni', 'info'], islemde: ['İşlemde', 'warn'], yanitlandi: ['Yanıtlandı', 'ok'], kapali: ['Kapalı', ''], spam: ['Spam', 'danger'] };
 const stChip = (s) => chip(ST[s]?.[0] ?? s, ST[s]?.[1] ?? '');
@@ -26,17 +27,17 @@ const detail = (id, onDone) => (close) => {
             field('Şirket / kurum', h('div', {}, f.company || '—')),
             field('Konu', h('div', {}, f.subject || '—'))),
           field('Mesaj', h('div', { class: 'card card-pad', style: undefined }, h('div', { class: 'md-preview', style: undefined }, f.message.split('\n').map((l) => h('p', {}, l))))),
-          extra.length ? field('Ek bilgiler', h('table', { class: 'tbl' }, h('tbody', {}, extra.map(([k, v]) => h('tr', {}, h('td', { class: 'muted' }, k), h('td', {}, Array.isArray(v) ? v.join(', ') : String(v))))))) : null,
+          extra.length ? field('Ek bilgiler', h('table', { class: 'tbl' }, h('tbody', {}, extra.map(([k, v]) => h('tr', {}, h('td', { class: 'muted' }, FORM_KEYS[k] ?? k.replace(/_/g, ' ').replace(/^./, (c) => c.toLocaleUpperCase('tr'))), h('td', {}, Array.isArray(v) ? v.join(', ') : v === true || v === 'true' ? 'evet' : v === false || v === 'false' ? 'hayır' : String(v))))))) : null,
           h('div', { class: 'small muted' }, `KVKK onayı: ${f.consent ? 'verildi' : 'yok'} · IP: ${f.ip || '—'}${f.handled_by ? ` · Son işlem: ${f.handled_by}` : ''}`),
           h('hr', { style: undefined }),
           field('Durum', status), field('İç not', note),
           h('div', { class: 'row wrap' },
             h('button', { class: 'btn', onclick: async () => { try { await api.patch(`/formlar/${f.id}`, { status: status.value, note: note.value }); toast('Güncellendi', 'ok'); onDone(); close(); } catch (e) { toast(e.message, 'err'); } } }, 'Kaydet'),
             h('a', { class: 'btn secondary', href: `mailto:${f.email}?subject=${encodeURIComponent('Re: ' + (f.subject || 'AKORT Mühendislik talebiniz'))}` }, icon('mail', 16), 'E-postayla yanıtla'),
-            ['admin', 'editor'].includes(session.user.role) && f.kind !== 'firsat' ? h('button', { class: 'btn secondary', title: 'AI Orchestra: Sales → CRM → onay → fırsat kaydı. Kişisel veriler (ad, e-posta, telefon) modele gönderilmez; e-posta/teklif gönderilmez.', onclick: async (e) => {
+            ['admin', 'editor'].includes(session.user.role) && f.kind !== 'firsat' ? h('button', { class: 'btn secondary', title: 'Yapay Zekâ Orkestrası: Satış → CRM → onay → fırsat kaydı. Kişisel veriler (ad, e-posta, telefon) modele gönderilmez; e-posta/teklif gönderilmez.', onclick: async (e) => {
               e.currentTarget.disabled = true;
               try { const r = await api.post('/x/orkestra/talep-analizi', { formId: f.id, idempotencyKey: crypto.randomUUID() }); toast('Analiz başlatıldı', 'ok'); close(); location.hash = `#/orkestra/izleme/${r.id}`; } catch (er) { toast(er.data?.error ?? er.message, 'err'); e.target.disabled = false; }
-            } }, icon('spark', 16), 'AI ile analiz et') : null,
+            } }, icon('spark', 16), 'Yapay Zekâ ile analiz et') : null,
             h('span', { class: 'grow' }),
             session.user.role === 'admin' ? h('button', { class: 'btn danger secondary', onclick: async () => {
               if (!(await confirmBox({ title: 'Talep silinsin mi?', message: 'Bu kayıt kalıcı olarak silinir.', confirmLabel: 'Sil', danger: true }))) return;

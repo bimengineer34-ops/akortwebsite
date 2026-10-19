@@ -1,4 +1,4 @@
-// Social Studio gönderi düzenleyici (modal) + durum sabitleri — takvim, onay merkezi ve genel bakış sayfalarında ortak
+// Sosyal Medya Stüdyosu gönderi düzenleyici (modal) + durum sabitleri — takvim, onay merkezi ve genel bakış sayfalarında ortak
 import { api, session } from '../api.js';
 import { h, icon, chip, toast, field, modal, confirmBox, fmtDate } from '../ui.js';
 import { infoBox, needConn } from './x-common.js';
