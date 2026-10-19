@@ -110,7 +110,7 @@ export const renderEntryEditor = async (ctx, k, slug) => {
         return input;
       }
       case 'media': {
-        const img = h('img', { alt: '', style: undefined, width: 96, class: 'md-preview', src: entry.previews?.cover && f.name === 'cover' ? entry.previews.cover : '' });
+        const img = h('img', { alt: '', style: undefined, class: 'cover-prev', src: entry.previews?.cover && f.name === 'cover' ? entry.previews.cover : '' });
         const input = h('input', { class: 'input mono', value: v ?? '', placeholder: 'Medya kütüphanesinden seçin', oninput: (e) => { set(e.target.value); img.classList.toggle('hidden', !e.target.value); } });
         if (!img.src || img.src === location.href) img.classList.add('hidden');
         return h('div', { class: 'stack' }, h('div', { class: 'row' }, input,

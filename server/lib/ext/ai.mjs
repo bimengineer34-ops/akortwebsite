@@ -8,7 +8,7 @@ const TIMEOUT = 60_000;
 export const PROVIDERS = {
   openai: { label: 'OpenAI', secret: 'ai.openai', defaultModel: 'gpt-4o-mini', docs: 'https://platform.openai.com/api-keys' },
   anthropic: { label: 'Anthropic (Claude)', secret: 'ai.anthropic', defaultModel: 'claude-sonnet-4-5', docs: 'https://console.anthropic.com/settings/keys' },
-  gemini: { label: 'Google Gemini', secret: 'ai.gemini', defaultModel: 'gemini-2.0-flash', docs: 'https://aistudio.google.com/apikey' },
+  gemini: { label: 'Google Gemini', secret: 'ai.gemini', defaultModel: 'gemini-3.5-flash', docs: 'https://aistudio.google.com/apikey' },
 };
 
 const need = (p) => {
@@ -85,11 +85,19 @@ const adapters = {
         .filter((m) => (m.supportedGenerationMethods ?? []).includes('generateContent'))
         .map((m) => m.name.replace(/^models\//, '')),
     chat: async (key, model, system, user, maxTokens, json = false) => {
-      const d = await call('gemini', `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      const gen = (m) => call('gemini', `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
         method: 'POST',
         headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json' },
         body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }], generationConfig: { maxOutputTokens: maxTokens + 2048, ...(json ? { responseMimeType: 'application/json' } : {}) } }), // +2048: Gemini 3 "düşünme" belirteçleri çıktı sınırından yer alır, JSON kesilmesin
       });
+      let d;
+      try { d = await gen(model); } catch (e) { // seçili model kaldırılmış/yeni hesaba kapalıysa listedeki en yeni "gemini-X-flash" modeline düş
+        if (!/no longer available|not found|is not supported|404/i.test(e.message)) throw e;
+        const ver = (n) => Number(/^gemini-(\d+(?:\.\d+)?)-flash$/.exec(n)?.[1] ?? -1);
+        const alt = (await adapters.gemini.models(key)).filter((n) => ver(n) > 0 && n !== model).sort((x, y) => (y === 'gemini-3.5-flash') - (x === 'gemini-3.5-flash') || ver(y) - ver(x))[0]; // doğrulanmış 3.5 önce (en yeni sürüm önizlemede yanıt vermeyebilir)
+        if (!alt) throw e;
+        d = await gen(alt);
+      }
       return { text: (d.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join(''), inTok: d.usageMetadata?.promptTokenCount, outTok: (d.usageMetadata?.candidatesTokenCount ?? 0) + (d.usageMetadata?.thoughtsTokenCount ?? 0) };
     },
   },

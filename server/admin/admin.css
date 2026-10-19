@@ -301,3 +301,7 @@ body.rt-lock { overflow: hidden; }
 .rt-raw pre { margin: 0; padding: 8px 10px; background: none; color: var(--text); font-size: 12px; max-height: 160px; }
 .rt-source { border: 0; border-radius: 0; min-height: 420px; resize: vertical; }
 .rt-status { display: flex; gap: 12px; padding: 6px 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+
+/* Kapak / medya alanı önizlemesi: sabit oran, taşmadan */
+.cover-prev { display: block; width: 100%; max-width: 360px; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2, #f6f5f9); }
+.cover-prev.hidden { display: none; }
