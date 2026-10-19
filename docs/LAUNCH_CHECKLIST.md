@@ -13,7 +13,7 @@ Diğer denetimler: `npm run check`, `npm run audit:seo`, `node scripts/link-scan
 ## Canlıya almadan ÖNCE sizden gerekenler (kod yazamaz)
 1. **Doğrulanmış firma bilgileri** — `src/data/site.ts`: e-posta, telefon (referanslarda 3 farklı numara var), adres, sosyal medya URL'leri. Doğrulanana kadar sitede gizli.
 2. **Yasal metinler** — `kvkk.md`, `gizlilik-politikasi.md`, `cerez-politikasi.md`: `[KÖŞELİ PARANTEZ]` alanları doldurun, hukuk danışmanına onaylatın, sonra `approved: true` yapın. Formlar kişisel veri topladığı için KVKK metni **zorunlu**.
-3. **Alan adı** — `PUBLIC_SITE_URL`, `public/robots.txt`, sitemap adresi (şu an `www.akortmuhendislik.com`).
+3. **Alan adı** — `PUBLIC_SITE_URL`, `public/robots.txt`, sitemap adresi (kesinleşti: `www.akortmuhendislik.com`; DNS + SSL canlı kurulumda).
 4. **E-posta bildirimi (SMTP)** — `.env`: `SMTP_HOST/PORT/USER/PASS/FROM`; alıcılar panel → Ayarlar. Yoksa yeni talepler yalnızca panelde görünür.
 5. **Gerçek içerik** — projeler (şu an `örnek`/noindex), blog yazıları, "rakamlarla AKORT", kilometre taşları: doğrulanmayan hiçbir rakam yayınlanmaz.
 6. **Hizmet metinlerinin firma onayı** — `src/data/serviceContent/*.ts` genel mühendislik bilgisiyle yazıldı (Çelik Yapı dahil); firmanın sunmadığı hizmet varsa silin.

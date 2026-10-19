@@ -42,7 +42,7 @@ Pack çizgi diliyle (24×24, stroke 1.8, round) çizilecek, onay bekleyen ikonla
 
 ## TODO-CONTENT (doğrulama)
 
-- [ ] Domain (`astro.config.mjs` → `PUBLIC_SITE_URL`, `public/robots.txt`)
+- [x] Domain kesinleşti: www.akortmuhendislik.com (DNS, www/çıplak alan adı yönlendirmesi ve SSL canlı kurulumda)
 - [ ] E-posta, telefon (referanslarda 3 farklı numara), adres, şehir — `src/data/site.ts`
 - [ ] Sosyal medya URL'leri
 - [ ] "15+ Yıllık Deneyim", "360°" ifadeleri (Ana Sayfa › Neden AKORT) ve "15+ yıllık tecrübe" (Hizmetler › Fark Yaratan) — doğrulanana kadar production'da sayısız ifade
