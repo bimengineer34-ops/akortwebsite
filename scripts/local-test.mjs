@@ -11,7 +11,8 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const dir = path.join(ROOT, '.local-test');
+const REAL = process.env.LOCAL_TEST_REAL === '1'; // gerçek yapay zekâ sağlayıcısı (anahtarı panelden girin); varsayılan: sahte model
+const dir = path.join(ROOT, REAL ? '.local-test-real' : '.local-test');
 const port = Number(process.env.LOCAL_TEST_PORT || 4500);
 if (process.argv.includes('--reset')) fs.rmSync(dir, { recursive: true, force: true });
 fs.mkdirSync(path.join(dir, 'data'), { recursive: true });
@@ -40,14 +41,14 @@ const pass = /Parola:\s+(\S+)/.exec(fs.readFileSync(credFile, 'utf8'))[1];
 console.log(`\nAKORT yerel test ortamı → http://localhost:${port}`);
 console.log(`  Site:   http://localhost:${port}/`);
 console.log(`  Panel:  http://localhost:${port}/yonetim/   (giriş bilgisi: ${path.relative(ROOT, credFile)})`);
-console.log('  AI Orchestra: sahte model AÇIK (anahtar gerekmez). Durdurmak için Ctrl+C.\n');
+console.log(REAL ? "  AI Orchestra: GERÇEK model (Entegrasyonlar'dan anahtar girin; token harcar). Durdurmak için Ctrl+C.\n" : '  AI Orchestra: sahte model AÇIK (anahtar gerekmez). Durdurmak için Ctrl+C.\n');
 
 const child = spawn(process.execPath, ['server/index.mjs'], {
   cwd: ROOT, stdio: 'inherit',
   env: {
     ...process.env, PORT: String(port), HOST: '127.0.0.1', NODE_ENV: '',
     DATA_DIR: path.join(dir, 'data'), SITE_DIR: site, STAGING_DIR: path.join(dir, 'stg'), PREVIOUS_DIR: path.join(dir, 'prev'),
-    ADMIN_EMAIL: 'test@akort.test', ADMIN_PASSWORD: pass, ORCH_FAKE_LLM: '1', AUTO_BACKUP: 'false',
+    ADMIN_EMAIL: 'test@akort.test', ADMIN_PASSWORD: pass, ORCH_FAKE_LLM: REAL ? '' : '1', AUTO_BACKUP: 'false',
   },
 });
 child.on('exit', (c) => process.exit(c ?? 0));

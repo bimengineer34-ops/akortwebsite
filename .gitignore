@@ -32,4 +32,5 @@ public/bim/
 
 # yerel test ortamı (scripts/local-test.mjs): test verisi ve giriş bilgisi
 .local-test/
+.local-test-real/
 .local-test.*
