@@ -183,7 +183,7 @@ export const renderBrandKit = async (ctx) => {
   ctx.setTitle('Brand Kit');
   const root = h('div', {}, spinner());
   try {
-    const [b, media] = await Promise.all([api.get('/x/marka'), api.get('/medya?limit=60').catch(() => ({ rows: [] }))]);
+    const [b, media, gopt] = await Promise.all([api.get('/x/marka'), api.get('/medya?limit=60').catch(() => ({ rows: [] })), api.get('/x/marka/gorsel-secenek').catch(() => null)]);
     const imgs = (media.rows ?? []).filter((m) => /^image\//.test(m.mime));
     const logos = panel('Logo Varyasyonları', h('div', { class: 'logo-grid' }, b.logos.map((l, i) => h('div', { class: `logo-card${i === 0 ? ' on' : ''}` }, h('div', { class: `logo-view${l.dark ? ' dark' : ''}` }, h('img', { src: l.src, alt: l.name })), h('b', {}, l.name), h('span', { class: 'small muted' }, l.note)))), { ic: 'image', sub: 'Marka logosunun kullanım biçimleri (resmî dosyalar)' });
     const pal = panel('Renk Paleti', h('div', { class: 'sw-grid' }, b.palette.map((c) => h('button', { class: 'sw', title: 'Kopyala', onclick: async () => { await copyText(c.hex, `${c.hex} kopyalandı`); } }, h('i', { style: `background:${c.hex}` }), h('b', {}, c.name), h('span', {}, c.hex.toUpperCase())))), { ic: 'palette', sub: 'Sitenin tasarım token\'larından okunur' });
@@ -224,10 +224,47 @@ export const renderBrandKit = async (ctx) => {
       h('div', { class: 'stack' }, preview, h('div', { class: 'lbl' }, 'Dışa Aktar'), h('div', { class: 'row wrap' }, h('button', { class: 'btn secondary', onclick: () => download('png') }, icon('download', 16), 'PNG'), h('button', { class: 'btn secondary', onclick: () => download('jpg') }, icon('download', 16), 'JPG'), h('button', { class: 'btn secondary', onclick: () => download('webp') }, icon('download', 16), 'WebP'), h('button', { class: 'btn secondary', title: 'Düzenlenebilir vektör: metinler canlı, görsel/logo gömülü. Yazı tipi, açan bilgisayarda yüklü olana düşer.', onclick: () => download('svg') }, icon('download', 16), 'SVG'), h('button', { class: 'btn secondary', title: 'Tek sayfalık PDF (görsel tabanlı, metin seçilemez)', onclick: () => download('pdf') }, icon('download', 16), 'PDF'),
         h('button', { class: 'btn', onclick: async (e) => { e.target.disabled = true; try { const r = await api.post('/x/marka/kaydet', { ...st, title: titleI.value, subtitle: subI.value, format: fmtSel.value, template: st.template }); toast(`Medya kütüphanesine kaydedildi: ${r.filename}`, 'ok'); } catch (er) { toast(er.message, 'err'); } e.target.disabled = false; } }, icon('upload', 16), 'Medya Kütüphanesine Kaydet')))), { ic: 'edit', sub: 'Logo ve marka metni her zaman şablon katmanı olarak bindirilir; yapay zekâ logo/tipografi üretmez' });
 
+
+    // ---- AI ile görsel üretimi (üretken): kaydetmeden kitaplığa girmez; kaydedilince "AI görseli" etiketi alır
+    const STYLE_LABELS = { mimari: 'Mimari çizim (ince çizgi)', izometrik: 'İzometrik teknik illüstrasyon', soyut: 'Soyut geometrik arka plan', foto: 'Genel sahne (fotogerçekçi, insansız)' };
+    const connectedProv = (gopt?.providers ?? []).filter((p) => p.connected);
+    let aiPanel;
+    if (!gopt || !connectedProv.length) {
+      aiPanel = panel('AI ile Görsel Üret', connectBox('Görsel üretimi için Gemini veya OpenAI bağlayın', 'Entegrasyonlar sayfasından API anahtarı ekleyin. Not: Görsel üretimi çoğu sağlayıcıda ücretli plan/faturalandırma gerektirir.'), { ic: 'spark' });
+    } else {
+      const gProv = h('select', { class: 'select' }, connectedProv.map((p) => h('option', { value: p.id }, p.label)));
+      const gStyle = h('select', { class: 'select' }, gopt.styles.map((k) => h('option', { value: k }, STYLE_LABELS[k] ?? k)));
+      const gAsp = h('select', { class: 'select' }, gopt.aspects.map((a) => h('option', { value: a.key }, a.label)));
+      const gPrompt = h('textarea', { class: 'textarea', rows: 3, maxlength: 600, placeholder: 'Örn: Çelik yapı iskeleti ve vinç, sabah ışığında şantiye' });
+      const gOut = h('div', { class: 'ai-gen-out' }, h('div', { class: 'muted small' }, 'Henüz görsel üretilmedi.'));
+      const genBtn = h('button', { type: 'button', class: 'btn' }, icon('spark', 16), 'Görsel Üret');
+      let cur = null;
+      const saveCur = async (btn) => {
+        btn.disabled = true;
+        try { const rec = await api.post('/x/marka/gorsel-kaydet', { data: cur.data, title: gPrompt.value.slice(0, 60), alt: '' }); toast('Medya kütüphanesine kaydedildi (AI görseli etiketiyle)', 'ok'); return rec; } catch (e) { toast(e.message, 'err'); return null; } finally { btn.disabled = false; }
+      };
+      const show = () => {
+        gOut.replaceChildren(h('img', { class: 'ai-gen-img', src: 'data:' + cur.mime + ';base64,' + cur.data, alt: 'Üretilen görsel önizleme' }),
+          h('div', { class: 'small muted' }, cur.provider + ' · ' + cur.model + ' · ' + Math.round(cur.bytes / 1024) + ' KB · yapay zekâ ile üretildi'),
+          h('div', { class: 'row wrap' },
+            h('button', { type: 'button', class: 'btn', onclick: (e) => saveCur(e.currentTarget) }, icon('download', 16), 'Medya Kütüphanesine Kaydet'),
+            h('button', { type: 'button', class: 'btn secondary', onclick: async (e) => { const rec = await saveCur(e.currentTarget); if (!rec) return; bgSel.append(h('option', { value: rec.filename }, rec.title || rec.filename)); bgSel.value = rec.filename; st.bg = rec.filename; render(); document.querySelector('.tpl-ed')?.scrollIntoView({ block: 'center' }); } }, 'Şablonda Arka Plan Yap'),
+            h('button', { type: 'button', class: 'btn ghost', onclick: () => genBtn.click() }, 'Yeniden Üret')));
+      };
+      genBtn.addEventListener('click', async () => {
+        if (gPrompt.value.trim().length < 8) { toast('Görseli kısaca tarif edin (en az 8 karakter)', 'err'); return; }
+        genBtn.disabled = true; gOut.replaceChildren(spinner());
+        try { cur = await api.post('/x/marka/gorsel-uret', { provider: gProv.value, prompt: gPrompt.value, aspect: gAsp.value, style: gStyle.value }); show(); } catch (e) { gOut.replaceChildren(errorBanner(e)); } finally { genBtn.disabled = false; }
+      });
+      aiPanel = panel('AI ile Görsel Üret', h('div', { class: 'tpl-ed' },
+        h('div', { class: 'stack' }, field('Sahne / konu tarifi', gPrompt), h('div', { class: 'grid cols-2' }, field('Sağlayıcı', gProv), field('Format', gAsp)), field('Stil', gStyle), genBtn,
+          h('div', { class: 'small muted' }, 'Marka kuralları otomatik uygulanır: görselde yazı/logo/sahte belge ve gerçek kişi yüzü olmaz; renkler marka paletine yakın tutulur. Üretilen görsel yapay zekâ ürünüdür — gerçek bir proje fotoğrafı gibi sunmayın; yayımlamadan önce inceleyin. Logo ve metin, şablon düzenleyiciyle sonradan bindirilir.')),
+        gOut), { ic: 'spark', sub: 'üretken görsel · onay sonrası kitaplığa girer' });
+    }
     root.replaceChildren(pageHead('Brand Kit & Tasarım Sistemi', 'Logo, renk, tipografi, ikon stili ve onaylı tasarım şablonlarını yönetin.', { crumbs: 'Social Studio › Brand Kit' }),
       h('div', { class: 'dash-grid' }, h('div', { class: 'span-4' }, logos), h('div', { class: 'span-5' }, pal), h('div', { class: 'span-3' }, typo),
         h('div', { class: 'span-4' }, icons), h('div', { class: 'span-4' }, comps), h('div', { class: 'span-4' }, h('div', { class: 'empty small' }, 'Marka kuralları: logo çevresinde boşluk bırakın, renk paletinin dışına çıkmayın, abartılı sloganlardan kaçının.')),
-        h('div', { class: 'span-12' }, tpls), h('div', { class: 'span-12' }, editorP)));
+        h('div', { class: 'span-12' }, aiPanel), h('div', { class: 'span-12' }, tpls), h('div', { class: 'span-12' }, editorP)));
     render();
   } catch (e) { root.replaceChildren(errorBanner(e)); }
   return root;

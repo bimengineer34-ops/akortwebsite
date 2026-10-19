@@ -6,12 +6,12 @@ import { requireUser, requireAdmin } from '../auth.mjs';
 import { getEntry, saveEntry, listEntries } from '../entries.mjs';
 import { setSecret, deleteSecret, hasSecret, secretMeta } from './vault.mjs';
 import { featureOn } from './schema.mjs';
-import { PROVIDERS, providerStatus, setCfg, testProvider, listModels, generate, TASKS, markRun, recentRuns, recentUsage } from './ai.mjs';
+import { generateImage, IMAGE_ASPECTS, IMAGE_STYLES, PROVIDERS, providerStatus, setCfg, testProvider, listModels, generate, TASKS, markRun, recentRuns, recentUsage } from './ai.mjs';
 import { scanSite, speedReport, getFocus, setFocus, seoOverview, internalLinkSuggestions } from './seo.mjs';
 import * as social from './social.mjs';
 import * as intel from './intel.mjs';
 import { runPsi, speedOverview, clearCache, pruneDb } from './speed.mjs';
-import { brandData, renderBrand, saveRender } from './brand.mjs';
+import { brandData, renderBrand, saveRender, saveAiImage } from './brand.mjs';
 import * as i18n from './i18n.mjs';
 import * as oauth from './oauth.mjs';
 import * as orch from './orchestra/engine.mjs';
@@ -274,6 +274,9 @@ export const extRoutes = [
     const r = await renderBrand(await J(req, 8 * 1024));
     sendJson(res, 200, { mime: r.mime, w: r.w, h: r.h, data: r.buf.toString('base64') });
   }],
+  ['GET', new RegExp(`^${A}/marka/gorsel-secenek$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, { aspects: Object.entries(IMAGE_ASPECTS).map(([key, v]) => ({ key, label: v.label })), styles: Object.keys(IMAGE_STYLES), providers: ['gemini', 'openai'].map((p) => ({ id: p, label: PROVIDERS[p].label, connected: hasSecret(PROVIDERS[p].secret) })) }))],
+  ['POST', new RegExp(`^${A}/marka/gorsel-uret$`), async ({ req, res }) => { const u = requireUser(req); const b = await J(req, 8 * 1024); sendJson(res, 200, await generateImage({ provider: String(b.provider ?? ''), prompt: b.prompt, aspect: String(b.aspect ?? 'kare'), style: String(b.style ?? 'mimari') }, u)); }],
+  ['POST', new RegExp(`^${A}/marka/gorsel-kaydet$`), async ({ req, res }) => sendJson(res, 200, await saveAiImage(await J(req, 20 * 1024 * 1024), requireUser(req)))],
   ['POST', new RegExp(`^${A}/marka/kaydet$`), async ({ req, res }) => sendJson(res, 200, await saveRender(await J(req, 8 * 1024), requireUser(req)))],
 
   /* ---------- İngilizce site (çeviri hafızası) ---------- */

@@ -39,7 +39,8 @@ const call = async (p, url, init) => {
   let last;
   for (let i = 0; i < 2; i++) {
     try {
-      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT) });
+      const { timeoutMs, ...fetchInit } = init ?? {};
+      const res = await fetch(url, { ...fetchInit, signal: AbortSignal.timeout(timeoutMs ?? TIMEOUT) });
       const text = await res.text();
       let data = null;
       try { data = JSON.parse(text); } catch { /* json değil */ }
@@ -228,6 +229,73 @@ export const rawChat = async ({ provider, system, prompt, max = 2000, task = 'si
   } catch (e) {
     noteResult(provider, false);
     q.run('INSERT INTO ai_usage (provider, model, task, ok, error, user_email, ms) VALUES (?,?,?,0,?,?,?)', provider, cfg.model, task, String(e.message).slice(0, 300), user.email, Date.now() - t0);
+    throw e;
+  }
+};
+
+/* ---------- görsel üretimi (marka kuralları korumalı) ---------- */
+const IMG_GUARD = 'Kurumsal mühendislik danışmanlığı (AKORT) için görsel. Kurallar: görselde HİÇBİR yazı, rakam, logo, marka adı, sertifika veya sahte belge olmasın; gerçek kişi yüzü veya tanınabilir kişi olmasın; gerçek bir projeyi/müşteriyi iddia eden sahne olmasın; sade, profesyonel, lacivert-mavi-beyaz ağırlıklı renkler, temiz kompozisyon, metin için boş alan bırak.';
+export const IMAGE_ASPECTS = { kare: { gemini: '1:1', openai: '1024x1024', label: 'Kare (1:1)' }, yatay: { gemini: '16:9', openai: '1536x1024', label: 'Yatay (16:9)' }, dikey: { gemini: '9:16', openai: '1024x1536', label: 'Dikey (9:16)' }, portre: { gemini: '4:5', openai: '1024x1536', label: 'Portre (4:5)' } };
+export const IMAGE_STYLES = {
+  mimari: 'Minimal mimari çizim / teknik illüstrasyon stili, ince çizgiler, açık zemin.',
+  izometrik: 'İzometrik 3B teknik illüstrasyon, temiz geometri, yumuşak gölgeler.',
+  soyut: 'Soyut geometrik arka plan, mavi tonlarda gradyanlar ve çizgiler.',
+  foto: 'Fotogerçekçi mimari/şantiye atmosferi; yalnızca genel sahne (belirli bir proje değil), insansız.',
+};
+const sniffImage = (buf) => (buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 ? 'image/png' : buf[0] === 0xff && buf[1] === 0xd8 ? 'image/jpeg' : buf.length > 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP' ? 'image/webp' : null);
+let geminiImageModel = null;
+const pickGeminiImageModel = async (key) => {
+  const cfgModel = getSetting('ai.imageModel.gemini');
+  if (cfgModel) return cfgModel;
+  if (geminiImageModel) return geminiImageModel;
+  const names = await adapters.gemini.models(key);
+  const img = names.filter((n) => /image/i.test(n) && !/tts|preview/i.test(n));
+  geminiImageModel = ['gemini-3.1-flash-image', 'gemini-2.5-flash-image'].find((n) => img.includes(n)) ?? img[0] ?? 'gemini-2.5-flash-image';
+  return geminiImageModel;
+};
+
+/** Prompt'tan görsel üretir (Gemini veya OpenAI). Dönen görsel kitaplığa KAYDEDİLMEZ; çağıran kaydeder. Anthropic görsel üretmez. */
+export const generateImage = async ({ provider, prompt, aspect = 'kare', style = 'mimari' }, user) => {
+  if (!['gemini', 'openai'].includes(provider)) throw new HttpError(400, 'Görsel üretimi yalnızca Gemini veya OpenAI ile yapılır');
+  const subject = String(prompt ?? '').trim().slice(0, 600);
+  if (subject.length < 8) throw new HttpError(400, 'Görseli kısaca tarif edin (en az 8 karakter)');
+  const asp = IMAGE_ASPECTS[aspect] ?? IMAGE_ASPECTS.kare;
+  const full = `${subject}\n\nStil: ${IMAGE_STYLES[style] ?? IMAGE_STYLES.mimari}\n${IMG_GUARD}`;
+  const { key } = need(provider);
+  checkBreaker(provider);
+  const t0 = Date.now();
+  let model = provider === 'openai' ? 'gpt-image-1' : null;
+  try {
+    let b64;
+    if (provider === 'gemini') {
+      model = await pickGeminiImageModel(key);
+      const d = await call('gemini', `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST', timeoutMs: 120_000,
+        headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: full }] }], generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: asp.gemini } } }),
+      });
+      b64 = (d.candidates?.[0]?.content?.parts ?? []).find((p) => p.inlineData?.data)?.inlineData.data;
+      if (!b64) throw new HttpError(502, 'Gemini görsel döndürmedi (içerik filtresi veya model desteği olabilir); tarifi değiştirip yeniden deneyin.');
+    } else {
+      const d = await call('openai', 'https://api.openai.com/v1/images/generations', {
+        method: 'POST', timeoutMs: 120_000,
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, prompt: full, size: asp.openai, n: 1 }),
+      });
+      b64 = d.data?.[0]?.b64_json;
+      if (!b64) throw new HttpError(502, 'OpenAI görsel döndürmedi; tarifi değiştirip yeniden deneyin.');
+    }
+    const buf = Buffer.from(b64, 'base64');
+    const mime = sniffImage(buf);
+    if (!mime) throw new HttpError(502, 'Sağlayıcı geçerli bir görsel döndürmedi');
+    if (buf.length > 14 * 1024 * 1024) throw new HttpError(502, 'Üretilen görsel çok büyük');
+    noteResult(provider, true);
+    q.run('INSERT INTO ai_usage (provider, model, task, ok, user_email, ms) VALUES (?,?,?,1,?,?)', provider, model, 'gorsel', user.email, Date.now() - t0);
+    audit(user, 'ai.gorsel_uret', `${provider}/${model}`);
+    return { mime, data: buf.toString('base64'), model, provider, bytes: buf.length };
+  } catch (e) {
+    noteResult(provider, false);
+    q.run('INSERT INTO ai_usage (provider, model, task, ok, error, user_email, ms) VALUES (?,?,?,0,?,?,?)', provider, model, 'gorsel', String(e.message).slice(0, 300), user.email, Date.now() - t0);
     throw e;
   }
 };

@@ -5,7 +5,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { ROOT, config, paths } from '../config.mjs';
 import { HttpError } from '../http.mjs';
-import { mediaFilePath, uploadMedia } from '../media.mjs';
+import { mediaFilePath, uploadMedia, updateMedia, getMedia } from '../media.mjs';
 import { audit } from '../db.mjs';
 
 const tokensFile = path.join(ROOT, 'src', 'styles', 'tokens.css');
@@ -187,4 +187,15 @@ export const saveRender = async (o, user) => {
   const rec = await uploadMedia(r.buf, name, user);
   audit(user, 'marka.sablon_kaydet', name);
   return rec;
+};
+
+/** AI ile üretilmiş görseli medya kitaplığına kaydeder; başlıkta "AI görseli" etiketi (şeffaflık) */
+export const saveAiImage = async ({ data, title, alt }, user) => {
+  const buf = Buffer.from(String(data ?? ''), 'base64');
+  if (buf.length < 100 || buf.length > 14 * 1024 * 1024) throw new HttpError(400, 'Geçersiz görsel verisi');
+  const rec = await uploadMedia(buf, `ai-gorsel-${Date.now().toString(36)}.png`, user);
+  const t = `AI görseli: ${String(title ?? '').trim().slice(0, 80) || 'Marka görseli'}`;
+  updateMedia(rec.id, { title: t, alt: String(alt ?? '').trim().slice(0, 200) || 'Yapay zekâ ile üretilmiş görsel' }, user);
+  audit(user, 'marka.ai_gorsel_kaydet', rec.filename);
+  return getMedia(rec.id);
 };
