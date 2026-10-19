@@ -28,14 +28,14 @@ const estimate = (s) => Math.ceil(String(s ?? '').length / 4);
  * Ajan çağrısı. Dönüş: { text, inTok, outTok, model, provider, costUsd }
  * Hata: sağlayıcı yoksa 409 (yeniden denenmez), bütçe doluysa 429 (yeniden denenmez).
  */
-export const chat = async ({ agent, key, system, prompt, max }) => {
+export const chat = async ({ agent, key, system, prompt, max, json }) => {
   if (override || fakeEnabled()) {
     const text = override ? await override(key, system, prompt) : fakeRespond(key, prompt);
     return { text, inTok: estimate(system) + estimate(prompt), outTok: estimate(text), model: 'test-llm', provider: 'test', costUsd: 0 };
   }
   const provider = resolveProvider(agent);
   if (!provider) throw new HttpError(409, 'Yapay zekâ sağlayıcısı bağlı değil: Entegrasyonlar sayfasından bir API anahtarı ekleyin.');
-  const r = await rawChat({ provider, system, prompt, max: max ?? agent?.max_tokens ?? 2000, task: `orkestra:${key}`, model: agent?.model || undefined }, { email: 'orkestra' });
+  const r = await rawChat({ provider, system, prompt, max: max ?? agent?.max_tokens ?? 2000, task: `orkestra:${key}`, model: agent?.model || undefined, json }, { email: 'orkestra' });
   const cfg = getCfg(provider);
   const usedModel = agent?.model || cfg.model;
   const costUsd = cfg.priceInPerM != null && cfg.priceOutPerM != null ? ((r.inTok ?? 0) * cfg.priceInPerM + (r.outTok ?? 0) * cfg.priceOutPerM) / 1e6 : null;
@@ -44,7 +44,7 @@ export const chat = async ({ agent, key, system, prompt, max }) => {
 
 /** JSON üreten çağrı: yanıt ayrıştırılır; hata mesajı gizli bilgi içermez */
 export const chatJson = async (opts) => {
-  const r = await chat(opts);
+  const r = await chat({ ...opts, json: true });
   let json;
   try { json = extractJson(r.text); } catch (e) { throw Object.assign(new Error(`Model geçerli JSON döndürmedi: ${redact(e.message)}`), { usage: r }); }
   return { json, usage: r };

@@ -84,13 +84,13 @@ const adapters = {
       (await call('gemini', 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=100', { headers: { 'x-goog-api-key': key } })).models
         .filter((m) => (m.supportedGenerationMethods ?? []).includes('generateContent'))
         .map((m) => m.name.replace(/^models\//, '')),
-    chat: async (key, model, system, user, maxTokens) => {
+    chat: async (key, model, system, user, maxTokens, json = false) => {
       const d = await call('gemini', `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
         method: 'POST',
         headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }], generationConfig: { maxOutputTokens: maxTokens } }),
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }], generationConfig: { maxOutputTokens: maxTokens + 2048, ...(json ? { responseMimeType: 'application/json' } : {}) } }), // +2048: Gemini 3 "düşünme" belirteçleri çıktı sınırından yer alır, JSON kesilmesin
       });
-      return { text: (d.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join(''), inTok: d.usageMetadata?.promptTokenCount, outTok: d.usageMetadata?.candidatesTokenCount };
+      return { text: (d.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join(''), inTok: d.usageMetadata?.promptTokenCount, outTok: (d.usageMetadata?.candidatesTokenCount ?? 0) + (d.usageMetadata?.thoughtsTokenCount ?? 0) };
     },
   },
 };
@@ -203,7 +203,7 @@ export const recentRuns = () => q.all('SELECT id, ts, provider, model, task, sta
 export const recentUsage = () => q.all('SELECT ts, provider, model, task, input_tokens, output_tokens, cost_est, ok, error, user_email, ms FROM ai_usage ORDER BY id DESC LIMIT 30');
 
 /** Toplu/sistem görevleri için ham çağrı (bütçe, devre kesici ve kullanım kaydı dahil). Metin güvenilmez kabul edilir; çağıran doğrular. */
-export const rawChat = async ({ provider, system, prompt, max = 2000, task = 'sistem', model }, user = { email: 'sistem' }) => {
+export const rawChat = async ({ provider, system, prompt, max = 2000, task = 'sistem', model, json = false }, user = { email: 'sistem' }) => {
   const { key } = need(provider);
   const cfg = { ...getCfg(provider), ...(model && /^[\w.:/-]{2,80}$/.test(model) ? { model } : {}) }; // model: çağrı başına geçersiz kılma (AI Orchestra ajanları)
   if (cfg.monthlyTokenBudget > 0) {
@@ -213,7 +213,7 @@ export const rawChat = async ({ provider, system, prompt, max = 2000, task = 'si
   checkBreaker(provider);
   const t0 = Date.now();
   try {
-    const r = await adapters[provider].chat(key, cfg.model, system, prompt, max);
+    const r = await adapters[provider].chat(key, cfg.model, system, prompt, max, json);
     noteResult(provider, true);
     q.run('INSERT INTO ai_usage (provider, model, task, input_tokens, output_tokens, ok, user_email, ms) VALUES (?,?,?,?,?,1,?,?)', provider, cfg.model, task, r.inTok ?? null, r.outTok ?? null, user.email, Date.now() - t0);
     return { text: String(r.text ?? ''), model: cfg.model, inTok: r.inTok ?? 0, outTok: r.outTok ?? 0 };
