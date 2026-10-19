@@ -418,6 +418,7 @@ export const renderModelConfig = wrap('AI Model & API Configuration', 'Sağlayı
   const conc = h('input', { class: 'input', type: 'number', min: 1, max: 6, value: s.concurrency, disabled: !isAdmin() });
   const lim = h('input', { class: 'input', type: 'number', min: 0, value: s.tokenLimit, disabled: !isAdmin() });
   const dlim = h('input', { class: 'input', type: 'number', min: 0, value: s.dailyTokenLimit ?? 0, disabled: !isAdmin() });
+  const aiImg = h('input', { type: 'checkbox', checked: s.aiImage !== false, disabled: !isAdmin() });
   return [
     st.fake ? infoBox('TEST MODU: ORCH_FAKE_LLM=1 — ajanlar gerçek model yerine deterministik sahte yanıt üretiyor. Canlı ortamda bu değişken kullanılmaz (NODE_ENV=production iken devre dışıdır).', 'warn') : null,
     panel('Sağlayıcılar', h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Sağlayıcı', 'Durum', 'Model', 'Bu ay', 'Aylık bütçe'].map((x) => h('th', {}, x)))),
@@ -425,8 +426,9 @@ export const renderModelConfig = wrap('AI Model & API Configuration', 'Sağlayı
       { ic: 'plug', action: h('a', { class: 'btn secondary sm', href: '#/entegrasyonlar' }, 'API anahtarı / bütçe') }),
     panel('Orkestrasyon ayarları', h('div', { class: 'stack' },
       h('div', { class: 'grid cols-3' }, field('Varsayılan sağlayıcı', prov), field('Eşzamanlı görev (1–6)', conc), field('Çalıştırma başına token limiti (0 = sınırsız)', lim), field('Günlük genel token limiti (0 = sınırsız)', dlim)),
+      h('label', { class: 'switch' }, aiImg, h('i'), h('span', {}, 'Design ajanı: onaydan sonra AI ile arka plan görseli üret (Gemini/OpenAI görsel kotası gerekir; yoksa şablon kullanılır)')),
       h('p', { class: 'small muted' }, 'Token limiti aşılan çalıştırma durdurulur. Aylık sağlayıcı bütçesi Entegrasyonlar sayfasındadır ve Orchestra çağrıları için de geçerlidir. Test ve canlı ortam ayrımı: ORCH_FAKE_LLM yalnızca NODE_ENV≠production iken çalışır.'),
-      isAdmin() ? h('button', { class: 'btn', style: 'justify-self:start', onclick: async () => { try { await api.put('/x/orkestra/ayarlar', { provider: prov.value, concurrency: Number(conc.value), tokenLimit: Number(lim.value), dailyTokenLimit: Number(dlim.value) }); toast('Kaydedildi', 'ok'); load(); } catch (e) { toast(e.message, 'err'); } } }, 'Kaydet') : infoBox('Ayarları yalnızca yönetici değiştirebilir.')), { ic: 'gear' }),
+      isAdmin() ? h('button', { class: 'btn', style: 'justify-self:start', onclick: async () => { try { await api.put('/x/orkestra/ayarlar', { provider: prov.value, concurrency: Number(conc.value), tokenLimit: Number(lim.value), dailyTokenLimit: Number(dlim.value), aiImage: aiImg.checked }); toast('Kaydedildi', 'ok'); load(); } catch (e) { toast(e.message, 'err'); } } }, 'Kaydet') : infoBox('Ayarları yalnızca yönetici değiştirebilir.')), { ic: 'gear' }),
     panel('Ajan bazlı model', h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Ajan', 'Sağlayıcı', 'Model', ''].map((x) => h('th', {}, x)))),
       h('tbody', {}, d.agents.filter((a) => a.executable).map((a) => {
         const ps = h('select', { class: 'select', disabled: !isAdmin() }, [['', 'Orchestra varsayılanı'], ...st.providers.map((p) => [p.id, p.label])].map(([v, l]) => h('option', { value: v, selected: v === a.provider }, l)));

@@ -6,7 +6,8 @@ import { q, audit, getSetting, setSetting } from '../../db.mjs';
 import { HttpError } from '../../http.mjs';
 import { saveEntry, getEntry } from '../../entries.mjs';
 import { savePost } from '../social.mjs';
-import { saveRender } from '../brand.mjs';
+import { saveRender, saveAiImage } from '../brand.mjs';
+import { generateImage, imageProvider } from '../ai.mjs';
 import { featureOn } from '../schema.mjs';
 import './schema.mjs';
 import { seedAgents, getAgent, listAgents, setExecutable, isExecutable } from './agents.mjs';
@@ -20,12 +21,13 @@ const p = (s, d) => { try { return JSON.parse(s); } catch { return d; } };
 const TERMINAL_RUN = new Set(['succeeded', 'failed', 'cancelled']);
 const DONE_OK = new Set(['succeeded', 'skipped']);
 const num = (name, def) => { const n = Number(getSetting(name, '')); return Number.isFinite(n) && n > 0 ? n : def; };
-export const settings = () => ({ concurrency: num('orch.concurrency', 2), tokenLimit: Number(getSetting('orch.token_limit', '150000')) || 0, dailyTokenLimit: Number(getSetting('orch.daily_token_limit', '0')) || 0, provider: getSetting('orch.provider', '') });
+export const settings = () => ({ concurrency: num('orch.concurrency', 2), tokenLimit: Number(getSetting('orch.token_limit', '150000')) || 0, dailyTokenLimit: Number(getSetting('orch.daily_token_limit', '0')) || 0, provider: getSetting('orch.provider', ''), aiImage: getSetting('orch.ai_image', '1') !== '0' });
 export const saveSettings = (b, user) => {
   if (b.concurrency !== undefined) { const n = Number(b.concurrency); if (!Number.isInteger(n) || n < 1 || n > 6) throw new HttpError(400, 'Eşzamanlılık 1–6 arasında olmalı'); setSetting('orch.concurrency', String(n)); }
   if (b.tokenLimit !== undefined) { const n = Number(b.tokenLimit); if (!Number.isInteger(n) || n < 0 || n > 5_000_000) throw new HttpError(400, 'Görev başına token limiti 0–5.000.000 olmalı (0 = sınırsız)'); setSetting('orch.token_limit', String(n)); }
   if (b.dailyTokenLimit !== undefined) { const n = Number(b.dailyTokenLimit); if (!Number.isInteger(n) || n < 0 || n > 100_000_000) throw new HttpError(400, 'Günlük genel token limiti 0–100.000.000 olmalı (0 = sınırsız)'); setSetting('orch.daily_token_limit', String(n)); }
   if (b.provider !== undefined) { if (b.provider && !['openai', 'anthropic', 'gemini'].includes(b.provider)) throw new HttpError(400, 'Geçersiz sağlayıcı'); setSetting('orch.provider', b.provider); }
+  if (b.aiImage !== undefined) setSetting('orch.ai_image', b.aiImage ? '1' : '0');
   audit(user, 'orkestra.ayar', 'orkestra', j({ concurrency: settings().concurrency, tokenLimit: settings().tokenLimit, dailyTokenLimit: settings().dailyTokenLimit }));
   return settings();
 };
@@ -107,17 +109,29 @@ const ACTIONS = {
     },
   },
   'action.brand_image': {
-    label: 'Brand Kit ile görsel üret ve medya kitaplığına kaydet (yayınlamaz)', external: false,
+    label: 'Brand Kit görseli üret (AI arka plan + marka katmanı) ve medya kitaplığına kaydet (yayınlamaz)', external: false,
     run: async ({ task, deps, run }) => {
       const key = `orch.action.${task.id}`;
       const done = p(getSetting(key, ''), null);
       if (done) return { output: done };
       const d = Object.values(deps).find((x) => x?.template && x?.theme && x?.format && x?.title);
       if (!d) throw Object.assign(new Error('Görsel için Visual Design çıktısı gerekli'), { fatal: true });
+      const who = { email: task.approved_by || run.created_by || 'orkestra' };
+      // Üretken arka plan: yalnızca onay SONRASI (maliyet), görsel/sağlayıcı yoksa veya hata olursa şablon-yalnız yedeğe düşer; logo ve metin her zaman marka katmanıyla bindirilir
+      let bg = '', ai = null, aiError = '';
+      const prov = settings().aiImage && !process.env.ORCH_FAKE_LLM ? imageProvider(settings().provider) : null;
+      if (prov) {
+        try {
+          const aspect = /dikey|story|reel/i.test(d.format) ? 'dikey' : /portre/i.test(d.format) ? 'portre' : /link|yatay|kapak|banner/i.test(d.format) ? 'yatay' : 'kare';
+          const gen = await generateImage({ provider: prov, prompt: `Konu: ${d.title}. ${d.alt}`.slice(0, 500), aspect, style: 'soyut' }, who);
+          const bgRec = await saveAiImage({ data: gen.data, title: d.title, alt: d.alt }, who);
+          bg = bgRec.filename; ai = { provider: gen.provider, model: gen.model, background: bgRec.url };
+        } catch (e) { aiError = String(e.message).slice(0, 200); }
+      }
       let rec;
-      try { rec = await saveRender({ format: d.format, theme: d.theme, title: d.title, subtitle: d.subtitle, template: 'orkestra', out: 'png' }, { email: task.approved_by || run.created_by || 'orkestra' }); }
+      try { rec = await saveRender({ format: d.format, theme: d.theme, title: d.title, subtitle: d.subtitle, template: 'orkestra', out: 'png', ...(bg ? { bg } : {}) }, who); }
       catch (e) { throw Object.assign(new Error(`Görsel üretilemedi: ${e.message}`), { fatal: true }); }
-      const out = { media: rec.url, id: rec.id, filename: rec.filename, alt: d.alt, width: rec.width, height: rec.height };
+      const out = { media: rec.url, id: rec.id, filename: rec.filename, alt: d.alt, width: rec.width, height: rec.height, ...(ai ? { ai } : {}), ...(aiError ? { aiError: `AI arka plan üretilemedi, şablon kullanıldı: ${aiError}` } : {}) };
       setSetting(key, j(out));
       return { output: out };
     },

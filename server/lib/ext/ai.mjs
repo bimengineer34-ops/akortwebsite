@@ -254,6 +254,9 @@ const pickGeminiImageModel = async (key) => {
   return geminiImageModel;
 };
 
+/** Görsel üretebilen ve anahtarı bağlı sağlayıcı (tercih edilen varsa o); yoksa null */
+export const imageProvider = (preferred = '') => { const ok = ['gemini', 'openai'].filter((p) => hasSecret(PROVIDERS[p].secret)); return ok.includes(preferred) ? preferred : ok[0] ?? null; };
+
 /** Prompt'tan görsel üretir (Gemini veya OpenAI). Dönen görsel kitaplığa KAYDEDİLMEZ; çağıran kaydeder. Anthropic görsel üretmez. */
 export const generateImage = async ({ provider, prompt, aspect = 'kare', style = 'mimari' }, user) => {
   if (!['gemini', 'openai'].includes(provider)) throw new HttpError(400, 'Görsel üretimi yalnızca Gemini veya OpenAI ile yapılır');
