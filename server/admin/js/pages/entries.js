@@ -2,6 +2,7 @@
 import { api } from '../api.js';
 import { h, icon, chip, fmtDate, toast, confirmBox, errorBanner, field } from '../ui.js';
 import { openMediaPicker } from './media.js';
+import { createRichEditor } from '../richtext.js';
 
 const KINDS = {
   blog: { path: '/blog', apiKind: 'blog', title: 'Blog yazıları', one: 'Blog yazısı', newLabel: 'Yeni yazı', site: (s) => `/blog/${s}` },
@@ -12,99 +13,8 @@ const KINDS = {
 const TR = { ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u', Ç: 'c', Ğ: 'g', İ: 'i', I: 'i', Ö: 'o', Ş: 's', Ü: 'u' };
 const slugify = (s) => s.replace(/[çğıöşüÇĞİIÖŞÜ]/g, (c) => TR[c]).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90);
 
-/* ---------------- güvenli Markdown önizleme ---------------- */
-const safeUrl = (u) => (/^(https?:\/\/|mailto:|tel:|\/|#)/i.test(u) ? u : '#');
-const inline = (text) => {
-  const frag = document.createDocumentFragment();
-  const re = /(\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`|!\[([^\]]*)\]\(([^)\s]+)\)|\[([^\]]+)\]\(([^)\s]+)\))/g;
-  let last = 0, m;
-  while ((m = re.exec(text))) {
-    if (m.index > last) frag.append(text.slice(last, m.index));
-    if (m[2]) frag.append(h('strong', {}, m[2]));
-    else if (m[3]) frag.append(h('em', {}, m[3]));
-    else if (m[4]) frag.append(h('code', {}, m[4]));
-    else if (m[6]) frag.append(h('img', { src: safeUrl(m[6]), alt: m[5] }));
-    else frag.append(h('a', { href: safeUrl(m[8]), target: '_blank', rel: 'noopener' }, m[7]));
-    last = re.lastIndex;
-  }
-  if (last < text.length) frag.append(text.slice(last));
-  return frag;
-};
-const renderMd = (src) => {
-  const out = document.createDocumentFragment();
-  const lines = src.replace(/\r/g, '').split('\n');
-  let i = 0;
-  while (i < lines.length) {
-    const l = lines[i];
-    if (!l.trim()) { i++; continue; }
-    let m;
-    if ((m = /^(#{1,4})\s+(.*)$/.exec(l))) { out.append(h(`h${Math.min(m[1].length + 0, 4)}`, {}, inline(m[2]))); i++; continue; }
-    if (/^---+\s*$/.test(l)) { out.append(h('hr')); i++; continue; }
-    if (l.startsWith('```')) {
-      const code = []; i++;
-      while (i < lines.length && !lines[i].startsWith('```')) code.push(lines[i++]);
-      i++;
-      out.append(h('pre', {}, h('code', {}, code.join('\n'))));
-      continue;
-    }
-    if (/^>\s?/.test(l)) {
-      const q = [];
-      while (i < lines.length && /^>\s?/.test(lines[i])) q.push(lines[i++].replace(/^>\s?/, ''));
-      out.append(h('blockquote', {}, h('p', {}, inline(q.join(' ')))));
-      continue;
-    }
-    if (/^\s*([-*])\s+/.test(l) || /^\s*\d+\.\s+/.test(l)) {
-      const ordered = /^\s*\d+\./.test(l);
-      const items = [];
-      while (i < lines.length && (/^\s*([-*])\s+/.test(lines[i]) || /^\s*\d+\.\s+/.test(lines[i]))) items.push(lines[i++].replace(/^\s*([-*]|\d+\.)\s+/, ''));
-      out.append(h(ordered ? 'ol' : 'ul', {}, items.map((t) => h('li', {}, inline(t)))));
-      continue;
-    }
-    const para = [];
-    while (i < lines.length && lines[i].trim() && !/^(#{1,4}\s|---+\s*$|```|>\s?|\s*([-*])\s+|\s*\d+\.\s+)/.test(lines[i])) para.push(lines[i++]);
-    out.append(h('p', {}, inline(para.join(' '))));
-  }
-  return out;
-};
-
-const mdEditor = (initial, onChange) => {
-  const ta = h('textarea', { class: 'textarea md-area', spellcheck: 'true' });
-  ta.value = initial;
-  const preview = h('div', { class: 'md-preview', 'aria-label': 'Önizleme' });
-  const wrap = h('div', { class: 'md-wrap' });
-  const draw = () => preview.replaceChildren(renderMd(ta.value));
-  ta.addEventListener('input', () => { draw(); onChange(); });
-  const wrapSel = (before, after = before) => {
-    const { selectionStart: s, selectionEnd: e, value } = ta;
-    ta.value = value.slice(0, s) + before + (value.slice(s, e) || 'metin') + after + value.slice(e);
-    ta.focus();
-    ta.setSelectionRange(s + before.length, s + before.length + (e - s || 5));
-    ta.dispatchEvent(new Event('input'));
-  };
-  const linePrefix = (p) => {
-    const { selectionStart: s, value } = ta;
-    const start = value.lastIndexOf('\n', s - 1) + 1;
-    ta.value = value.slice(0, start) + p + value.slice(start);
-    ta.focus();
-    ta.dispatchEvent(new Event('input'));
-  };
-  const tb = (label, title, fn) => h('button', { type: 'button', class: 'btn secondary sm', title, onclick: fn }, label);
-  const toolbar = h('div', { class: 'md-toolbar' },
-    tb(h('b', {}, 'B'), 'Kalın', () => wrapSel('**')), tb(h('i', {}, 'İ'), 'İtalik', () => wrapSel('*')),
-    tb('H2', 'Başlık 2', () => linePrefix('## ')), tb('H3', 'Başlık 3', () => linePrefix('### ')),
-    tb('• Liste', 'Madde işaretli liste', () => linePrefix('- ')), tb('1. Liste', 'Numaralı liste', () => linePrefix('1. ')),
-    tb('❝', 'Alıntı', () => linePrefix('> ')),
-    tb('Bağlantı', 'Bağlantı ekle', () => { const u = prompt('Bağlantı adresi (https://… veya /sayfa):', 'https://'); if (u) wrapSel('[', `](${u})`); }),
-    tb(h('span', { class: 'row' }, icon('image', 14), 'Görsel'), 'Medya kütüphanesinden görsel ekle', async () => {
-      const m = await openMediaPicker({ type: 'image' });
-      if (m) { const { selectionStart: s, value } = ta; const md = `![${m.alt || m.title || ''}](${m.url})`; ta.value = value.slice(0, s) + md + value.slice(s); ta.dispatchEvent(new Event('input')); }
-    }),
-    h('span', { class: 'grow' }),
-    tb('Önizleme', 'Önizlemeyi aç/kapat', () => { wrap.classList.toggle('single'); preview.classList.toggle('hidden'); }));
-  draw();
-  wrap.append(ta, preview);
-  return { el: h('div', {}, toolbar, wrap), get: () => ta.value, set: (v) => { ta.value = v; draw(); } };
-};
+/* ---------------- içerik editörü: zengin metin (WYSIWYG), Markdown olarak saklanır ---------------- */
+const mdEditor = (initial, onChange) => createRichEditor({ value: initial, onChange, pickMedia: () => openMediaPicker({ type: 'image' }) });
 
 /* ---------------- liste ---------------- */
 export const renderEntryList = async (ctx, k) => {
@@ -299,7 +209,7 @@ export const renderEntryEditor = async (ctx, k, slug) => {
     errBox, draftNote,
     h('div', { class: 'stack' },
       h('div', { class: 'card card-pad stack' }, isNew ? field('Adres (slug)', slugInput, 'Yalnızca küçük harf, rakam ve tire. Başlıktan otomatik üretilir; oluşturduktan sonra değiştirilemez.') : null, fieldsEl),
-      h('div', { class: 'card card-pad stack' }, h('h3', {}, 'İçerik (Markdown)'), h('div', { class: 'hint' }, 'Başlıklar için ## / ###, kalın için **metin**, liste için -, bağlantı için [metin](adres). Görseller medya kütüphanesinden eklenir.'), bodyEd.el)),
+      h('div', { class: 'card card-pad stack' }, h('h3', {}, 'İçerik Editörü'), h('div', { class: 'hint' }, 'WordPress benzeri görsel editör: biçimlendirmeyi araç çubuğundan yapın, görselleri medya kütüphanesinden ekleyin. İçerik Markdown olarak saklanır; isterseniz "Kaynak" düğmesiyle ham Markdown içeriğini düzenleyebilirsiniz.'), bodyEd.el)),
     h('div', { class: 'savebar' }, saveBtn, status, h('span', { class: 'grow' }),
       !isNew && k !== 'yasal' ? h('a', { class: 'btn ghost', href: K.site(slug), target: '_blank', rel: 'noopener' }, icon('external', 15), 'Sitede aç (yayınlandıysa)') : null,
       h('a', { class: 'btn ghost', href: `#${K.path}` }, 'Listeye dön')));

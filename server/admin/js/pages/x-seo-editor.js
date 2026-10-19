@@ -4,6 +4,8 @@ import { h, icon, chip, debounce, toast, spinner, errorBanner } from '../ui.js';
 import { ring, panel } from '../charts.js';
 import { pageHead, connectBox, infoBox } from './x-common.js';
 import { analyze } from './x-seo.js';
+import { openMediaPicker } from './media.js';
+import { createRichEditor } from '../richtext.js';
 
 const ctr = (el, max) => { const c = h('span', { class: 'cnt' }); const f = () => { c.textContent = `${el.value.length}/${max}`; c.classList.toggle('over', el.value.length > max); }; el.addEventListener('input', f); f(); return c; };
 const fld = (label, control, counter, hint) => h('label', { class: 'field' }, h('div', { class: 'row' }, h('span', { class: 'lbl grow' }, label), counter ?? null), control, hint ? h('span', { class: 'hint' }, hint) : null);
@@ -44,15 +46,11 @@ export const renderSeoEditor = async (ctx, kind, slug) => {
     const desc = h('textarea', { class: 'textarea', rows: 3, maxlength: 170 }); desc.value = seo.description ?? d.description ?? d.summary ?? '';
     const focus = h('input', { class: 'input', value: e.focus, maxlength: 100, placeholder: 'ör. endüstriyel sürdürülebilirlik' });
     const noindex = h('input', { type: 'checkbox', checked: !!seo.noindex });
-    const body = h('textarea', { class: 'textarea md-area', rows: 16 }); body.value = e.body ?? '';
+    const body = createRichEditor({ value: e.body ?? '', minHeight: 380, pickMedia: () => openMediaPicker({ type: 'image' }) }); // textarea benzeri yüzey: value / input olayı
     const dirtyDot = h('span', { class: 'dotc', style: 'background:#12b76a' });
     const savedTxt = h('span', {}, 'Kayıtlı');
     let dirty = false;
 
-    const tool = (label, fn, title) => h('button', { type: 'button', class: 'btn ghost sm', title, onclick: () => { fn(); body.focus(); body.dispatchEvent(new Event('input')); } }, label);
-    const wrap = (a, b2 = a) => () => { const { selectionStart: s0, selectionEnd: s1, value } = body; body.value = `${value.slice(0, s0)}${a}${value.slice(s0, s1) || 'metin'}${b2}${value.slice(s1)}`; };
-    const line = (p) => () => { const { selectionStart: s0, value } = body; const ls = value.lastIndexOf('\n', s0 - 1) + 1; body.value = `${value.slice(0, ls)}${p}${value.slice(ls)}`; };
-    const toolbar = h('div', { class: 'md-toolbar' }, tool('H2', line('## '), 'Ara başlık'), tool('H3', line('### '), 'Alt başlık'), tool('B', wrap('**'), 'Kalın'), tool('I', wrap('*'), 'İtalik'), tool('• Liste', line('- '), 'Madde işareti'), tool('1. Liste', line('1. '), 'Numaralı liste'), tool('❝', line('> '), 'Alıntı'), tool('Bağlantı', wrap('[', '](/hizmetler/)'), 'Bağlantı ekle'));
     const wc = h('span', {});
 
     const scoreBox = h('div'), serpBox = h('div'), mobBox = h('div'), recBox = h('div');
@@ -105,7 +103,7 @@ export const renderSeoEditor = async (ctx, kind, slug) => {
     if (connected.length) drawAi(null);
 
     const linkPanel = panel('İç Bağlantı Önerileri', links.rows.length ? h('div', {}, links.rows.map((l) => h('div', { class: 'listrow' }, h('span', { class: 'lic' }, icon('doc', 16)), h('div', { class: 'grow' }, h('b', {}, l.title), h('span', { class: 'mono' }, l.url)),
-      h('button', { class: 'btn secondary sm', onclick: () => { body.value = `${body.value.replace(/\s+$/, '')}\n\n[${l.title}](${l.url})\n`; body.dispatchEvent(new Event('input')); toast('Bağlantı metnin sonuna eklendi; uygun yere taşıyın', 'ok'); } }, 'Ekle')))) : h('div', { class: 'muted small', style: 'padding:6px 0' }, 'Şu an önerilecek ilgili sayfa bulunamadı.'), { ic: 'link' });
+      h('button', { class: 'btn secondary sm', onclick: () => { body.insertMarkdown(`[${l.title}](${l.url})`); toast('Bağlantı imlecin olduğu yere eklendi', 'ok'); } }, 'Ekle')))) : h('div', { class: 'muted small', style: 'padding:6px 0' }, 'Şu an önerilecek ilgili sayfa bulunamadı.'), { ic: 'link' });
     const cover = d.cover ? String(d.cover).split('/').pop() : '';
     const imgPanel = panel('Görsel SEO (Öne Çıkan Görsel)', h('div', {},
       h('div', { class: 'stat-row' }, h('span', { class: 'grow' }, 'Dosya adı'), cover ? h('span', { class: 'mono' }, cover) : chip('Kapak yok', 'warn')),
@@ -122,7 +120,7 @@ export const renderSeoEditor = async (ctx, kind, slug) => {
           panel('Temel Bilgiler', h('div', { class: 'stack' }, fld('Başlık (H1) *', h1, ctr(h1, 70)), fld('Meta Başlık (Title)', seoTitle, ctr(seoTitle, 60), 'Boşsa H1 kullanılır.'), fld('Meta Açıklama (Description)', desc, ctr(desc, 160)),
             h('div', { class: 'grid cols-2' }, fld('URL Slug (değiştirilemez)', h('input', { class: 'input', value: `/${base}/${slug}`, readOnly: true })), fld('Odak Anahtar Kelime *', focus, ctr(focus, 100))),
             h('label', { class: 'switch' }, noindex, h('i'), h('span', {}, 'Arama motorlarından gizle (noindex)'))), { ic: 'doc' }),
-          panel('İçerik Editörü', h('div', { class: 'stack' }, toolbar, body, h('div', { class: 'small muted' }, wc)), { ic: 'edit' })),
+          panel('İçerik Editörü', h('div', { class: 'stack' }, body.el, h('div', { class: 'small muted' }, wc)), { ic: 'edit' })),
         h('div', { class: 'stack' },
           panel('SEO Analiz Skoru', scoreBox, { ic: 'shield' }),
           h('div', { class: 'grid cols-2' }, panel('Google Önizleme', serpBox, { ic: 'search' }), panel('Mobil Önizleme', mobBox, { ic: 'eye' })),
