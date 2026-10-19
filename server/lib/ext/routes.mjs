@@ -14,6 +14,8 @@ import { runPsi, speedOverview, clearCache, pruneDb } from './speed.mjs';
 import { brandData, renderBrand, saveRender } from './brand.mjs';
 import * as i18n from './i18n.mjs';
 import * as oauth from './oauth.mjs';
+import * as orch from './orchestra/engine.mjs';
+import { listAgents, getAgent, updateAgent, resetAgent, ALL_TOOLS } from './orchestra/agents.mjs';
 import { dashboard, setPrefs, computeCard, CATALOG } from './kpi.mjs';
 import { getStats } from '../stats.mjs';
 
@@ -103,7 +105,7 @@ export const extRoutes = [
   /* ---------- entegrasyonlar + sır kasası ---------- */
   ['GET', new RegExp(`^${A}/entegrasyonlar$`), ({ req, res }) => {
     requireUser(req);
-    sendJson(res, 200, { ...integrations(), providers: providerStatus(), flags: ['seo', 'ai', 'social', 'intel'].map((k) => ({ key: k, enabled: featureOn(k) })) });
+    sendJson(res, 200, { ...integrations(), providers: providerStatus(), flags: ['seo', 'ai', 'social', 'intel', 'orchestra'].map((k) => ({ key: k, enabled: featureOn(k) })) });
   }],
   ['PUT', new RegExp(`^${A}/ai/([a-z]+)/anahtar$`), async ({ req, res, m }) => {
     const u = requireAdmin(req);
@@ -120,7 +122,7 @@ export const extRoutes = [
   ['PUT', new RegExp(`^${A}/ai/([a-z]+)/ayar$`), async ({ req, res, m }) => sendJson(res, 200, { cfg: setCfg(m[1], await J(req, 4096), requireAdmin(req)) })],
   ['POST', new RegExp(`^${A}/ai/([a-z]+)/test$`), async ({ req, res, m }) => sendJson(res, 200, await testProvider(m[1], requireAdmin(req)))],
   ['GET', new RegExp(`^${A}/ai/([a-z]+)/modeller$`), async ({ req, res, m }) => (requireUser(req), sendJson(res, 200, { models: await listModels(m[1]) }))],
-  ['PUT', new RegExp(`^${A}/bayrak/(seo|ai|social|intel)$`), async ({ req, res, m }) => {
+  ['PUT', new RegExp(`^${A}/bayrak/(seo|ai|social|intel|orchestra)$`), async ({ req, res, m }) => {
     const u = requireAdmin(req);
     const on = (await J(req, 512)).enabled === false ? 0 : 1;
     q.run(`INSERT INTO feature_flags (key, enabled) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET enabled = excluded.enabled, updated_at = datetime('now')`, m[1], on);
@@ -189,6 +191,37 @@ export const extRoutes = [
     const b = await J(req, 2048);
     sendJson(res, 200, await oauth.publishNow(id(m[1]), String(b.platform ?? ''), u));
   }],
+
+  /* ---------- AI Orchestra (çok ajanlı yönetim modülü) ---------- */
+  // Okuma: yalnızca yönetici/editör (rbac.mjs). Çalıştırma/onay: yönetici/editör. Ajan, akış ve ayar tanımları: yalnızca yönetici.
+  ['GET', new RegExp(`^${A}/orkestra/ozet$`), ({ req, res }) => (requireUser(req), orch.initOrchestra(), sendJson(res, 200, orch.overview()))],
+  ['GET', new RegExp(`^${A}/orkestra/ajanlar$`), ({ req, res }) => (requireUser(req), orch.initOrchestra(), sendJson(res, 200, { agents: listAgents(), tools: ALL_TOOLS, actions: orch.ACTION_LIST }))],
+  ['PUT', new RegExp(`^${A}/orkestra/ajanlar/([a-z_]+)$`), async ({ req, res, m }) => { const u = requireAdmin(req); sendJson(res, 200, updateAgent(m[1], await J(req, 64 * 1024), u)); }],
+  ['POST', new RegExp(`^${A}/orkestra/ajanlar/([a-z_]+)/sifirla$`), ({ req, res, m }) => sendJson(res, 200, resetAgent(m[1], requireAdmin(req)))],
+  ['GET', new RegExp(`^${A}/orkestra/akislar$`), ({ req, res }) => (requireUser(req), orch.initOrchestra(), sendJson(res, 200, { workflows: orch.listWorkflows() }))],
+  ['POST', new RegExp(`^${A}/orkestra/akislar$`), async ({ req, res }) => { const u = requireAdmin(req); sendJson(res, 200, orch.saveWorkflow(0, await J(req, 64 * 1024), u)); }],
+  ['PUT', new RegExp(`^${A}/orkestra/akislar/(\\d+)$`), async ({ req, res, m }) => { const u = requireAdmin(req); sendJson(res, 200, orch.saveWorkflow(id(m[1]), await J(req, 64 * 1024), u)); }],
+  ['DELETE', new RegExp(`^${A}/orkestra/akislar/(\\d+)$`), ({ req, res, m }) => (orch.deleteWorkflow(id(m[1]), requireAdmin(req)), sendJson(res, 200, { ok: true }))],
+  ['POST', new RegExp(`^${A}/orkestra/akislar/dogrula$`), async ({ req, res }) => { requireUser(req); const v = orch.validateSteps((await J(req, 64 * 1024)).steps); sendJson(res, 200, { ok: !v.errors.length, errors: v.errors, steps: v.steps }); }],
+  ['POST', new RegExp(`^${A}/orkestra/plan$`), async ({ req, res }) => { const u = requireUser(req); sendJson(res, 200, await orch.planFromCommand((await J(req, 8 * 1024)).command, u)); }],
+  ['POST', new RegExp(`^${A}/orkestra/calistir$`), async ({ req, res }) => {
+    const u = requireUser(req);
+    const b = await J(req, 128 * 1024);
+    let steps = b.steps, workflowId = null, title = b.title;
+    if (b.workflowId) { const w = orch.listWorkflows().find((x) => x.id === Number(b.workflowId)); if (!w) throw new HttpError(404, 'İş akışı bulunamadı'); steps = w.steps; workflowId = w.id; title ||= w.name; }
+    sendJson(res, 200, orch.createRun({ title, command: b.command, steps, workflowId, params: b.params, idempotencyKey: b.idempotencyKey, tokenLimit: u.role === 'admin' ? b.tokenLimit : undefined }, u));
+  }],
+  ['GET', new RegExp(`^${A}/orkestra/calistirmalar$`), ({ req, res, url }) => (requireUser(req), sendJson(res, 200, { runs: orch.listRuns({ status: url.searchParams.get('durum') ?? '', limit: url.searchParams.get('limit') ?? 40 }) }))],
+  ['GET', new RegExp(`^${A}/orkestra/calistirmalar/(\\d+)$`), ({ req, res, m }) => (requireUser(req), sendJson(res, 200, orch.getRun(id(m[1]))))],
+  ['POST', new RegExp(`^${A}/orkestra/calistirmalar/(\\d+)/iptal$`), ({ req, res, m }) => sendJson(res, 200, orch.cancelRun(id(m[1]), requireUser(req)))],
+  ['GET', new RegExp(`^${A}/orkestra/onaylar$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, { approvals: orch.pendingApprovals() }))],
+  ['POST', new RegExp(`^${A}/orkestra/gorevler/(\\d+)/onayla$`), async ({ req, res, m }) => { const u = requireUser(req); const b = await J(req, 4096); sendJson(res, 200, orch.approveTask(id(m[1]), u, { note: b.note, ack: b.ack === true })); }],
+  ['POST', new RegExp(`^${A}/orkestra/gorevler/(\\d+)/reddet$`), async ({ req, res, m }) => { const u = requireUser(req); const b = await J(req, 4096); sendJson(res, 200, orch.rejectTask(id(m[1]), u, b.note)); }],
+  ['POST', new RegExp(`^${A}/orkestra/gorevler/(\\d+)/yeniden-dene$`), ({ req, res, m }) => sendJson(res, 200, orch.retryTask(id(m[1]), requireUser(req)))],
+  ['GET', new RegExp(`^${A}/orkestra/olaylar$`), ({ req, res, url }) => (requireUser(req), sendJson(res, 200, { events: orch.eventsList({ level: url.searchParams.get('seviye') ?? '', runId: url.searchParams.get('calistirma') ?? '', limit: url.searchParams.get('limit') ?? 100 }) }))],
+  ['GET', new RegExp(`^${A}/orkestra/analitik$`), ({ req, res, url }) => (requireUser(req), sendJson(res, 200, orch.analytics({ days: url.searchParams.get('gun') ?? 30 })))],
+  ['GET', new RegExp(`^${A}/orkestra/ayarlar$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, { settings: orch.settings(), providers: providerStatus().map((p) => ({ id: p.id, label: p.label, connected: p.connected, model: p.cfg.model, month: p.month, budget: p.cfg.monthlyTokenBudget })), fake: process.env.ORCH_FAKE_LLM === '1' && process.env.NODE_ENV !== 'production' }))],
+  ['PUT', new RegExp(`^${A}/orkestra/ayarlar$`), async ({ req, res }) => { const u = requireAdmin(req); sendJson(res, 200, { settings: orch.saveSettings(await J(req, 4096), u) }); }],
 
   /* ---------- Social Studio ---------- */
   ['GET', new RegExp(`^${A}/sosyal$`), ({ req, res }) => (requireUser(req), sendJson(res, 200, { summary: social.socialSummary(), platforms: Object.entries(social.PLATFORMS).map(([k, p]) => ({ id: k, label: p.label, limit: p.limit, caps: p.caps, needs: p.needs, url: p.url, docs: p.docs, connected: oauth.listAccounts('x').find((a) => a.id === k)?.connected ?? false })), specialDays: social.upcomingSpecialDays(), statuses: social.STATUSES }))],

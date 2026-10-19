@@ -203,9 +203,9 @@ export const recentRuns = () => q.all('SELECT id, ts, provider, model, task, sta
 export const recentUsage = () => q.all('SELECT ts, provider, model, task, input_tokens, output_tokens, cost_est, ok, error, user_email, ms FROM ai_usage ORDER BY id DESC LIMIT 30');
 
 /** Toplu/sistem görevleri için ham çağrı (bütçe, devre kesici ve kullanım kaydı dahil). Metin güvenilmez kabul edilir; çağıran doğrular. */
-export const rawChat = async ({ provider, system, prompt, max = 2000, task = 'sistem' }, user = { email: 'sistem' }) => {
+export const rawChat = async ({ provider, system, prompt, max = 2000, task = 'sistem', model }, user = { email: 'sistem' }) => {
   const { key } = need(provider);
-  const cfg = getCfg(provider);
+  const cfg = { ...getCfg(provider), ...(model && /^[\w.:/-]{2,80}$/.test(model) ? { model } : {}) }; // model: çağrı başına geçersiz kılma (AI Orchestra ajanları)
   if (cfg.monthlyTokenBudget > 0) {
     const u = monthUsage(provider);
     if (u.i + u.o >= cfg.monthlyTokenBudget) throw new HttpError(429, `${PROVIDERS[provider].label} aylık token bütçesi doldu (${cfg.monthlyTokenBudget}).`);

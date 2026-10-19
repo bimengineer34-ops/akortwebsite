@@ -30,5 +30,6 @@ t('sosyal medya uzmanı sosyal + marka yazar; seo/içerik/crm yazamaz', !D('sosy
 t('satış yalnızca CRM yazar ve okur', !D('satis', 'DELETE', 'formlar/1') && !D('satis', 'GET', 'formlar') && !!D('satis', 'PUT', 'icerik/a') && !!D('satis', 'POST', 'x/sosyal/gonderiler'));
 t('kullanıcı/ayar/yedek gibi sistem yazmaları yalnızca admin/editör', ['seo', 'icerik', 'sosyal', 'satis', 'izleyici'].every((r) => D(r, 'POST', 'kullanicilar') && D(r, 'PUT', 'ayarlar') && D(r, 'POST', 'yedekler')));
 t('herkes kendi parola/2FA/çıkış işlemini yapabilir', ['izleyici', 'satis', 'seo'].every((r) => !D(r, 'POST', 'cikis') && !D(r, 'POST', 'parola') && !D(r, 'POST', '2fa/baslat')));
+t('AI Orchestra: yalnızca yönetici/editör okur ve yazar', ['admin', 'editor'].every((r) => !D(r, 'GET', 'x/orkestra/calistirmalar') && !D(r, 'POST', 'x/orkestra/calistir')) && ['seo', 'icerik', 'sosyal', 'satis', 'izleyici'].every((r) => D(r, 'GET', 'x/orkestra/calistirmalar') && D(r, 'GET', 'x/orkestra/onaylar') && D(r, 'POST', 'x/orkestra/calistir') && D(r, 'POST', 'x/orkestra/gorevler/1/onayla')));
 console.log(`\n${pass} geçti, ${fail} başarısız`);
 process.exit(fail ? 1 : 0);

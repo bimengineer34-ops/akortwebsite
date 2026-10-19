@@ -12,6 +12,7 @@ import { mediaFilePath, MIME_BY_EXT } from './lib/media.mjs';
 import { legacyEnRedirect } from './lib/ext/i18n.mjs';
 import { bootstrapAdmin } from './lib/auth.mjs';
 import { startScheduler } from './lib/ext/intel.mjs';
+import { startOrchestra } from './lib/ext/orchestra/engine.mjs';
 import { ensureInitialBuild } from './lib/build.mjs';
 import { audit } from './lib/db.mjs';
 import { matchRedirect } from './lib/redirects.mjs';
@@ -141,6 +142,7 @@ server.keepAliveTimeout = 10_000;
 
 bootstrapAdmin();
 startScheduler();
+startOrchestra();
 pruneStats();
 setInterval(pruneStats, 24 * 3_600_000).unref();
 

@@ -14,6 +14,7 @@ export const ROLE_IDS = Object.keys(ROLES);
 
 /** Yol → alan. Eşleşmeyen yazma istekleri "sistem" alanıdır (yalnızca admin/editör). */
 const AREAS = [
+  ['orkestra', /^x\/orkestra(\/|$)/],
   ['crm', /^(formlar|aboneler)(\/|$)/],
   ['medya', /^medya(\/|$)/],
   ['yayin', /^(yayin|yayin-geri-al|yayinlar|yeniden-derle)(\/|$)/],
@@ -32,6 +33,8 @@ const WRITE = {
   satis: ['crm'],
   izleyici: [],
 };
+/** AI Orchestra görevlerini (komutlar, taslaklar, kaynaklar, kullanım) okuyabilen roller */
+const READ_ORCH = new Set(['admin', 'editor']);
 /** CRM kişisel verisini okuyabilen roller */
 const READ_CRM = new Set(['admin', 'editor', 'satis']);
 /** Herkesin kendi oturumu/hesabı için yaptığı yazma istekleri */
@@ -45,7 +48,11 @@ export const denyReason = (role, method, pathname) => {
   if (!pathname.startsWith('/api/admin/') || SELF.test(sub)) return null;
   const area = areaOf(sub);
   const read = method === 'GET' || method === 'HEAD';
-  if (read) return area === 'crm' && !READ_CRM.has(role) ? 'Gelen talepler kişisel veri içerir; bu rol göremez' : null;
+  if (read) {
+    if (area === 'crm' && !READ_CRM.has(role)) return 'Gelen talepler kişisel veri içerir; bu rol göremez';
+    if (area === 'orkestra' && !READ_ORCH.has(role)) return 'AI Orchestra görevleri ve çıktıları yalnızca yönetici/editör tarafından görüntülenebilir';
+    return null;
+  }
   const w = WRITE[role];
   if (w === '*' || w?.includes(area)) return null;
   return `"${ROLES[role]?.label ?? role}" rolü bu alanda değişiklik yapamaz`;

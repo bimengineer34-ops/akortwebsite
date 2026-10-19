@@ -35,3 +35,4 @@ Durum anahtarÄ±: âœ… gerÃ§ek ve test edilmiÅŸ Â· ğŸŸ¡ kÄ±smen (neden belirtilir)
 
 
 | Ä°ngilizce adresler (slug) | yeni | âœ… | Ãœst dÃ¼zey adresler varsayÄ±lan Ã§evrilir (hizmetlerâ†’servicesâ€¦), diÄŸerleri panelden eÅŸlenir; canonical/hreflang/sitemap/iÃ§ baÄŸlantÄ±/arama indeksi eÅŸlenmiÅŸ adresi kullanÄ±r. Eski EN adresleri (TÃ¼rkÃ§e biÃ§imli veya deÄŸiÅŸtirilmiÅŸ) 301 ile gÃ¼ncel adrese yÃ¶nlendirilir |
+| AI Orchestra (çok ajanlı yönetim modülü) | yeni | ?? | 12 yapılandırılabilir ajan (9 çalıştırılabilir; Visual Design/Sales/CRM bağlı değil), DAG motoru (sıralı/paralel, kalıcı, yeniden deneme, iptal, idempotent), insan onayı, bütçe/token takibi, 8 panel sayfası. İlk akış: Research›Content›SEO›QA›Onay›Blog taslağı. Yalnızca sahte modelle test edildi; gerçek sağlayıcıyla ilk çalıştırma gözlenmeli. Ayrıntı: docs/ORCHESTRA.md |

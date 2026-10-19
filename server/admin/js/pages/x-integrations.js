@@ -57,7 +57,7 @@ export const renderIntegrations = async (ctx) => {
         h('p', { class: 'muted' }, 'Hesabı bağlamak için önce platformun geliştirici konsolunda bir uygulama oluşturup Client ID/Secret girin, sonra "Bağlan"a basın. Belirteçler şifreli saklanır.'),
         accountsGrid(),
         h('h2', {}, 'Modül anahtarları (özellik bayrakları)'),
-        h('div', { class: 'card card-pad row wrap' }, d.flags.map((f) => h('label', { class: 'switch' }, h('input', { type: 'checkbox', checked: f.enabled, disabled: session.user.role !== 'admin', onchange: async (e) => { try { await api.put(`/x/bayrak/${f.key}`, { enabled: e.target.checked }); toast('Güncellendi', 'ok'); } catch (er) { toast(er.message, 'err'); e.target.checked = !e.target.checked; } } }), h('i'), h('span', {}, { seo: 'SEO', ai: 'AI Stüdyo', social: 'Social Studio', intel: 'Pazar/Rakip/Backlink' }[f.key])))));
+        h('div', { class: 'card card-pad row wrap' }, d.flags.map((f) => h('label', { class: 'switch' }, h('input', { type: 'checkbox', checked: f.enabled, disabled: session.user.role !== 'admin', onchange: async (e) => { try { await api.put(`/x/bayrak/${f.key}`, { enabled: e.target.checked }); toast('Güncellendi', 'ok'); } catch (er) { toast(er.message, 'err'); e.target.checked = !e.target.checked; } } }), h('i'), h('span', {}, { seo: 'SEO', ai: 'AI Stüdyo', social: 'Social Studio', intel: 'Pazar/Rakip/Backlink', orchestra: 'AI Orchestra' }[f.key])))));
     } catch (e) { root.replaceChildren(errorBanner(e)); }
   };
   load();

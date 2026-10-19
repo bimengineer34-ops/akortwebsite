@@ -13,6 +13,9 @@ export const NAV = [
   { to: '/backlink', label: 'Backlink Intelligence', ic: 'link', area: 'seo' },
   { to: '/hiz', label: 'Speed Engine', ic: 'bolt', area: 'seo' },
   { to: '/ai', label: 'AI Content Studio', ic: 'spark', area: 'ai' },
+  { to: '/orkestra', label: 'AI Orchestra', ic: 'radar', area: 'orkestra', orch: true, badge: 'orch', sub: [
+    { to: '/orkestra', label: 'Pano', exact: true }, { to: '/orkestra/komut', label: 'Komut Merkezi' }, { to: '/orkestra/ajanlar', label: 'Ajanlar' }, { to: '/orkestra/akislar', label: 'İş Akışı Oluşturucu' },
+    { to: '/orkestra/izleme', label: 'Görev İzleme' }, { to: '/orkestra/onay', label: 'Onay Merkezi' }, { to: '/orkestra/model', label: 'Model & API' }, { to: '/orkestra/kayit', label: 'Kayıtlar & Analitik' } ] },
   { to: '/sosyal', label: 'Social Studio', ic: 'share', area: 'sosyal', sub: [
     { to: '/sosyal', label: 'Genel Bakış', exact: true }, { to: '/sosyal/takvim', label: 'İçerik Takvimi' }, { to: '/sosyal/onay', label: 'Onay Merkezi' },
     { to: '/sosyal/marka', label: 'Brand Kit' }, { to: '/sosyal/arsiv', label: 'İçerik Arşivi' } ] },
@@ -39,6 +42,7 @@ export const buildNav = (user, onNavigate) => {
   for (const it of NAV) {
     if (it.admin && user.role !== 'admin') continue;
     if (it.crm && user.readCrm === false) continue; // kişisel veri: bu rol göremez
+    if (it.orch && !['admin', 'editor'].includes(user.role)) continue; // AI Orchestra görevleri yalnızca yönetici/editör
     const subs = (it.sub ?? []).filter((s) => !s.admin || user.role === 'admin');
     const a = h('a', { href: `#${subs.length ? subs[0].to : it.to}`, class: 'nav-item', onclick: onNavigate }, icon(it.ic), h('span', {}, it.label), badge(it.badge), (it.area && !canWrite(user, it.area)) ? h('span', { class: 'ro-tag', title: 'Bu alanda yalnızca görüntüleyebilirsiniz' }, 'salt okunur') : null, subs.length ? h('span', { class: 'chev' }, icon('down', 14)) : null);
     const box = h('div', { class: 'nav-group' }, a);
