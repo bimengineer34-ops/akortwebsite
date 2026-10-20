@@ -84,7 +84,7 @@ const rd = (await admin.call('GET', `${O}/calistirmalar/${rj.d.id}`)).d;
 t('Reddedilen çalıştırma başarısız olur, taslak oluşmaz', rd.run.status === 'failed' && rd.tasks.find((x) => x.ref === 'draft').status === 'skipped');
 const lim = await admin.call('POST', `${O}/calistir`, { workflowId: wf.id, params: { topic: 'limit', focus: '' }, idempotencyKey: key(), tokenLimit: 1 });
 const ld = await until(async () => { const d = (await admin.call('GET', `${O}/calistirmalar/${lim.d.id}`)).d; return d.run.status === 'failed' ? d : null; });
-t('Token limiti aşılan çalıştırma durur', !!ld && /token limiti/.test(ld.run.error), ld?.run);
+t('Token limiti aşılan çalıştırma durur', !!ld && /(token|belirteç) limiti/.test(ld.run.error), ld?.run);
 
 /* ---- plan (Master) ---- */
 const pl = await admin.call('POST', `${O}/plan`, { command: 'Bu hafta BIM koordinasyonu konusunda bir blog yazısı hazırla. Rakip içerikleri araştır. LinkedIn gönderisi oluştur ve onayıma sun.' });
