@@ -1,4 +1,4 @@
-// Speed Engine — GERÇEK ölçümler: PageSpeed Insights (Google API) çalıştırmaları + derlenmiş site ağırlık analizi + güvenli bakım eylemleri.
+// Hız Motoru — GERÇEK ölçümler: Sayfa Hızı Insights (Google API) çalıştırmaları + derlenmiş site ağırlık analizi + güvenli bakım eylemleri.
 import fs from 'node:fs';
 import path from 'node:path';
 import { q, audit, db, getSetting, setSetting } from '../db.mjs';
@@ -32,13 +32,13 @@ export const runPsi = async (url, strategy, user) => {
   try {
     res = await fetch(`${PSI}?${qs}`, { signal: AbortSignal.timeout(90_000) });
     data = await res.json();
-  } catch (e) { throw new HttpError(502, `PageSpeed API erişilemedi: ${e.name === 'TimeoutError' ? 'zaman aşımı' : e.message}`); }
+  } catch (e) { throw new HttpError(502, `Sayfa Hızı API erişilemedi: ${e.name === 'TimeoutError' ? 'zaman aşımı' : e.message}`); }
   if (!res.ok) {
     const msg = data?.error?.message ?? `HTTP ${res.status}`;
-    throw new HttpError(res.status === 429 ? 429 : 502, `PageSpeed API: ${String(msg).slice(0, 220)}${res.status === 429 && !key ? ' — Entegrasyonlar sayfasından Google API anahtarı ekleyin.' : ''}`);
+    throw new HttpError(res.status === 429 ? 429 : 502, `Sayfa Hızı API: ${String(msg).slice(0, 220)}${res.status === 429 && !key ? ' — Entegrasyonlar sayfasından Google API anahtarı ekleyin.' : ''}`);
   }
   const lh = data.lighthouseResult;
-  if (!lh) throw new HttpError(502, 'PageSpeed yanıtında Lighthouse sonucu yok');
+  if (!lh) throw new HttpError(502, 'Sayfa Hızı yanıtında laboratuvar sonucu yok');
   const a = lh.audits ?? {};
   const opp = Object.values(a).filter((x) => x?.details?.type === 'opportunity' && x.score !== null && x.score < 0.9).sort((p, r) => (r.details.overallSavingsMs ?? 0) - (p.details.overallSavingsMs ?? 0)).slice(0, 5).map((x) => ({ title: x.title, text: x.displayValue ?? '' }));
   const inp = data.loadingExperience?.metrics?.INTERACTION_TO_NEXT_PAINT?.percentile;
@@ -72,7 +72,7 @@ export const speedOverview = (n = 30) => {
     if (local.js.totalKb > 400) recs.push({ n: recs.length + 1, title: 'JavaScript toplamı yüksek', text: `${local.js.totalKb} KB; kullanılmayan kodu azaltın (BIM görüntüleyici yalnızca /bim sayfasında yüklenmeli).` });
     if (local.html.avgKb > 150) recs.push({ n: recs.length + 1, title: 'HTML sayfaları büyük', text: `Ortalama ${local.html.avgKb} KB.` });
   }
-  for (const o of (latest('mobile')?.opportunities ?? []).slice(0, 3)) recs.push({ n: recs.length + 1, title: o.title, text: `${o.text} (PageSpeed mobil)` });
+  for (const o of (latest('mobile')?.opportunities ?? []).slice(0, 3)) recs.push({ n: recs.length + 1, title: o.title, text: `${o.text} (Sayfa Hızı mobil)` });
   const last = (k) => getSetting(k, '');
   return {
     range: n, local, psi: { latest: { mobile: latest('mobile'), desktop: latest('desktop') }, first: { mobile: first('mobile'), desktop: first('desktop') }, runs, hasKey: !!getSecret('google.psi') },

@@ -1,4 +1,4 @@
-// Social Studio — editoryal takvim + onay iş akışı. Platform OAuth bağlantısı olmadığı için YAYIN adaptörleri kapalıdır
+// Sosyal Medya Stüdyosu — editoryal takvim + onay iş akışı. Platform OAuth bağlantısı olmadığı için YAYIN adaptörleri kapalıdır
 // (sahte "yayımlandı" yok); onaylı içerik hash ile mühürlenir, "yayımlandı" yalnızca elle veya gerçek adaptörle işaretlenir.
 import crypto from 'node:crypto';
 import { q, audit, getSetting, setSetting } from '../db.mjs';
@@ -8,7 +8,7 @@ import './schema.mjs';
 
 export const PLATFORMS = {
   linkedin: { label: 'LinkedIn', limit: 3000, caps: { yazi: true, gorsel: true, carousel: true, zamanla: true, insights: true }, needs: 'LinkedIn Marketing/Community Management API onayı + OAuth' },
-  instagram: { label: 'Instagram', limit: 2200, caps: { yazi: true, gorsel: true, carousel: true, zamanla: true, insights: true }, needs: 'Meta Graph API (Instagram Business hesabı + Facebook Sayfası) + OAuth' },
+  instagram: { label: 'Instagram', limit: 2200, caps: { yazi: true, gorsel: true, carousel: true, zamanla: true, insights: true }, needs: 'Meta Graph API (Instagram İşletme hesabı + Facebook Sayfası) + OAuth' },
   facebook: { label: 'Facebook', limit: 63206, caps: { yazi: true, gorsel: true, carousel: true, zamanla: true, insights: true }, needs: 'Meta Graph API (Sayfa erişim belirteci) + OAuth' },
   x: { label: 'X (Twitter)', limit: 280, caps: { yazi: true, gorsel: true, carousel: false, zamanla: false, insights: false }, needs: 'X API (ücretli katman gerekebilir) + OAuth 2.0 PKCE' },
   youtube: { label: 'YouTube', limit: 5000, caps: { yazi: false, gorsel: false, carousel: false, zamanla: true, insights: true }, needs: 'YouTube Data API + OAuth (video yükleme kotası)' },
@@ -194,7 +194,7 @@ export const autoDraftSpecialDays = () => {
     if (d.inDays > 7 || getSetting(autoKey(d.date), '0') !== '1') continue;
     const ref = `ozelgun/${d.date}`;
     if (q.get('SELECT 1 AS x FROM social_posts WHERE source_ref = ?', ref)) continue;
-    savePost(0, { title: d.name, body: `${d.name} için paylaşım taslağı — metni düzenleyin veya AI İçerik Stüdyosu'nda üretin.`, category: 'Özel Gün', platforms: ['linkedin'], scheduled_at: `${d.date}T10:00`, source_ref: ref }, { email: 'sistem' });
+    savePost(0, { title: d.name, body: `${d.name} için paylaşım taslağı — metni düzenleyin veya Yapay Zekâ İçerik Stüdyosu'nda üretin.`, category: 'Özel Gün', platforms: ['linkedin'], scheduled_at: `${d.date}T10:00`, source_ref: ref }, { email: 'sistem' });
     made++;
   }
   return made;
@@ -213,7 +213,7 @@ export const socialOverview = (n = 30) => {
   const valid = live.filter((p) => validatePost(p).length === 0).length;
   const sealed = live.filter((p) => ['onaylandi', 'planlandi', 'yayimlandi'].includes(p.status));
   const recent = live.filter((p) => new Date(String(p.created_at).replace(' ', 'T') + 'Z').getTime() >= n30).length;
-  const criteria = [crit('Görsel kullanımı', withMedia, live.length), crit('Hashtag stratejisi', withTags, live.length), crit('Platform uyumu (karakter sınırı)', valid, live.length), crit('Onay disiplini (mühürlü)', sealed.filter((p) => p.sealed || p.status === 'yayimlandi').length, sealed.length), { label: 'Yayın sıklığı (30 günde ≥ 4)', score: live.length ? Math.min(100, Math.round((recent / 4) * 100)) : null }];
+  const criteria = [crit('Görsel kullanımı', withMedia, live.length), crit('Etiket stratejisi', withTags, live.length), crit('Platform uyumu (karakter sınırı)', valid, live.length), crit('Onay disiplini (mühürlü)', sealed.filter((p) => p.sealed || p.status === 'yayimlandi').length, sealed.length), { label: 'Yayın sıklığı (30 günde ≥ 4)', score: live.length ? Math.min(100, Math.round((recent / 4) * 100)) : null }];
   const scored = criteria.filter((c) => c.score !== null);
   const used = new Set(all.map((p) => p.source_ref).filter(Boolean));
   const ideas = [];
@@ -240,7 +240,7 @@ export const socialOverview = (n = 30) => {
   };
 };
 
-/** Hashtag önerisi: sitenin gerçek etiketleri + hizmet/sektör terimleri (uydurma popülerlik verisi yok) */
+/** Etiket önerisi: sitenin gerçek etiketleri + hizmet/sektör terimleri (uydurma popülerlik verisi yok) */
 export const hashtagSuggestions = (text = '') => {
   const pool = new Set(['#AKORTMühendislik', '#Mühendislik', '#BIM', '#EnerjiVerimliliği', '#MEP', '#Sürdürülebilirlik', '#YapıTeknolojisi', '#DijitalDönüşüm']);
   try { for (const e of listEntries('blog')) { const d = getEntry('blog', e.slug).data; for (const t of d.tags ?? []) pool.add(`#${String(t).replace(/[^\p{L}\p{N}]+/gu, '')}`); } } catch { /* */ }

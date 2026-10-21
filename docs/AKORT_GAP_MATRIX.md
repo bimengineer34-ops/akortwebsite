@@ -35,3 +35,4 @@ Durum anahtarı: ✅ gerçek ve test edilmiş · 🟡 kısmen (neden belirtilir)
 
 
 | İngilizce adresler (slug) | yeni | ✅ | Üst düzey adresler varsayılan çevrilir (hizmetler→services…), diğerleri panelden eşlenir; canonical/hreflang/sitemap/iç bağlantı/arama indeksi eşlenmiş adresi kullanır. Eski EN adresleri (Türkçe biçimli veya değiştirilmiş) 301 ile güncel adrese yönlendirilir |
+| AI Orchestra (çok ajanlı yönetim modülü) | yeni | 🟡 | 12 ajanın tamamı çalıştırılabilir (SEO mevcut sayfa denetimi, Sales→CRM müşteri talebi akışı, Visual Design→Brand Kit görseli dahil); DAG motoru (sıralı/paralel, kalıcı, yeniden deneme, duraklat/devam/iptal, idempotent), insan onayı, ajan/günlük/çalıştırma token limitleri, 8 panel sayfası, 4 hazır iş akışı. Harici e-posta/teklif gönderimi YOK. Yalnızca sahte modelle test edildi; gerçek sağlayıcıyla ilk çalıştırma gözlenmeli. Ayrıntı: docs/ORCHESTRA.md |

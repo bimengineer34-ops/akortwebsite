@@ -1,6 +1,6 @@
 // İngilizce site (/en): yayınlanan Türkçe sayfalar çeviri hafızası (TM) ile İngilizceye dönüştürülür.
 // Yöntem: derlenmiş HTML okunur → metin blokları (satır içi etiketler yer tutucuya çevrilerek) çıkarılır → TM'de olanlar uygulanır,
-// olmayanlar AI ile (arka planda) çevrilip TM'ye yazılır → yalnızca TÜM metni çevrilmiş sayfalar /en altında yayınlanır.
+// olmayanlar Yapay Zekâ ile (arka planda) çevrilip TM'ye yazılır → yalnızca TÜM metni çevrilmiş sayfalar /en altında yayınlanır.
 // TR sayfalar yalnızca dil anahtarı + hreflang bağlantıları kadar değişir. Elle düzenlenen çeviriler asla ezilmez.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -534,7 +534,7 @@ const translateBatch = async (provider, keys) => {
 export const translateMissing = async (missing, { provider } = {}) => {
   const list = [...missing.values()];
   const prov = FAKE ? 'fake' : (provider ?? pickProvider());
-  if (!prov && list.length) throw new HttpError(409, 'İngilizce çeviri için bir AI sağlayıcısı bağlı değil (Entegrasyonlar sayfasından anahtar ekleyin).');
+  if (!prov && list.length) throw new HttpError(409, 'İngilizce çeviri için bir Yapay Zekâ sağlayıcısı bağlı değil (Entegrasyonlar sayfasından anahtar ekleyin).');
   job.total += list.length;
   const batches = [];
   let cur = [], size = 0;

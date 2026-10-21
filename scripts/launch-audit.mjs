@@ -40,7 +40,7 @@ for (const u of urls) {
   const noAlt = (t.match(/<img\b(?![^>]*\balt\b)[^>]*>/g) ?? []).length; if (noAlt) add(crit, u, `${noAlt} görselde alt yok`);
   const emptyLinks = (t.match(/<a\b[^>]*>\s*<\/a>/g) ?? []).length; if (emptyLinks) add(warn, u, `${emptyLinks} boş bağlantı`);
   const hashLinks = (t.match(/<a\b[^>]*href="#"[^>]*>/g) ?? []).length; if (hashLinks) add(warn, u, `${hashLinks} href="#" bağlantı`);
-  const btnNoName = (t.match(/<button\b(?![^>]*aria-label)[^>]*>\s*<svg[\s\S]*?<\/svg>\s*<\/button>/g) ?? []).length; if (btnNoName) add(warn, u, `${btnNoName} simge-düğmede aria-label yok`);
+  const btnNoName = (t.match(/<button\b(?![^>]*aria-label)[^>]*>\s*<svg(?:(?!<\/svg>|<\/button>)[\s\S])*<\/svg>\s*<\/button>/g) ?? []).length; if (btnNoName) add(warn, u, `${btnNoName} simge-düğmede aria-label yok`);
   // JSON-LD
   for (const j of t.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) { try { JSON.parse(j[1]); } catch { add(crit, u, 'JSON-LD geçersiz'); } }
   // mailto / tel

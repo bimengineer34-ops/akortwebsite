@@ -1,6 +1,9 @@
 // Sistem sayfaları: kullanıcılar, etkinlik günlüğü, yedekler, hesabım, doğrulama bekleyenler
 import { api, session } from '../api.js';
 import { h, icon, chip, fmtDate, fmtSize, debounce, toast, confirmBox, errorBanner, modal, field, spinner } from '../ui.js';
+import { humanize } from '../editor.js';
+/** "items[1].text" → "Öğeler 2 › Metin" (teknik alan yolunu okunur Türkçeye çevirir) */
+const pathTr = (p) => String(p).split('.').map((seg) => { const m2 = /^([^[]*)((?:\[\d+\])*)$/.exec(seg); if (!m2) return seg; const idx = [...m2[2].matchAll(/\[(\d+)\]/g)].map((x) => Number(x[1]) + 1).join('.'); return [m2[1] ? humanize(m2[1]) : '', idx].filter(Boolean).join(' '); }).filter(Boolean).join(' › ');
 
 /* ---------------- kullanıcılar ---------------- */
 let ROLE_LIST = [];
@@ -196,7 +199,7 @@ export const renderVerification = async (ctx) => {
     rows.length
       ? h('div', { class: 'stack' }, [...byDoc.entries()].map(([key, g]) => h('div', { class: 'card' },
           h('div', { class: 'card-head' }, h('h3', {}, g.label), chip(`${g.items.length} alan`, 'warn'), h('a', { class: 'btn secondary sm', href: `#/icerik/${key}` }, 'Belgeyi aç')),
-          h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('tbody', {}, g.items.map((i) => h('tr', {}, h('td', { class: 'mono small muted' }, i.path), h('td', {}, i.value))))))))
+          h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('tbody', {}, g.items.map((i) => h('tr', {}, h('td', { class: 'small muted' }, pathTr(i.path)), h('td', {}, i.value))))))))
         )
       : h('div', { class: 'card empty' }, h('b', {}, 'Doğrulama bekleyen alan yok.')),
     h('div', { class: 'hint' }, 'Not: Projeler için doğrulama durumu proje editöründe yönetilir.'));
@@ -271,7 +274,7 @@ export const renderStats = async (ctx) => {
       h('div', { class: 'grid cols-2' },
         h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('h3', {}, 'En çok görüntülenen sayfalar')), table(s.topPages, 'path')),
         h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('h3', {}, 'Nereden geldiler (dış siteler)')), table(s.referrers, 'host'))),
-      h('div', { class: 'hint' }, 'Bu sayaç çerez kullanmaz ve IP, tarayıcı bilgisi veya kimlik tutmaz; yalnızca gün ve sayfa başına toplam sayıyı tutar. Botlar, "Do Not Track" gönderenler ve panele giriş yapmış kullanıcılar sayılmaz. Arama motoru görünürlüğü için Google Search Console önerilir.'));
+      h('div', { class: 'hint' }, 'Bu sayaç çerez kullanmaz ve IP, tarayıcı bilgisi veya kimlik tutmaz; yalnızca gün ve sayfa başına toplam sayıyı tutar. Botlar, "Do Not Track" gönderenler ve panele giriş yapmış kullanıcılar sayılmaz. Arama motoru görünürlüğü için Google Arama Konsolu önerilir.'));
   };
   const sel = h('select', { class: 'select', onchange: (e) => { days = Number(e.target.value); draw(); } }, [[7, 'Son 7 gün'], [30, 'Son 30 gün'], [90, 'Son 90 gün'], [365, 'Son 1 yıl']].map(([v, l]) => h('option', { value: v, selected: v === days }, l)));
   await draw();

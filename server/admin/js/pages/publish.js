@@ -17,7 +17,7 @@ export const renderPublish = async (ctx) => {
   const draw = (state, history) => {
     root.replaceChildren();
     const pendingN = state.pending.length + (state.entriesDirty ? 1 : 0);
-    const logBox = h('pre', { class: `log${state.log ? '' : ' hidden'}`, id: 'buildlog' }, state.log ?? '');
+    const logBox = h('pre', { class: 'log', id: 'buildlog' }, state.log ?? '');
     const publishBtn = h('button', { class: 'btn', disabled: state.running || !pendingN, onclick: async () => {
       try {
         await api.post('/yayinla');
@@ -51,7 +51,7 @@ export const renderPublish = async (ctx) => {
             try { await api.post('/yayin-geri-al'); toast('Önceki yayına dönüldü', 'ok'); refresh(); } catch (e) { toast(e.message, 'err'); }
           } }, icon('undo', 16), 'Önceki yayına dön') : null)),
 
-      logBox.textContent ? h('div', { class: 'card card-pad stack' }, h('h3', {}, 'Derleme günlüğü'), logBox) : null,
+      logBox.textContent ? h('details', { class: 'card card-pad' }, h('summary', {}, 'Teknik derleme çıktısı (derleme aracının ham çıktısıdır, İngilizcedir)'), logBox) : null,
 
       h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('h3', {}, 'Yayın geçmişi')),
         history.length

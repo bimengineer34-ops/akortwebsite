@@ -20,7 +20,7 @@ const safeMarkdown = defineMdastPlugin({
   },
 });
 
-// TODO-CONTENT: Domain doğrulanmadı. Canlıya çıkmadan önce PUBLIC_SITE_URL ile gerçek domain verilmeli.
+// Alan adı kesinleşti: https://www.akortmuhendislik.com (PUBLIC_SITE_URL ile geçersiz kılınabilir; canlıda aynı değer ayarlanır).
 const SITE_URL = process.env.PUBLIC_SITE_URL ?? 'https://www.akortmuhendislik.com';
 
 /** @param {'latin' | 'latin-ext'} subset */

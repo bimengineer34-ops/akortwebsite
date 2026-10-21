@@ -14,7 +14,7 @@ const LABELS = {
   title2: 'İkinci başlık', primary: 'Ana kartlar', secondary: 'Diğer kartlar', onHome: 'Ana sayfada göster', lines: 'Satırlar', year: 'Yıl', hours: 'Çalışma saatleri', city: 'Şehir', map: 'Harita',
   titleLines: 'Başlık satırları', titleAccent: 'Vurgulu başlık', video: 'Video', secondaryCta: 'İkinci buton', badge: 'Rozet', ctaLabel: 'Buton metni', caption: 'Alt yazı', links: 'Bağlantılar', columns: 'Sütunlar', description2: 'Açıklama', metrics: 'Göstergeler', disciplines: 'Disiplinler', phases: 'Aşamalar', options: 'Seçenekler', groups: 'Gruplar', tagline: 'Slogan', lang: 'Dil', defaultDescription: 'Varsayılan açıklama',
 };
-const humanize = (k) => LABELS[k] ?? k.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
+export const humanize = (k) => LABELS[k] ?? k.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
 
 const isObj = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
 const clone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
@@ -109,7 +109,7 @@ export const createEditor = ({ value, defaults, icons = [], pickMedia, onChange 
   const verifiableControl = (parent, key, label) => {
     const v = parent[key];
     const wrap = h('div', { class: 'vrow' });
-    const flag = h('label', { class: `vflag${v.verified ? '' : ' unv'}`, title: 'Doğrulanmayan değerler yayında gösterilmez (NO_FAKE_DATA)' });
+    const flag = h('label', { class: `vflag${v.verified ? '' : ' unv'}`, title: 'Doğrulanmayan değerler yayında gösterilmez (sahte veri yasağı)' });
     const cb = h('input', { type: 'checkbox', checked: v.verified, onchange: (e) => { v.verified = e.target.checked; flag.classList.toggle('unv', !v.verified); text.textContent = v.verified ? 'Doğrulandı' : 'Doğrulanmadı'; touch(); } });
     const text = h('span', {}, v.verified ? 'Doğrulandı' : 'Doğrulanmadı');
     flag.append(cb, text);

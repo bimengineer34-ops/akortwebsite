@@ -17,10 +17,11 @@ import { renderAiStudio } from './pages/x-ai-studio.js';
 import { renderSocialOverview, renderSocialCalendar, renderSocialApproval, renderSocialArchive, renderBrandKit } from './pages/x-social.js';
 import { renderMarket, renderCompetitors, renderBacklinks } from './pages/x-intel.js';
 import { renderIntegrations } from './pages/x-integrations.js';
+import { renderOrkestraDashboard, renderCommandCenter, renderAgents, renderWorkflows, renderMonitor, renderApprovals, renderModelConfig, renderLogs } from './pages/x-orkestra.js';
 import { renderUsers, renderAudit, renderBackups, renderAccount, renderVerification, renderRedirects, renderSettings, renderStats } from './pages/system.js';
 
 const app = document.getElementById('app');
-const state = { badges: { forms: 0, pending: 0, verify: 0 }, siteUrl: '' };
+const state = { badges: { forms: 0, pending: 0, verify: 0, orch: 0 }, siteUrl: '' };
 let shell, view, topbar, publishBtn, nav;
 
 /* ---------------- giriş / kurulum ---------------- */
@@ -161,7 +162,7 @@ const buildShell = () => {
   view = h('main', { class: 'content', id: 'main', tabindex: '-1' });
   shell = h('div', { class: 'shell' },
     h('aside', { class: 'sidebar' },
-      h('a', { class: 'brand', href: '#/', 'aria-label': 'AKORT Mühendislik — Dashboard' }, h('img', { src: '/yonetim/img/logo-h.png', alt: 'AKORT Mühendislik', width: 190 })),
+      h('a', { class: 'brand', href: '#/', 'aria-label': 'AKORT Mühendislik — Pano' }, h('img', { src: '/yonetim/img/logo-h.png', alt: 'AKORT Mühendislik', width: 190 })),
       nav.el,
       h('a', { class: 'side-promo', href: '/', target: '_blank', rel: 'noopener' }, h('img', { src: '/yonetim/img/logo-mark-dark.png', alt: '' }), h('div', {}, h('span', {}, 'Mühendislikte'), h('b', {}, 'Daha İleriye')), h('span', { class: 'go' }, icon('external', 16))),
       h('div', { class: 'sidebar-foot' },
@@ -183,7 +184,8 @@ const refreshBadges = async () => {
   if (!session.user) return;
   try {
     const d = await api.get('/pano');
-    state.badges = { forms: d.forms.fresh, pending: d.drafts.length + (d.entriesDirty ? 1 : 0), verify: d.unverifiedCount };
+    state.badges = { forms: d.forms.fresh, pending: d.drafts.length + (d.entriesDirty ? 1 : 0), verify: d.unverifiedCount, orch: state.badges.orch };
+    if (['admin', 'editor'].includes(session.user.role)) { try { state.badges.orch = (await api.get('/x/orkestra/onaylar')).approvals.length; } catch { /* modül kapalı olabilir */ } }
     for (const b of document.querySelectorAll('[data-badge]')) {
       const n = state.badges[b.dataset.badge];
       b.textContent = String(n);
@@ -232,6 +234,15 @@ const routes = [
   [/^\/rakipler$/, () => renderCompetitors(ctx)],
   [/^\/backlink$/, () => renderBacklinks(ctx)],
   [/^\/entegrasyonlar$/, () => renderIntegrations(ctx)],
+  [/^\/orkestra$/, () => renderOrkestraDashboard(ctx)],
+  [/^\/orkestra\/komut$/, () => renderCommandCenter(ctx)],
+  [/^\/orkestra\/ajanlar$/, () => renderAgents(ctx)],
+  [/^\/orkestra\/akislar$/, () => renderWorkflows(ctx)],
+  [/^\/orkestra\/izleme$/, () => renderMonitor(ctx)],
+  [/^\/orkestra\/izleme\/(\d+)$/, (m) => renderMonitor(ctx, Number(m[1]))],
+  [/^\/orkestra\/onay$/, () => renderApprovals(ctx)],
+  [/^\/orkestra\/model$/, () => renderModelConfig(ctx)],
+  [/^\/orkestra\/kayit$/, () => renderLogs(ctx)],
 ];
 
 let leaveGuard = null;

@@ -33,7 +33,7 @@ export const renderDocList = async (ctx) => {
         h('div', { class: 'card-head' }, h('h3', {}, g), chip(`${items.length} belge`)),
         h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, h('tbody', {}, items.map((d) =>
           h('tr', { class: 'clickable', onclick: () => ctx.nav(`/icerik/${d.key}`) },
-            h('td', {}, h('b', {}, d.label), h('div', { class: 'muted small mono' }, d.key)),
+            h('td', {}, h('b', {}, d.label)),
             h('td', {}, d.draft ? chip('Taslak var', 'warn') : d.published ? chip('Özelleştirildi', 'info') : chip('Varsayılan')),
             h('td', { class: 'muted small' }, d.draft ? fmtDate(d.draftAt) : d.published ? fmtDate(d.publishedAt) : ''),
             h('td', { style: undefined }, icon('chevron', 16)))))))));
